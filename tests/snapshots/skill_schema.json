@@ -1,0 +1,46 @@
+{
+  "description": "A Modus skill.\n\nSkills are AI agents you can run interactively.\nTo configure a skill (instructions, model, tools), use modus.management.ModusManagement.",
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "integer"
+    },
+    "slug": {
+      "title": "Slug",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "active",
+        "deleted"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    }
+  },
+  "required": [
+    "id",
+    "slug",
+    "name",
+    "status"
+  ],
+  "title": "Skill",
+  "type": "object"
+}

@@ -1,0 +1,29 @@
+{
+  "description": "Response returned by all POST /api/v1/context/* creator endpoints.\n\nThis is a lightweight envelope \u2014 it confirms creation and provides the\nnew item's UID. Call client.context.items.get(item.context_item_id) for\nthe full ContextItem.",
+  "properties": {
+    "contextItemId": {
+      "title": "Contextitemid",
+      "type": "string"
+    },
+    "kind": {
+      "title": "Kind",
+      "type": "string"
+    },
+    "title": {
+      "title": "Title",
+      "type": "string"
+    },
+    "s3Key": {
+      "title": "S3Key",
+      "type": "string"
+    }
+  },
+  "required": [
+    "contextItemId",
+    "kind",
+    "title",
+    "s3Key"
+  ],
+  "title": "CreatedContextItem",
+  "type": "object"
+}

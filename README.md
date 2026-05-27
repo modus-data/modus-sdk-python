@@ -1,0 +1,136 @@
+# Modus Python SDK
+
+[![PyPI version](https://img.shields.io/pypi/v/modus-sdk.svg)](https://pypi.org/project/modus-sdk/)
+[![Python versions](https://img.shields.io/pypi/pyversions/modus-sdk.svg)](https://pypi.org/project/modus-sdk/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
+Official Python client for the [Modus](https://modus.com) AI data platform.
+
+## Installation
+
+```bash
+pip install modus-sdk
+```
+
+## Quick Start
+
+```python
+import modus
+
+# Reads MODUS_API_KEY env var, or pass api_key= explicitly
+client = modus.Modus()
+
+# List skills
+for skill in client.skills.list():
+    print(skill.name, skill.status)
+
+# Get a skill by slug or id
+skill = client.skills.get("revenue-analysis")
+print(skill.name, skill.description)
+
+# List context items (your knowledge base)
+for item in client.context.items.list():
+    print(item.uid, item.type, item.title)
+```
+
+## Authentication
+
+Create a token at **app.modus.com → Settings → API Tokens**.
+
+```bash
+export MODUS_API_KEY=modus_xxx
+```
+
+Or pass it directly:
+
+```python
+client = modus.Modus(api_key="modus_xxx")
+```
+
+## Pagination
+
+List endpoints return a `Page[T]`. Iterating gives the current page.
+Use `.auto_paging_iter()` to iterate across all pages.
+
+```python
+# Current page only (default 20 items)
+page = client.skills.list(limit=20)
+for skill in page:
+    print(skill.name)
+
+# All pages
+for skill in client.skills.list().auto_paging_iter():
+    print(skill.name)
+
+# Manual control
+if page.has_next_page():
+    next_page = page.get_next_page()
+```
+
+## Async
+
+```python
+import asyncio
+import modus
+
+async def main():
+    async with modus.AsyncModus() as client:
+        page = await client.skills.list()
+        for skill in page:
+            print(skill.name)
+
+asyncio.run(main())
+```
+
+## Error Handling
+
+```python
+try:
+    skill = client.skills.get(999)
+except modus.NotFoundError:
+    print("Skill not found")
+except modus.AuthenticationError:
+    print("Check your MODUS_API_KEY")
+except modus.RateLimitError as e:
+    print(f"Rate limited. Retry after {e.retry_after}s")
+except modus.ModusError as e:
+    print(f"API error {e.status_code}: {e.message}")
+```
+
+## Managing skills, agents & context
+
+The same package ships a management client for configuration (requires a
+PAT with `skills:write` / `agents:write`):
+
+```python
+from modus.management import ModusManagement
+
+mgmt = ModusManagement()  # reads MODUS_API_KEY
+skill = mgmt.skills.create(name="Analyst", model="gpt-4o")
+mgmt.skills.deploy(skill.id)
+```
+
+Errors are the shared `modus.*` hierarchy (`modus.NotFoundError`, etc.).
+
+## Status
+
+**v0.1.0** — Initial release. Read surface (`modus.Modus`) + write surface (`modus.management.ModusManagement`).
+
+| Feature | Client | Status |
+|---|---|---|
+| `client.skills.list/get` | `Modus` | Available |
+| `client.skills.conversations(skill_id).list/get` | `Modus` | Available |
+| `client.agents.list/get` | `Modus` | Available |
+| `client.context.items.list/get/lookup/list_values` | `Modus` | Available |
+| Async client (`AsyncModus`) | `Modus` | Available |
+| `mgmt.skills.create/update/deploy/delete` | `ModusManagement` | Available |
+| `mgmt.agents.create/update/deploy/delete` | `ModusManagement` | Available |
+| `mgmt.context.create_note/saved_query/link` | `ModusManagement` | Available |
+| `mgmt.context.items.update/delete` | `ModusManagement` | Available |
+| Async management client (`AsyncModusManagement`) | `ModusManagement` | Available |
+
+`ModusManagement` requires a PAT with `skills:write` / `agents:write` scopes.
+Errors from both clients use the shared `modus.*` hierarchy (`modus.NotFoundError`, etc.).
+
+Skill execution (`run` / `stream`) is on the roadmap, blocked on backend
+prerequisites.

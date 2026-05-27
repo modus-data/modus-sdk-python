@@ -1,0 +1,55 @@
+{
+  "description": "A Modus agent (scheduled automation).\n\nAgents run unattended on a schedule or trigger.\nTo configure an agent (instructions, model, trigger), use modus.management.ModusManagement.",
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "integer"
+    },
+    "slug": {
+      "title": "Slug",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "active",
+        "deleted"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "type": {
+      "enum": [
+        "task",
+        "workflow"
+      ],
+      "title": "Type",
+      "type": "string"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    }
+  },
+  "required": [
+    "id",
+    "slug",
+    "name",
+    "status",
+    "type"
+  ],
+  "title": "Agent",
+  "type": "object"
+}
