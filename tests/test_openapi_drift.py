@@ -8,8 +8,9 @@ import json
 import pytest
 from pathlib import Path
 
-# Locate openapi spec relative to monorepo root (2 levels up from sdk-python/)
-_OPENAPI_PATH = Path(__file__).parents[2] / "apps/services/modus-api/openapi/v1.json"
+# Locate openapi spec relative to monorepo root. The SDK lives at
+# `sdk/python/consumption/tests/` — four parents up reaches the repo root.
+_OPENAPI_PATH = Path(__file__).parents[4] / "apps/services/modus-api/openapi/v1.json"
 
 pytestmark = pytest.mark.skipif(
     not _OPENAPI_PATH.exists(),
