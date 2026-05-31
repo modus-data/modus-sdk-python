@@ -25,3 +25,17 @@ The SDK source lives in the `modus-data/modus` monorepo. This repository
 is a release mirror — pull requests are not accepted here. If you have a
 proposed fix or feature, please open an issue and the team will handle it
 from the monorepo.
+
+## Development (monorepo)
+
+From the repository root (requires [Node.js](https://nodejs.org/) + [pnpm](https://pnpm.io/) per `.nvmrc`, and [uv](https://docs.astral.sh/uv/) on your `PATH`):
+
+```bash
+pnpm sdk:test                  # pytest
+pnpm sdk:lint                  # mypy
+pnpm sdk:requirements-drift    # regenerate + verify Snyk requirements.txt files
+pnpm sdk:build                 # build wheel/sdist locally
+```
+
+These run via Nx (`modus-sdk` project). They are not included in root
+`pnpm test` / `pnpm build` (Python is excluded via `lang:python` tag).

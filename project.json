@@ -1,0 +1,65 @@
+{
+  "name": "modus-sdk",
+  "sourceRoot": "sdk/python/modus-sdk",
+  "projectType": "library",
+  "tags": ["scope:sdk", "type:lib", "lang:python"],
+  "implicitDependencies": ["modus-api"],
+  "targets": {
+    "install": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "uv sync --extra dev",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true,
+      "inputs": ["{projectRoot}/pyproject.toml", "{projectRoot}/uv.lock"]
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install"],
+      "options": {
+        "command": "mkdir -p reports && uv run pytest tests/ -v --junit-xml=reports/pytest-junit.xml --tb=short",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true,
+      "inputs": [
+        "default",
+        "{workspaceRoot}/apps/services/modus-api/openapi/v1.json"
+      ],
+      "outputs": ["{projectRoot}/reports"]
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install"],
+      "options": {
+        "command": "bash -c 'set -o pipefail; mkdir -p reports && uv run mypy modus/ 2>&1 | tee reports/mypy.log'",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true,
+      "inputs": [
+        "default",
+        "{workspaceRoot}/apps/services/modus-api/openapi/v1.json"
+      ],
+      "outputs": ["{projectRoot}/reports"]
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install"],
+      "options": {
+        "command": "uv build",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true,
+      "inputs": ["{projectRoot}/pyproject.toml", "{projectRoot}/uv.lock", "default"],
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "requirements-drift": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bash scripts/check-snyk-requirements-drift.sh",
+        "cwd": "{workspaceRoot}/sdk/python"
+      },
+      "cache": false
+    }
+  }
+}
