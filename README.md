@@ -130,7 +130,7 @@ client.agents.chat(agent_id, "Run report", model=MODEL)
 client.agents.runs.list(agent_id, page_size=20)
 ```
 
-See [`sdk/python/examples/`](../examples/) and [`sdk/docs/CHAT_AND_STREAMING.md`](../../docs/CHAT_AND_STREAMING.md).
+See [`sdk/python/examples/`](../examples/), [`SDK_PYTHON_LOCAL_DEV.md`](../examples/SDK_PYTHON_LOCAL_DEV.md) (local API), and [`sdk/docs/CHAT_AND_STREAMING.md`](../../docs/CHAT_AND_STREAMING.md).
 
 ## Status
 
