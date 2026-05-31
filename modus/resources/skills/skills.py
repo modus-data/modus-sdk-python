@@ -4,12 +4,26 @@ from __future__ import annotations
 from typing import Optional, Union
 from urllib.parse import quote
 
+from ..._chat import (
+    AsyncChatStream,
+    ChatStream,
+    chat_buffered,
+    chat_buffered_async,
+    chat_stream_session,
+    chat_stream_session_async,
+)
 from ..._config import ModusConfig
 from ..._exceptions import ModusError
 from ..._http import AsyncHttpClient, HttpClient
 from ..._retry import async_with_retry, with_retry
 from ..._validation import validate_id, validate_limit
+from ..._wire.context_compose import (
+    _ComposeSkillContextRequestWire,
+    _ComposeSkillContextResponseWire,
+)
 from ..._wire.skills import _SkillWire
+from ...types.chat import ChatResult
+from ...types.context_compose import SkillContextComposition
 from ...types.pagination import AsyncPage, Page
 from ...types.skills import Skill
 from .conversations import AsyncConversationsResource, ConversationsResource
@@ -77,6 +91,60 @@ class SkillsResource:
         )
         return _translate_skill(_SkillWire.model_validate(data))
 
+    def chat(
+        self,
+        skill_id: Union[int, str],
+        message: str,
+        *,
+        model: str,
+        thread_id: Optional[str] = None,
+    ) -> ChatResult:
+        return chat_buffered(
+            self._http,
+            "skills",
+            skill_id,
+            message,
+            model=model,
+            thread_id=thread_id,
+        )
+
+    def chat_stream(
+        self,
+        skill_id: Union[int, str],
+        message: str,
+        *,
+        model: str,
+        thread_id: Optional[str] = None,
+    ) -> ChatStream:
+        return chat_stream_session(
+            self._http,
+            "skills",
+            skill_id,
+            message,
+            model=model,
+            thread_id=thread_id,
+        )
+
+    def get_context(
+        self,
+        skill_id: Union[int, str],
+        message: str,
+        *,
+        limit: Optional[int] = None,
+    ) -> SkillContextComposition:
+        validate_id(skill_id, name="skill_id")
+        safe_id = quote(str(skill_id), safe="")
+        body = _ComposeSkillContextRequestWire(message=message, limit=limit)
+        data = with_retry(
+            lambda: self._http.post(
+                f"/api/v1/skills/{safe_id}/context",
+                json=body.model_dump(by_alias=True, exclude_none=True),
+            ),
+            self._config.max_retries,
+        )
+        wire = _ComposeSkillContextResponseWire.model_validate(data)
+        return SkillContextComposition.model_validate(wire.model_dump(by_alias=True))
+
 
 class AsyncSkillsResource:
     """
@@ -124,3 +192,57 @@ class AsyncSkillsResource:
             self._config.max_retries,
         )
         return _translate_skill(_SkillWire.model_validate(data))
+
+    async def chat(
+        self,
+        skill_id: Union[int, str],
+        message: str,
+        *,
+        model: str,
+        thread_id: Optional[str] = None,
+    ) -> ChatResult:
+        return await chat_buffered_async(
+            self._http,
+            "skills",
+            skill_id,
+            message,
+            model=model,
+            thread_id=thread_id,
+        )
+
+    def chat_stream(
+        self,
+        skill_id: Union[int, str],
+        message: str,
+        *,
+        model: str,
+        thread_id: Optional[str] = None,
+    ) -> AsyncChatStream:
+        return chat_stream_session_async(
+            self._http,
+            "skills",
+            skill_id,
+            message,
+            model=model,
+            thread_id=thread_id,
+        )
+
+    async def get_context(
+        self,
+        skill_id: Union[int, str],
+        message: str,
+        *,
+        limit: Optional[int] = None,
+    ) -> SkillContextComposition:
+        validate_id(skill_id, name="skill_id")
+        safe_id = quote(str(skill_id), safe="")
+        body = _ComposeSkillContextRequestWire(message=message, limit=limit)
+        data = await async_with_retry(
+            lambda: self._http.post(
+                f"/api/v1/skills/{safe_id}/context",
+                json=body.model_dump(by_alias=True, exclude_none=True),
+            ),
+            self._config.max_retries,
+        )
+        wire = _ComposeSkillContextResponseWire.model_validate(data)
+        return SkillContextComposition.model_validate(wire.model_dump(by_alias=True))

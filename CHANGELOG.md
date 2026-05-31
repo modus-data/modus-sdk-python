@@ -6,6 +6,26 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-05-29
+
+### Added
+
+- `client.skills.chat()` and `client.skills.chat_stream()` — buffered and SSE chat
+  against public `POST /api/v1/skills/{id}/chat` (and conversation continue paths).
+- `client.skills.get_context()` — context composition via
+  `POST /api/v1/skills/{id}/context` (RAG query, no LLM).
+- `client.agents.chat()` and `client.agents.chat_stream()` — same chat surface for agents.
+- `client.agents.runs.list()` and `client.agents.runs.get()` — agent run history.
+- Public types: `ChatResult`, `SkillContextComposition`, `AgentRun`, `AgentRunListItem`,
+  stream events (`TokenEvent`, `DoneEvent`, …), `RunCancelledError`, `StreamTimeoutError`.
+- Async parity on `AsyncModus` for all new methods.
+- Example: `sdk/python/examples/chat_demo.py`.
+
+### Changed
+
+- `DoneEvent` and SSE parser now carry `thread_id` from the `done` frame.
+- Error SSE frames may use an `error` field (OpenAPI `SkillChatErrorEventDto`).
+
 ## [0.1.2] — 2026-05-28
 
 ### Changed
@@ -53,7 +73,7 @@ conversations.
 ### Breaking Changes
 - `context.items.delete()` now returns `ContextItemDeletion` instead of `None`
 - `ModusError.__init__` has new optional keyword arguments (`request_id`, `response_headers`, `body`, `code`)
-- `client.skills.run()` and `client.skills.stream()` removed from the public surface. No corresponding `@PublicApi` operation exists in the OpenAPI spec yet. Tracked for v0.3 — see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the three backend prerequisites.
+- `client.skills.run()` and `client.skills.stream()` removed from the public surface (no matching `@PublicApi` operation). Use `chat()` / `chat_stream()` since 0.2.0.
 - `client.agents.runs.list()` removed from the public surface. The backend endpoint `GET /api/v1/agents/:id/runs` has no `@PublicApi` decorator and rejects PAT tokens.
 - Public exports removed from `modus`: `RunResult`, `RunCancelledError`, `StreamTimeoutError`. The classes still exist as internal scaffolding for v0.3 (`modus.types.runs`, `modus._exceptions`) but are no longer part of the public API.
 - `examples/run_skill_when_ready.py` and `examples/chat_demo/` removed; both demonstrated APIs that are not in the spec. They will be re-added in v0.3 once the run endpoint lands.

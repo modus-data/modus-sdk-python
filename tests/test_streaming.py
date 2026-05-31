@@ -36,6 +36,26 @@ def test_done_event():
     assert events[0].run_id == "run-123"
 
 
+def test_done_event_includes_thread_id():
+    events = list(
+        parse_sse_stream(
+            lines(
+                'data: {"type":"done","runId":"run-123",'
+                '"threadId":"thread-456"}'
+            )
+        )
+    )
+    assert events[0].thread_id == "thread-456"
+
+
+def test_error_event_uses_error_field():
+    events = list(
+        parse_sse_stream(lines('data: {"type":"error","error":"Quota exceeded"}'))
+    )
+    assert isinstance(events[0], ErrorEvent)
+    assert events[0].message == "Quota exceeded"
+
+
 def test_error_event():
     events = list(parse_sse_stream(lines('data: {"type":"error","message":"Something broke"}')))
     assert len(events) == 1

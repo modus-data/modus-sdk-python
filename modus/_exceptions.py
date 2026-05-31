@@ -130,23 +130,18 @@ class InternalServerError(ModusError):
 
 # ---------------------------------------------------------------------------
 # Run-specific errors (raised from SSE events, not HTTP status codes)
-#
-# INTERNAL — not part of the public API in v0.2. These classes are kept as
-# scaffolding for the future skills.run/stream feature, which depends on a
-# backend operation that does not yet exist in the OpenAPI spec.
-# See docs/DEVELOPMENT.md and docs/SSE_DESIGN_NOTES.md.
 # ---------------------------------------------------------------------------
 
 
 class RunCancelledError(ModusError):
-    """Raised when a skill run is cancelled before completing. INTERNAL (v0.3+)."""
+    """Raised when a chat stream is cancelled before completing."""
 
     def __init__(self, message: str = "Run was cancelled.") -> None:
         super().__init__(message)
 
 
 class StreamTimeoutError(ModusError):
-    """Raised when a streaming response times out before completion. INTERNAL (v0.3+)."""
+    """Raised when a chat stream times out before completion."""
 
     def __init__(self, message: str = "Stream timed out.") -> None:
         super().__init__(message)

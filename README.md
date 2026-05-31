@@ -112,25 +112,38 @@ mgmt.skills.deploy(skill.id)
 
 Errors are the shared `modus.*` hierarchy (`modus.NotFoundError`, etc.).
 
+## Chat
+
+```python
+MODEL = "claude-sonnet-4.6"
+
+result = client.skills.chat(skill_id, "Hello", model=MODEL)
+print(result.text, result.thread_id)
+
+with client.skills.chat_stream(skill_id, "Hi", model=MODEL) as stream:
+    for chunk in stream.text_stream:
+        print(chunk, end="")
+    final = stream.get_final_result()
+
+ctx = client.skills.get_context(skill_id, "What tables describe revenue?", limit=25)
+client.agents.chat(agent_id, "Run report", model=MODEL)
+client.agents.runs.list(agent_id, page_size=20)
+```
+
+See [`sdk/python/examples/`](../examples/) and [`sdk/docs/CHAT_AND_STREAMING.md`](../../docs/CHAT_AND_STREAMING.md).
+
 ## Status
 
-**v0.1.0** — Initial release. Read surface (`modus.Modus`) + write surface (`modus.management.ModusManagement`).
+**v0.2.0** — Chat, context compose, and agent runs on `modus.Modus`, plus management CRUD.
 
-| Feature | Client | Status |
-|---|---|---|
-| `client.skills.list/get` | `Modus` | Available |
-| `client.skills.conversations(skill_id).list/get` | `Modus` | Available |
-| `client.agents.list/get` | `Modus` | Available |
-| `client.context.items.list/get/lookup/list_values` | `Modus` | Available |
-| Async client (`AsyncModus`) | `Modus` | Available |
-| `mgmt.skills.create/update/deploy/delete` | `ModusManagement` | Available |
-| `mgmt.agents.create/update/deploy/delete` | `ModusManagement` | Available |
-| `mgmt.context.create_note/saved_query/link` | `ModusManagement` | Available |
-| `mgmt.context.items.update/delete` | `ModusManagement` | Available |
-| Async management client (`AsyncModusManagement`) | `ModusManagement` | Available |
+| Feature | Client |
+|---|---|
+| `client.skills.list/get`, `conversations`, `chat`, `chat_stream`, `get_context` | `Modus` |
+| `client.agents.list/get`, `chat`, `chat_stream`, `runs.list/get` | `Modus` |
+| `client.context.items.list/get/lookup/list_values` | `Modus` |
+| `AsyncModus` | `Modus` |
+| `mgmt.skills/agents/context` write APIs | `ModusManagement` |
+| `AsyncModusManagement` | `ModusManagement` |
 
 `ModusManagement` requires a PAT with `skills:write` / `agents:write` scopes.
-Errors from both clients use the shared `modus.*` hierarchy (`modus.NotFoundError`, etc.).
-
-Skill execution (`run` / `stream`) is on the roadmap, blocked on backend
-prerequisites.
+Upcoming: skill memories on management — [`sdk/docs/FUTURE.md`](../../docs/FUTURE.md).

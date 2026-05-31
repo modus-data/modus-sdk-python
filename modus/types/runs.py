@@ -1,14 +1,4 @@
-"""
-Types for skill run results and SSE events.
-
-INTERNAL — not part of the public API in v0.2. This module is scaffolding for
-the future skills.run/stream feature, which depends on a backend operation
-that does not yet exist in the OpenAPI spec. These types are intentionally
-not re-exported from `modus.types` or `modus`.
-
-See docs/DEVELOPMENT.md (v0.3 prerequisites) and docs/SSE_DESIGN_NOTES.md
-(SDK-side design conventions for when the spec lands).
-"""
+"""SSE event types for chat streaming."""
 
 from __future__ import annotations
 from dataclasses import dataclass, field
@@ -17,13 +7,11 @@ from typing import Union
 
 @dataclass
 class RunResult:
-    """The complete result of a skill run."""
+    """Legacy alias — prefer :class:`modus.ChatResult`."""
 
     text: str
-    """The full text response from the skill."""
-
     run_id: str
-    """The unique run identifier. Useful for support and debugging."""
+    thread_id: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -43,6 +31,7 @@ class DoneEvent:
     """The run completed successfully."""
     type: str = field(default="done", init=False)
     run_id: str = ""
+    thread_id: str = ""
 
 
 @dataclass

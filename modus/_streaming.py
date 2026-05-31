@@ -72,9 +72,17 @@ def parse_sse_stream(lines: Iterator[str]) -> Iterator[RunEvent]:
         if event_type == "token":
             yield TokenEvent(content=data.get("content", ""))
         elif event_type == "done":
-            yield DoneEvent(run_id=data.get("runId", ""))
+            yield DoneEvent(
+                run_id=data.get("runId", ""),
+                thread_id=data.get("threadId", ""),
+            )
         elif event_type == "error":
-            msg = data.get("message") or data.get("content") or "Unknown run error"
+            msg = (
+                data.get("error")
+                or data.get("message")
+                or data.get("content")
+                or "Unknown run error"
+            )
             yield ErrorEvent(message=str(msg))
         elif event_type == "cancelled":
             yield CancelledEvent()

@@ -13,7 +13,7 @@ not here. This keeps each layer's responsibility clear.
 
 from __future__ import annotations
 import json
-from typing import Any, Dict, Iterator, Optional
+from typing import Any, AsyncIterator, Dict, Iterator, Optional
 import platform
 
 import httpx
@@ -279,6 +279,19 @@ class AsyncHttpClient:
         if response.status_code == 204 or not response.content:
             return None
         return response.json()
+
+    async def stream_post(
+        self, path: str, *, json: Optional[Dict[str, Any]] = None
+    ) -> AsyncIterator[str]:
+        """Streaming POST — yields raw SSE lines."""
+        try:
+            async with self._client.stream("POST", path, json=json) as response:
+                _raise_for_status(response)
+                async for line in response.aiter_lines():
+                    if line.strip():
+                        yield line
+        except _NETWORK_ERRORS as exc:
+            raise _wrap_network_error(exc, self._config.base_url) from exc
 
     async def aclose(self) -> None:
         await self._client.aclose()

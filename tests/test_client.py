@@ -40,16 +40,21 @@ def test_sync_client_has_skills():
     assert hasattr(client.skills, "conversations")
 
 
-def test_sync_client_does_not_expose_unspec_methods():
-    """Contract principle: surface only mirrors openapi/v1.json @PublicApi ops.
-
-    skills.run/stream and agents.runs are intentionally absent until the
-    backend exposes them in the public spec.
-    """
+def test_sync_client_does_not_expose_legacy_run_helpers():
+    """Legacy placeholders removed in favor of chat/chat_stream."""
     client = Modus(api_key="modus_test")
     assert not hasattr(client.skills, "run")
     assert not hasattr(client.skills, "stream")
-    assert not hasattr(client.agents, "runs")
+
+
+def test_sync_client_exposes_chat_and_runs():
+    client = Modus(api_key="modus_test")
+    assert hasattr(client.skills, "chat")
+    assert hasattr(client.skills, "chat_stream")
+    assert hasattr(client.skills, "get_context")
+    assert hasattr(client.agents, "chat")
+    assert hasattr(client.agents, "chat_stream")
+    assert hasattr(client.agents, "runs")
 
 
 def test_sync_client_has_agents():

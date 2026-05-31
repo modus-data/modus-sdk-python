@@ -79,3 +79,43 @@ def test_context_item_matches_openapi(openapi):
         f"ContextItem is missing fields backend sends: {sorted(missing)}.\n"
         f"Update modus/types/context.py"
     )
+
+
+def test_skill_chat_wire_matches_openapi(openapi):
+    from modus._wire.chat import _SkillChatRequestWire, _SkillChatResponseWire
+
+    req_backend = {_camel_to_snake(f) for f in _backend_fields(openapi, "SkillChatRequestDto")}
+    assert not (req_backend - _wire_fields(_SkillChatRequestWire))
+
+    resp_backend = {_camel_to_snake(f) for f in _backend_fields(openapi, "SkillChatResponseDto")}
+    assert not (resp_backend - _wire_fields(_SkillChatResponseWire))
+
+
+def test_compose_context_wire_matches_openapi(openapi):
+    from modus._wire.context_compose import (
+        _ComposeSkillContextRequestWire,
+        _ComposeSkillContextResponseWire,
+    )
+
+    req_backend = {
+        _camel_to_snake(f) for f in _backend_fields(openapi, "ComposeSkillContextRequestDto")
+    }
+    assert not (req_backend - _wire_fields(_ComposeSkillContextRequestWire))
+
+    resp_backend = {
+        _camel_to_snake(f) for f in _backend_fields(openapi, "ComposeSkillContextResponseDto")
+    }
+    assert not (resp_backend - _wire_fields(_ComposeSkillContextResponseWire))
+
+
+def test_automation_run_list_item_wire_matches_openapi(openapi):
+    from modus._wire.agent_runs import _AutomationRunListItemWire
+
+    backend = {
+        _camel_to_snake(f) for f in _backend_fields(openapi, "AutomationRunListItemDto")
+    }
+    wire = _wire_fields(_AutomationRunListItemWire)
+    missing = backend - wire
+    assert not missing, (
+        f"_AutomationRunListItemWire missing backend fields: {sorted(missing)}"
+    )

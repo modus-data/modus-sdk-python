@@ -1,19 +1,21 @@
 """Public types exported by the Modus SDK."""
 
+from .agent_runs import AgentRun, AgentRunListItem
 from .agents import Agent, AgentStatus, AgentType
+from .chat import ChatResult
 from .context import ContextItem, ContextType
+from .context_compose import SkillContextComposition
 from .conversations import Conversation, ConversationListItem, Message
 from .pagination import AsyncPage, Page
 from .skills import Skill, SkillStatus
 
-# Note: modus.types.runs (RunResult, *Event) is internal scaffolding for the
-# future skills.run/stream feature. It is intentionally not re-exported here
-# because no corresponding @PublicApi operation exists in the OpenAPI spec yet.
-
 __all__ = [
     "Agent",
+    "AgentRun",
+    "AgentRunListItem",
     "AgentStatus",
     "AgentType",
+    "ChatResult",
     "ContextItem",
     "ContextType",
     "Conversation",
@@ -22,5 +24,6 @@ __all__ = [
     "AsyncPage",
     "Page",
     "Skill",
+    "SkillContextComposition",
     "SkillStatus",
 ]

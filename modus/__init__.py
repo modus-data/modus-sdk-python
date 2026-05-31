@@ -25,13 +25,18 @@ from ._exceptions import (
     NotFoundError,
     PermissionDeniedError,
     RateLimitError,
+    RunCancelledError,
+    StreamTimeoutError,
     UnprocessableError,
 )
 from .types import (
     Agent,
+    AgentRun,
+    AgentRunListItem,
     AgentStatus,
     AgentType,
     AsyncPage,
+    ChatResult,
     ContextItem,
     ContextType,
     Conversation,
@@ -39,7 +44,15 @@ from .types import (
     Message,
     Page,
     Skill,
+    SkillContextComposition,
     SkillStatus,
+)
+from .types.runs import (
+    CancelledEvent,
+    DoneEvent,
+    ErrorEvent,
+    StreamTimeoutEvent,
+    TokenEvent,
 )
 
 from importlib.metadata import PackageNotFoundError, version as _pkg_version
@@ -61,9 +74,15 @@ __all__ = [
     "UnprocessableError",
     "RateLimitError",
     "InternalServerError",
+    "RunCancelledError",
+    "StreamTimeoutError",
+    "ChatResult",
+    "SkillContextComposition",
     "Skill",
     "SkillStatus",
     "Agent",
+    "AgentRun",
+    "AgentRunListItem",
     "AgentStatus",
     "AgentType",
     "ContextItem",
@@ -73,5 +92,10 @@ __all__ = [
     "Message",
     "Page",
     "AsyncPage",
+    "TokenEvent",
+    "DoneEvent",
+    "ErrorEvent",
+    "CancelledEvent",
+    "StreamTimeoutEvent",
     "__version__",
 ]
