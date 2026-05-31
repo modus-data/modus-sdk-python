@@ -6,14 +6,21 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-05-28
+
 ### Changed
 
 - Management surface is now shipped inside `modus-sdk` as
   `modus.management.ModusManagement` (previously the separate
   `modus-management` package). One install, one version, unified
   `modus.ModusError` hierarchy.
+- Example scripts live under `sdk/python/examples/` (monorepo only; not
+  included in the published wheel or `modus-sdk-python` mirror).
 
-## [0.1.0] — 2026-05-XX
+## [0.1.0] — 2026-05-24
+
+Initial release: read APIs for skills and agents, context items CRUD, and
+conversations.
 
 ### Added
 - `APIConnectionError` — typed exception for network-level failures (ConnectError, ReadTimeout, etc.)
@@ -53,7 +60,3 @@ Versioning: [SemVer](https://semver.org/)
 
 ### Contract principle
 - The SDK now formally exposes a method only when there is a corresponding `@PublicApi` operation in `apps/services/modus-api/openapi/v1.json`. See [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for the full change-management policy.
-
-## [0.1.0] — 2026-01-XX
-
-Initial release. Skills/agents read, context items CRUD, conversations.
