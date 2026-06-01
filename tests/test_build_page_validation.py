@@ -1,6 +1,6 @@
 import pytest
-from modus._pagination import build_aip_page
 from modus._exceptions import ModusError
+from modus._pagination import build_aip_page
 from modus.types.skills import Skill
 
 

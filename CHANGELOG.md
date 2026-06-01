@@ -10,13 +10,22 @@ Planned next release: **`0.1.3`** (tag `sdk-python/v0.1.3`).
 
 ### Added
 
-- `modus.Modus` — chat/streaming, context compose, agent runs (on top of read APIs in `0.1.2`).
+- `modus.Modus` — chat, streaming, context compose, agent runs (on top of read APIs in `0.1.2`).
 - `modus.management.ModusManagement` — full configure surface in the same package.
+- `mgmt.skills.memories(skill_id)` — list, search, update, delete skill memories.
+- Exported types: `AgentTrigger`, `Toolset`, `AgentSelection`, `WorkflowGraph`,
+  `Memory`, `MemorySearchRequest`, `MemoryUpdate`, `JsonObject`, and related helpers.
 
 ### Changed
 
+- Management `create`/`update` accept typed models for triggers, toolsets, agent
+  selection, workflow graphs, and access config (`AgentTrigger.schedule_daily(...)`,
+  `Toolset.from_tools(...)`, etc.). Raw dicts still work with `DeprecationWarning`.
+- `context.items.list_values` returns `Page[ContextValueRow]`; `Message.tool_calls` is
+  `List[ToolCall]`; `SkillContextComposition.context_items` is typed.
+- `mgmt.context.items.update` uses explicit keyword fields only (no `**kwargs`).
 - List pagination: `page_size`, `page_token`, `Page.next_page_token`.
-- README and public docstrings for package consumers.
+- README and public docstrings oriented for package consumers (Modus behavior, not internal stack names).
 
 ## [0.1.2] — 2026-05-28
 

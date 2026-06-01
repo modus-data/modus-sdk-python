@@ -12,6 +12,7 @@ Backoff strategy:
 """
 
 from __future__ import annotations
+
 import asyncio
 import random
 import time
@@ -31,7 +32,7 @@ def _backoff_seconds(attempt: int, exc: Exception) -> float:
     if attempt == 0:
         return 0.0
     # Exponential backoff: 1s, 2s, ... with ±0.3s jitter
-    return max(0.5, (2 ** (attempt - 1)) + (random.random() * 0.6 - 0.3))  # noqa: S311
+    return max(0.5, (2 ** (attempt - 1)) + (random.random() * 0.6 - 0.3))
 
 
 def with_retry(func: Callable[[], T], max_retries: int) -> T:

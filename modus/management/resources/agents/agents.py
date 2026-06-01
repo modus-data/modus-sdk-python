@@ -1,17 +1,23 @@
 """Agents resource — /api/v1/agents (full CRUD, management SDK)"""
 
 from __future__ import annotations
-from typing import Any, Dict, Optional, Union
+
+from typing import Optional, Union
 from urllib.parse import quote
 
 from modus._config import ModusConfig
 from modus._http import AsyncHttpClient, HttpClient
-from modus._retry import async_with_retry, with_retry
 from modus._pagination import aip_list_params, build_aip_page_mapped, build_async_aip_page_mapped
+from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_id, validate_page_size
-from ..._wire.agents import _AgentWire
-from ...types.agents import Agent
 from modus.types.pagination import AsyncPage, Page
+
+from ..._wire.agents import _AgentWire
+from ...types.access import AccessConfigInput, dump_access_config
+from ...types.agent_selection import AgentSelectionInput, dump_agent_selection
+from ...types.agents import Agent
+from ...types.triggers import TriggerInput, dump_trigger
+from ...types.workflow import WorkflowGraphInput, dump_workflow_structure
 from ._translate import _translate_agent
 from ._update_body import _AgentCreateBody, _AgentUpdateBody
 
@@ -81,16 +87,18 @@ class AgentsResource:
         type: str,  # "task" | "workflow"
         *,
         description: Optional[str] = None,
-        trigger: Optional[Dict[str, Any]] = None,
-        agent_selection: Optional[Dict[str, Any]] = None,
-        workflow_structure: Optional[Dict[str, Any]] = None,
-        access_config: Optional[Dict[str, Any]] = None,
+        trigger: Optional[TriggerInput] = None,
+        agent_selection: Optional[AgentSelectionInput] = None,
+        workflow_structure: Optional[WorkflowGraphInput] = None,
+        access_config: Optional[AccessConfigInput] = None,
     ) -> Agent:
         """Create a new Modus agent in the organisation."""
         body = _AgentCreateBody(
             name=name, type=type, description=description,
-            trigger=trigger, agent_selection=agent_selection,
-            workflow_structure=workflow_structure, access_config=access_config,
+            trigger=dump_trigger(trigger),
+            agent_selection=dump_agent_selection(agent_selection),
+            workflow_structure=dump_workflow_structure(workflow_structure),
+            access_config=dump_access_config(access_config),
         ).model_dump(by_alias=True, exclude_none=True)
         raw = with_retry(
             lambda: self._http.post("/api/v1/agents", json=body),
@@ -104,16 +112,18 @@ class AgentsResource:
         *,
         name: Optional[str] = None,
         description: Optional[str] = None,
-        trigger: Optional[Dict[str, Any]] = None,
-        agent_selection: Optional[Dict[str, Any]] = None,
-        workflow_structure: Optional[Dict[str, Any]] = None,
-        access_config: Optional[Dict[str, Any]] = None,
+        trigger: Optional[TriggerInput] = None,
+        agent_selection: Optional[AgentSelectionInput] = None,
+        workflow_structure: Optional[WorkflowGraphInput] = None,
+        access_config: Optional[AccessConfigInput] = None,
     ) -> Agent:
         """Update a Modus agent's configuration."""
         body = _AgentUpdateBody(
-            name=name, description=description, trigger=trigger,
-            agent_selection=agent_selection, workflow_structure=workflow_structure,
-            access_config=access_config,
+            name=name, description=description,
+            trigger=dump_trigger(trigger),
+            agent_selection=dump_agent_selection(agent_selection),
+            workflow_structure=dump_workflow_structure(workflow_structure),
+            access_config=dump_access_config(access_config),
         ).model_dump(by_alias=True, exclude_none=True)
         validate_id(agent_id, name="agent_id")
         safe_id = quote(str(agent_id), safe="")
@@ -192,14 +202,16 @@ class AsyncAgentsResource:
 
     async def create(self, name: str, type: str, *,
                      description: Optional[str] = None,
-                     trigger: Optional[Dict[str, Any]] = None,
-                     agent_selection: Optional[Dict[str, Any]] = None,
-                     workflow_structure: Optional[Dict[str, Any]] = None,
-                     access_config: Optional[Dict[str, Any]] = None) -> Agent:
+                     trigger: Optional[TriggerInput] = None,
+                     agent_selection: Optional[AgentSelectionInput] = None,
+                     workflow_structure: Optional[WorkflowGraphInput] = None,
+                     access_config: Optional[AccessConfigInput] = None) -> Agent:
         body = _AgentCreateBody(
-            name=name, type=type, description=description, trigger=trigger,
-            agent_selection=agent_selection, workflow_structure=workflow_structure,
-            access_config=access_config,
+            name=name, type=type, description=description,
+            trigger=dump_trigger(trigger),
+            agent_selection=dump_agent_selection(agent_selection),
+            workflow_structure=dump_workflow_structure(workflow_structure),
+            access_config=dump_access_config(access_config),
         ).model_dump(by_alias=True, exclude_none=True)
         raw = await async_with_retry(
             lambda: self._http.post("/api/v1/agents", json=body),
@@ -209,14 +221,16 @@ class AsyncAgentsResource:
 
     async def update(self, agent_id: Union[int, str], *,
                      name: Optional[str] = None, description: Optional[str] = None,
-                     trigger: Optional[Dict[str, Any]] = None,
-                     agent_selection: Optional[Dict[str, Any]] = None,
-                     workflow_structure: Optional[Dict[str, Any]] = None,
-                     access_config: Optional[Dict[str, Any]] = None) -> Agent:
+                     trigger: Optional[TriggerInput] = None,
+                     agent_selection: Optional[AgentSelectionInput] = None,
+                     workflow_structure: Optional[WorkflowGraphInput] = None,
+                     access_config: Optional[AccessConfigInput] = None) -> Agent:
         body = _AgentUpdateBody(
-            name=name, description=description, trigger=trigger,
-            agent_selection=agent_selection, workflow_structure=workflow_structure,
-            access_config=access_config,
+            name=name, description=description,
+            trigger=dump_trigger(trigger),
+            agent_selection=dump_agent_selection(agent_selection),
+            workflow_structure=dump_workflow_structure(workflow_structure),
+            access_config=dump_access_config(access_config),
         ).model_dump(by_alias=True, exclude_none=True)
         validate_id(agent_id, name="agent_id")
         safe_id = quote(str(agent_id), safe="")

@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from .json_blob import JsonObject
 
 
 class AgentRunListItem(BaseModel):
@@ -24,17 +26,17 @@ class AgentRunListItem(BaseModel):
     ended_at: Optional[datetime] = None
     duration_ms: Optional[int] = None
     summary: Optional[str] = None
-    pending_approval: Optional[Any] = None
+    pending_approval: Optional[JsonObject] = None
 
 
 class AgentRunListPage(BaseModel):
-    """Paginated agent runs with optional continuation token."""
+    """Paginated list of agent automation runs."""
 
     model_config = ConfigDict(extra="forbid")
 
     runs: List[AgentRunListItem]
     next_page_token: Optional[str] = None
-    counts: Dict[str, Any] = Field(default_factory=dict)
+    counts: JsonObject = Field(default_factory=JsonObject)
 
 
 class AgentRun(BaseModel):
@@ -51,4 +53,4 @@ class AgentRun(BaseModel):
     status: str
     started_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None
-    history: Optional[Any] = None
+    history: Optional[List[JsonObject]] = None

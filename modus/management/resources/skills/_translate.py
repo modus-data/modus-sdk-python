@@ -7,9 +7,11 @@ guardrails is always read from accessConfig (default []).
 """
 from __future__ import annotations
 
-from ...types.access import AccessConfig
-from ...types.skills import Skill
 from ..._wire.skills import _SkillWire
+from ...types.access import AccessConfig
+from ...types.json_blob import parse_json_object_list
+from ...types.skills import Skill
+from ...types.toolset import parse_toolset
 
 
 def _translate_skill(wire: _SkillWire) -> Skill:
@@ -32,10 +34,16 @@ def _translate_skill(wire: _SkillWire) -> Skill:
         instructions=variation.get("instructions"),
         model=variation.get("model"),
         expected_output=variation.get("expectedOutput"),
-        toolset=variation.get("toolset"),
-        connection_set=variation.get("connectionSet"),
-        context_selections=variation.get("contextSelections"),
-        interfaces=variation.get("interfaces"),
+        toolset=parse_toolset(variation.get("toolset")),
+        connection_set=parse_json_object_list(
+            variation.get("connectionSet") or variation.get("connection_set")
+        ),
+        context_selections=parse_json_object_list(
+            variation.get("contextSelections") or variation.get("context_selections")
+        ),
+        interfaces=parse_json_object_list(
+            variation.get("interfaces")
+        ),
         evaluations=variation.get("evaluations"),
         # Guardrails + access config from accessConfig
         guardrails=access_raw.get("guardrails", []),

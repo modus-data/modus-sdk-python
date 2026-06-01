@@ -11,11 +11,14 @@ Two shapes are returned by the conversations API:
 """
 
 from __future__ import annotations
-from datetime import datetime
-from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from datetime import datetime
+from typing import List, Optional
+
+from pydantic import BaseModel, ConfigDict, field_validator
 from pydantic.alias_generators import to_camel
+
+from .tool_calls import ToolCall
 
 
 class Message(BaseModel):
@@ -30,8 +33,19 @@ class Message(BaseModel):
 
     type: Optional[str] = None        # "human", "ai", "tool", "system"
     content: Optional[str] = None
-    tool_calls: Optional[List[Dict[str, Any]]] = None
+    tool_calls: Optional[List[ToolCall]] = None
     id: Optional[str] = None
+
+    @field_validator("tool_calls", mode="before")
+    @classmethod
+    def _coerce_tool_calls(cls, value: object) -> object:
+        if value is None or (
+            isinstance(value, list) and value and isinstance(value[0], ToolCall)
+        ):
+            return value
+        if isinstance(value, list):
+            return [ToolCall.model_validate(item) for item in value]
+        return value
 
 
 class ConversationListItem(BaseModel):

@@ -1,6 +1,7 @@
 """Skills resource — /api/v1/skills (read-only, consumption SDK)"""
 
 from __future__ import annotations
+
 from typing import Optional, Union
 from urllib.parse import quote
 
@@ -27,11 +28,11 @@ from ..._wire.context_compose import (
 )
 from ..._wire.skills import _SkillWire
 from ...types.chat import ChatResult
-from ...types.context_compose import SkillContextComposition
+from ...types.context_compose import SkillContextComposition, composition_from_wire
 from ...types.pagination import AsyncPage, Page
 from ...types.skills import Skill
-from .conversations import AsyncConversationsResource, ConversationsResource
 from ._translate import _translate_skill
+from .conversations import AsyncConversationsResource, ConversationsResource
 
 
 def _map_skill(raw: dict) -> Skill:
@@ -62,11 +63,11 @@ class SkillsResource:
         page_token: Optional[str] = None,
     ) -> Page[Skill]:
         """
-        List all Modus skills in the organisation.
+        List skills in the organisation.
 
         Args:
-            page_size:  Maximum number of items to return (default 25).
-            page_token: Token from a previous page's ``next_page_token``; omit for the first page.
+            page_size:  Items per page (default 25).
+            page_token: Opaque token from a previous page's ``next_page_token``.
         """
         validate_page_size(page_size)
         return self._list_page(page_size, page_token)
@@ -86,10 +87,10 @@ class SkillsResource:
 
     def get(self, skill_id: Union[int, str]) -> Skill:
         """
-        Retrieve a Modus skill by ID or slug.
+        Retrieve a skill by ID or slug.
 
         Raises:
-            NotFoundError: if no Modus skill with this ID or slug exists.
+            NotFoundError: if no skill with this ID/slug exists.
         """
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")
@@ -107,7 +108,6 @@ class SkillsResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> ChatResult:
-        """Send a message to a Modus skill and return the full reply."""
         return chat_buffered(
             self._http,
             "skills",
@@ -125,7 +125,6 @@ class SkillsResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> ChatStream:
-        """Stream a Modus skill chat reply over Server-Sent Events."""
         return chat_stream_session(
             self._http,
             "skills",
@@ -143,12 +142,12 @@ class SkillsResource:
         limit: Optional[int] = None,
     ) -> SkillContextComposition:
         """
-        Compose relevant Modus context for a skill without invoking the LLM.
+        Return context items Modus would use for a skill query, without running chat.
 
         Args:
-            skill_id: Modus skill ID or slug.
-            message:  Query used to retrieve context.
-            limit:    Maximum number of Modus context items to include (request body field).
+            skill_id: Skill id or slug.
+            message:  Natural-language query used to select context.
+            limit:    Optional cap on how many items to return.
         """
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")
@@ -161,7 +160,7 @@ class SkillsResource:
             self._config.max_retries,
         )
         wire = _ComposeSkillContextResponseWire.model_validate(data)
-        return SkillContextComposition.model_validate(wire.model_dump(by_alias=True))
+        return composition_from_wire(wire)
 
 
 class AsyncSkillsResource:
@@ -186,13 +185,6 @@ class AsyncSkillsResource:
         page_size: int = 25,
         page_token: Optional[str] = None,
     ) -> AsyncPage[Skill]:
-        """
-        List all Modus skills in the organisation.
-
-        Args:
-            page_size:  Maximum number of items to return (default 25).
-            page_token: Token from a previous page's ``next_page_token``; omit for the first page.
-        """
         validate_page_size(page_size)
         return await self._list_page(page_size, page_token)
 
@@ -212,12 +204,6 @@ class AsyncSkillsResource:
         )
 
     async def get(self, skill_id: Union[int, str]) -> Skill:
-        """
-        Retrieve a Modus skill by ID or slug.
-
-        Raises:
-            NotFoundError: if no Modus skill with this ID or slug exists.
-        """
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")
         data = await async_with_retry(
@@ -234,7 +220,6 @@ class AsyncSkillsResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> ChatResult:
-        """Send a message to a Modus skill and return the full reply."""
         return await chat_buffered_async(
             self._http,
             "skills",
@@ -252,7 +237,6 @@ class AsyncSkillsResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> AsyncChatStream:
-        """Stream a Modus skill chat reply over Server-Sent Events."""
         return chat_stream_session_async(
             self._http,
             "skills",
@@ -270,12 +254,12 @@ class AsyncSkillsResource:
         limit: Optional[int] = None,
     ) -> SkillContextComposition:
         """
-        Compose relevant Modus context for a skill without invoking the LLM.
+        Return context items Modus would use for a skill query, without running chat.
 
         Args:
-            skill_id: Modus skill ID or slug.
-            message:  Query used to retrieve context.
-            limit:    Maximum number of Modus context items to include (request body field).
+            skill_id: Skill id or slug.
+            message:  Natural-language query used to select context.
+            limit:    Optional cap on how many items to return.
         """
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")
@@ -288,4 +272,4 @@ class AsyncSkillsResource:
             self._config.max_retries,
         )
         wire = _ComposeSkillContextResponseWire.model_validate(data)
-        return SkillContextComposition.model_validate(wire.model_dump(by_alias=True))
+        return composition_from_wire(wire)

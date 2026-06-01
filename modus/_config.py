@@ -6,8 +6,10 @@ during Modus.__init__ and passed down to the HTTP client and all resources.
 """
 
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Union
+
 import httpx
 
 # Defaults — override via Modus(base_url=..., timeout=..., max_retries=...)

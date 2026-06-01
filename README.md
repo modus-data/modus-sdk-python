@@ -179,7 +179,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 | `client.agents.list/get`, `chat`, `chat_stream`, `runs.list/get` | `Modus` |
 | `client.context.items.list/get/lookup/list_values` | `Modus` |
 | `AsyncModus` | `Modus` |
-| `mgmt.skills/agents/context` write APIs | `ModusManagement` |
+| `mgmt.skills/agents/context` write APIs, `mgmt.skills.memories(...)` | `ModusManagement` |
 | `AsyncModusManagement` | `ModusManagement` |
 
 `ModusManagement` requires a PAT with `skills:write` / `agents:write` scopes.

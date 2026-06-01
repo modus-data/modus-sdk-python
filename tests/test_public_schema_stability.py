@@ -4,8 +4,9 @@ Compares current model schemas to committed snapshots.
 Failures mean the public API surface changed — update snapshots intentionally.
 """
 import json
-import pytest
 from pathlib import Path
+
+import pytest
 
 SNAPSHOT_DIR = Path(__file__).parent / "snapshots"
 

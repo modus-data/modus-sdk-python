@@ -5,13 +5,13 @@ by the translator. Catches: new public field added but translator forgot
 to wire it up.
 """
 from datetime import datetime, timezone
-from modus._wire.skills import _SkillWire
-from modus._wire.agents import _AgentWire
-from modus.resources.skills._translate import _translate_skill
-from modus.resources.agents._translate import _translate_agent
-from modus.types.skills import Skill
-from modus.types.agents import Agent
 
+from modus._wire.agents import _AgentWire
+from modus._wire.skills import _SkillWire
+from modus.resources.agents._translate import _translate_agent
+from modus.resources.skills._translate import _translate_skill
+from modus.types.agents import Agent
+from modus.types.skills import Skill
 
 _NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 

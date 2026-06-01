@@ -1,6 +1,7 @@
 """Context items resource — /api/v1/context/items (read-only, consumption SDK)"""
 
 from __future__ import annotations
+
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
@@ -10,14 +11,20 @@ from ..._http import AsyncHttpClient, HttpClient
 from ..._pagination import (
     aip_list_params,
     build_aip_page,
-    build_aip_page_raw,
+    build_aip_page_mapped,
     build_async_aip_page,
-    build_async_aip_page_raw,
+    build_async_aip_page_mapped,
 )
 from ..._retry import async_with_retry, with_retry
 from ..._validation import DEFAULT_MAX_PAGE_SIZE, validate_page_size
 from ...types.context import ContextItem
+from ...types.context_values import ContextValueRow
+from ...types.json_blob import JsonObjectInput, dump_json_object
 from ...types.pagination import AsyncPage, Page
+
+
+def _map_value_row(raw: dict) -> ContextValueRow:
+    return ContextValueRow.model_validate(raw)
 
 
 def _context_list_params(
@@ -32,7 +39,7 @@ def _context_list_params(
 
 
 def _parse_lookup_response(raw: Dict[str, Any]) -> Optional[ContextItem]:
-    """Map lookup body ``{ \"item\": row | null }`` to ContextItem or None."""
+    """Map AIP lookup body ``{ \"item\": row | null }`` to ContextItem or None."""
     if not isinstance(raw, dict):
         raise ValueError("Unexpected lookup response shape")
     if "item" in raw:
@@ -56,11 +63,11 @@ class ContextItemsResource:
         context_type: Optional[str] = None,
     ) -> Page[ContextItem]:
         """
-        List all Modus context items in the knowledge base.
+        List context items in the knowledge base.
 
         Args:
-            page_size:    Maximum number of items to return (default 25).
-            page_token:   Token from a previous page's ``next_page_token``; omit for the first page.
+            page_size:    Items per page (default 25).
+            page_token:   Opaque token from a previous page's ``next_page_token``.
             context_type: Filter by type e.g. "note", "metric", "saved_query".
         """
         validate_page_size(page_size)
@@ -86,10 +93,10 @@ class ContextItemsResource:
 
     def get(self, uid: str) -> ContextItem:
         """
-        Retrieve a Modus context item by its UID.
+        Retrieve a single context item by its UID.
 
         Raises:
-            NotFoundError: if no Modus context item with this UID exists.
+            NotFoundError: if no item with this UID exists.
         """
         safe_uid = quote(uid, safe="")
         data = with_retry(
@@ -103,22 +110,22 @@ class ContextItemsResource:
         context_type: str,
         data_path: List[str],
         *,
-        content_projection: Optional[Dict[str, Any]] = None,
+        content_projection: Optional[JsonObjectInput] = None,
     ) -> Optional[ContextItem]:
         """
-        Look up a Modus context item by type and data path.
+        POST /api/v1/context/items/lookup — returns None when no match (404).
 
         Args:
-            context_type:        Modus context type to search for.
-            data_path:           Data path segments to match.
+            context_type:        The context type to search for.
+            data_path:           The data path to match.
             content_projection:  Optional projection filter for content.
 
         Returns:
-            ContextItem if found, None if no match.
+            ContextItem if found, None if not found (404).
         """
         payload: Dict[str, Any] = {"contextType": context_type, "dataPath": data_path}
         if content_projection is not None:
-            payload["contentProjection"] = content_projection
+            payload["contentProjection"] = dump_json_object(content_projection)
         try:
             raw = with_retry(
                 lambda: self._http.post("/api/v1/context/items/lookup", json=payload),
@@ -136,9 +143,9 @@ class ContextItemsResource:
         *,
         page_size: int = 25,
         page_token: Optional[str] = None,
-    ) -> Page[Dict[str, Any]]:
+    ) -> Page[ContextValueRow]:
         """
-        List paginated values for a field within a Modus context item.
+        List paginated values for a specific field within a context item.
 
         Args:
             uid:               The context item's UUID.
@@ -147,10 +154,10 @@ class ContextItemsResource:
             content_key_path:  Dot-separated JSON path to the array of values inside
                                ``content``. Example: ``"enumValues"`` or ``"sample.values"``.
             page_size:         Values per page (default 25, max 200).
-            page_token:        Token from a previous page's ``next_page_token``; omit for the first page.
+            page_token:        Opaque token from a previous page's ``next_page_token``.
 
         Returns:
-            Page[Dict[str, Any]] of value entries.
+            Page of value entries (shape varies by context type).
         """
         validate_page_size(page_size, max_page_size=DEFAULT_MAX_PAGE_SIZE)
         return self._list_values_page(uid, context_type, content_key_path, page_size, page_token)
@@ -162,7 +169,7 @@ class ContextItemsResource:
         content_key_path: str,
         page_size: int,
         page_token: Optional[str],
-    ) -> Page[Dict[str, Any]]:
+    ) -> Page[ContextValueRow]:
         safe_uid = quote(uid, safe="")
         params = aip_list_params(
             page_size,
@@ -174,9 +181,10 @@ class ContextItemsResource:
             lambda: self._http.get(f"/api/v1/context/items/{safe_uid}/values", params=params),
             self._config.max_retries,
         )
-        return build_aip_page_raw(
+        return build_aip_page_mapped(
             data,
             "values",
+            _map_value_row,
             lambda cur: self._list_values_page(
                 uid, context_type, content_key_path, page_size, cur
             ),
@@ -195,14 +203,6 @@ class AsyncContextItemsResource:
         page_token: Optional[str] = None,
         context_type: Optional[str] = None,
     ) -> AsyncPage[ContextItem]:
-        """
-        List all Modus context items in the knowledge base.
-
-        Args:
-            page_size:    Maximum number of items to return (default 25).
-            page_token:   Token from a previous page's ``next_page_token``; omit for the first page.
-            context_type: Filter by type e.g. "note", "metric", "saved_query".
-        """
         validate_page_size(page_size)
         return await self._list_page(page_size, page_token, context_type)
 
@@ -225,12 +225,6 @@ class AsyncContextItemsResource:
         )
 
     async def get(self, uid: str) -> ContextItem:
-        """
-        Retrieve a Modus context item by its UID.
-
-        Raises:
-            NotFoundError: if no Modus context item with this UID exists.
-        """
         safe_uid = quote(uid, safe="")
         data = await async_with_retry(
             lambda: self._http.get(f"/api/v1/context/items/{safe_uid}"),
@@ -243,22 +237,22 @@ class AsyncContextItemsResource:
         context_type: str,
         data_path: List[str],
         *,
-        content_projection: Optional[Dict[str, Any]] = None,
+        content_projection: Optional[JsonObjectInput] = None,
     ) -> Optional[ContextItem]:
         """
-        Look up a Modus context item by type and data path.
+        POST /api/v1/context/items/lookup — returns None when no match (404).
 
         Args:
-            context_type:        Modus context type to search for.
-            data_path:           Data path segments to match.
+            context_type:        The context type to search for.
+            data_path:           The data path to match.
             content_projection:  Optional projection filter for content.
 
         Returns:
-            ContextItem if found, None if no match.
+            ContextItem if found, None if not found (404).
         """
         payload: Dict[str, Any] = {"contextType": context_type, "dataPath": data_path}
         if content_projection is not None:
-            payload["contentProjection"] = content_projection
+            payload["contentProjection"] = dump_json_object(content_projection)
         try:
             raw = await async_with_retry(
                 lambda: self._http.post("/api/v1/context/items/lookup", json=payload),
@@ -276,9 +270,9 @@ class AsyncContextItemsResource:
         *,
         page_size: int = 25,
         page_token: Optional[str] = None,
-    ) -> AsyncPage[Dict[str, Any]]:
+    ) -> AsyncPage[ContextValueRow]:
         """
-        List paginated values for a field within a Modus context item.
+        List paginated values for a specific field within a context item.
 
         Args:
             uid:               The context item's UUID.
@@ -287,10 +281,10 @@ class AsyncContextItemsResource:
             content_key_path:  Dot-separated JSON path to the array of values inside
                                ``content``. Example: ``"enumValues"`` or ``"sample.values"``.
             page_size:         Values per page (default 25, max 200).
-            page_token:        Token from a previous page's ``next_page_token``; omit for the first page.
+            page_token:        Opaque token from a previous page's ``next_page_token``.
 
         Returns:
-            AsyncPage[Dict[str, Any]] of value entries.
+            AsyncPage of value entries (shape varies by context type).
         """
         validate_page_size(page_size, max_page_size=DEFAULT_MAX_PAGE_SIZE)
         return await self._list_values_page(
@@ -304,7 +298,7 @@ class AsyncContextItemsResource:
         content_key_path: str,
         page_size: int,
         page_token: Optional[str],
-    ) -> AsyncPage[Dict[str, Any]]:
+    ) -> AsyncPage[ContextValueRow]:
         safe_uid = quote(uid, safe="")
         params = aip_list_params(
             page_size,
@@ -316,9 +310,10 @@ class AsyncContextItemsResource:
             lambda: self._http.get(f"/api/v1/context/items/{safe_uid}/values", params=params),
             self._config.max_retries,
         )
-        return build_async_aip_page_raw(
+        return build_async_aip_page_mapped(
             data,
             "values",
+            _map_value_row,
             lambda cur: self._list_values_page(
                 uid, context_type, content_key_path, page_size, cur
             ),

@@ -3,17 +3,16 @@ Respx round-trip contract tests: SDK list methods vs AIP-158 request/response sh
 """
 from __future__ import annotations
 
-from typing import Any, Union
+from typing import Union
 
 import httpx
 import pytest
 import respx
-from pydantic import ValidationError
-
 from modus import Modus
 from modus._exceptions import ModusError
 from modus.management import ModusManagement
 from modus.types.pagination import Page
+from pydantic import ValidationError
 
 from .conftest import TEST_BASE_URL
 from .list_operations import (

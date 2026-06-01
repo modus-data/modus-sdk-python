@@ -4,6 +4,7 @@ Private — do not import from user code. Use modus.types.skills.Skill instead.
 When backend renames a field, update this file and the translator.
 """
 from __future__ import annotations
+
 from datetime import datetime
 from typing import Any, Dict, Optional
 

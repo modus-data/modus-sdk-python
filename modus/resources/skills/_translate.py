@@ -1,6 +1,6 @@
 """Translator: _SkillWire → Skill (consumption public type)."""
-from ...types.skills import Skill
 from ..._wire.skills import _SkillWire
+from ...types.skills import Skill
 
 
 def _translate_skill(wire: _SkillWire) -> Skill:

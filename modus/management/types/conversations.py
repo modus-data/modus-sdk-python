@@ -1,6 +1,7 @@
 """Conversation types — identical shape to the consumption SDK."""
 
 from __future__ import annotations
+
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 

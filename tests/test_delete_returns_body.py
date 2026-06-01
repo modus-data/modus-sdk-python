@@ -2,8 +2,8 @@
 import httpx
 import pytest
 import respx
-from modus._http import HttpClient, AsyncHttpClient
 from modus._config import ModusConfig
+from modus._http import AsyncHttpClient, HttpClient
 
 BASE = "https://api.modus.com"
 CFG = ModusConfig(api_key="modus_test", base_url=BASE)

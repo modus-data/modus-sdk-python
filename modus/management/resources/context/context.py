@@ -1,11 +1,13 @@
 """Context resource — knowledge base management (modus.management)."""
 
 from __future__ import annotations
+
 from typing import Any, Dict, List, Optional
 
 from modus._config import ModusConfig
 from modus._http import AsyncHttpClient, HttpClient
 from modus._retry import async_with_retry, with_retry
+
 from ...types.context import CreatedContextItem
 from .items import AsyncContextItemsResource, ContextItemsResource
 

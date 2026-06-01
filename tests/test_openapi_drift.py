@@ -5,8 +5,9 @@ Subset check: wire may have extra fields (forward-compat); missing fields are bu
 This test is monorepo-only — skipped gracefully outside the monorepo.
 """
 import json
-import pytest
 from pathlib import Path
+
+import pytest
 
 # Locate openapi spec relative to monorepo root. The SDK lives at
 # `sdk/python/consumption/tests/` — four parents up reaches the repo root.

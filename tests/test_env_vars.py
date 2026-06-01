@@ -1,7 +1,6 @@
 """Tests for MODUS_TIMEOUT and MODUS_MAX_RETRIES environment variables."""
 
-import pytest
-from modus import Modus, AsyncModus
+from modus import AsyncModus, Modus
 
 
 def test_modus_timeout_env_var(monkeypatch):

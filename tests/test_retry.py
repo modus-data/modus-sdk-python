@@ -1,9 +1,10 @@
 """Tests for retry logic."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
-from modus._retry import async_with_retry, with_retry
+
+import pytest
 from modus._exceptions import InternalServerError, NotFoundError, RateLimitError
+from modus._retry import async_with_retry, with_retry
 
 
 def test_success_no_retry():

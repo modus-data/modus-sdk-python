@@ -10,6 +10,7 @@ clear error immediately rather than a cryptic 401 on the first request.
 """
 
 from __future__ import annotations
+
 import os
 from typing import Optional, Union
 

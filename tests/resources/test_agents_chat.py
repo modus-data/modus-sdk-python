@@ -5,7 +5,6 @@ from __future__ import annotations
 from unittest.mock import patch
 
 import httpx
-import pytest
 import respx
 
 BASE = "https://api.modus.com"

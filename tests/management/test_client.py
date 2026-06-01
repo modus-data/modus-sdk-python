@@ -1,8 +1,8 @@
 """Tests for ModusManagement client instantiation."""
 
 import pytest
-from modus.management import ModusManagement, AsyncModusManagement
 from modus._exceptions import AuthenticationError
+from modus.management import AsyncModusManagement, ModusManagement
 
 
 def test_client_instantiates(monkeypatch):

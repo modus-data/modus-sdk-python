@@ -1,3 +1,3 @@
 from .context import AsyncContextResource, ContextResource
 
-__all__ = ["ContextResource", "AsyncContextResource"]
+__all__ = ["AsyncContextResource", "ContextResource"]

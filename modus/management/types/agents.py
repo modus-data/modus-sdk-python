@@ -1,6 +1,7 @@
 """Agent model for the management SDK — flat, variation fields at top level."""
 
 from __future__ import annotations
+
 from datetime import datetime
 from typing import List, Literal, Optional
 
@@ -8,6 +9,9 @@ from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 
 from .access import AccessConfig
+from .agent_selection import AgentSelection
+from .triggers import AgentTriggerValue
+from .workflow import WorkflowGraph
 
 AgentStatus = Literal["draft", "active", "deleted"]
 AgentType = Literal["task", "workflow"]
@@ -47,6 +51,9 @@ class Agent(BaseModel):
     # Configuration — from variation, None on list rows, populated on .get()
     instructions: Optional[List[str]] = None
     model: Optional[str] = None
+    trigger: Optional[AgentTriggerValue] = None
+    agent_selection: Optional[AgentSelection] = None
+    workflow_structure: Optional[WorkflowGraph] = None
 
     # Guardrails
     guardrails: List[str] = []

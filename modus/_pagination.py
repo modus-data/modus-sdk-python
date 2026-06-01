@@ -10,7 +10,7 @@ Query params use ``pageSize`` and ``pageToken``. Python resources expose
 
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Type, TypeVar, Union
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Type, TypeVar
 
 from ._exceptions import ModusError
 from .types.pagination import AsyncPage, Page

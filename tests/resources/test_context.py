@@ -1,7 +1,7 @@
 """Tests for context items read operations."""
 
+
 import httpx
-import json
 import pytest
 import respx
 from modus import NotFoundError

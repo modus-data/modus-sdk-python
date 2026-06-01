@@ -4,6 +4,7 @@ AsyncModusManagement — asynchronous client for the same.
 """
 
 from __future__ import annotations
+
 from typing import Optional, Union
 
 import httpx
@@ -11,6 +12,7 @@ import httpx
 from modus._auth import resolve_api_key, resolve_base_url, resolve_max_retries, resolve_timeout
 from modus._config import DEFAULT_BASE_URL, DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT, ModusConfig
 from modus._http import AsyncHttpClient, HttpClient
+
 from .resources import (
     AgentsResource,
     AsyncAgentsResource,

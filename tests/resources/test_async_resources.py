@@ -6,7 +6,6 @@ import httpx
 import pytest
 import respx
 from modus import AsyncModus
-from modus.types.context import ContextItem
 
 BASE = "https://api.modus.com"
 KEY = "modus_test_key_abc123"

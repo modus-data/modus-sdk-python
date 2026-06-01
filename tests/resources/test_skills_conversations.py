@@ -188,4 +188,8 @@ def test_conversations_get_with_tool_calls(client):
     ai_msg = conv.messages[1]
     assert ai_msg.tool_calls is not None
     assert len(ai_msg.tool_calls) == 1
-    assert ai_msg.tool_calls[0]["name"] == "sql_query"
+    tc = ai_msg.tool_calls[0]
+    assert tc.name == "sql_query"
+    assert tc.id == "tc-1"
+    assert tc.type == "tool_call"
+    assert tc.args == {"sql": "SELECT 1"}

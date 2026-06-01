@@ -13,8 +13,9 @@ Events and their handling:
 """
 
 from __future__ import annotations
+
 import json
-from typing import Iterator, Optional, Dict, Any
+from typing import Any, Dict, Iterator, Optional
 
 from .types.runs import (
     CancelledEvent,

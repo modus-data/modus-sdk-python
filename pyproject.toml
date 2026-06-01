@@ -22,6 +22,7 @@ dev = [
     "pytest-cov>=5.0",
     "respx>=0.21",
     "mypy>=1.10",
+    "ruff>=0.15",
 ]
 
 [tool.pytest.ini_options]
@@ -47,6 +48,16 @@ exclude = [
 [tool.coverage.run]
 source = ["modus"]
 omit = ["tests/*"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+# Library, tests, and sibling examples under sdk/python/
+src = ["modus", "tests", "../examples"]
+
+[tool.ruff.lint]
+# F: pyflakes (unused imports, etc.); I: isort; RUF021: parenthesize mixed and/or
+select = ["F", "I", "RUF021"]
 
 [tool.hatch.version]
 source = "vcs"

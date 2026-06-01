@@ -1,5 +1,6 @@
 """Internal request body models for agents create/update."""
 from __future__ import annotations
+
 from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, ConfigDict

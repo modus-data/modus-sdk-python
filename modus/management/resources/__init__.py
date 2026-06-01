@@ -3,10 +3,10 @@ from .context.context import AsyncContextResource, ContextResource
 from .skills.skills import AsyncSkillsResource, SkillsResource
 
 __all__ = [
-    "SkillsResource",
-    "AsyncSkillsResource",
     "AgentsResource",
     "AsyncAgentsResource",
-    "ContextResource",
     "AsyncContextResource",
+    "AsyncSkillsResource",
+    "ContextResource",
+    "SkillsResource",
 ]

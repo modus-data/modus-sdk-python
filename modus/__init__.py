@@ -15,6 +15,9 @@ Quick start:
 To create or configure skills, use modus.management.ModusManagement.
 """
 
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
+
 from ._client import AsyncModus, Modus
 from ._exceptions import (
     APIConnectionError,
@@ -55,47 +58,45 @@ from .types.runs import (
     TokenEvent,
 )
 
-from importlib.metadata import PackageNotFoundError, version as _pkg_version
-
 try:
     __version__ = _pkg_version("modus-sdk")
 except PackageNotFoundError:
     __version__ = "0.0.0.dev0"
 
 __all__ = [
-    "Modus",
-    "AsyncModus",
-    "ModusError",
     "APIConnectionError",
-    "AuthenticationError",
-    "PermissionDeniedError",
-    "NotFoundError",
-    "ConflictError",
-    "UnprocessableError",
-    "RateLimitError",
-    "InternalServerError",
-    "RunCancelledError",
-    "StreamTimeoutError",
-    "ChatResult",
-    "SkillContextComposition",
-    "Skill",
-    "SkillStatus",
     "Agent",
     "AgentRun",
     "AgentRunListItem",
     "AgentStatus",
     "AgentType",
+    "AsyncModus",
+    "AsyncPage",
+    "AuthenticationError",
+    "CancelledEvent",
+    "ChatResult",
+    "ConflictError",
     "ContextItem",
     "ContextType",
     "Conversation",
     "ConversationListItem",
-    "Message",
-    "Page",
-    "AsyncPage",
-    "TokenEvent",
     "DoneEvent",
     "ErrorEvent",
-    "CancelledEvent",
+    "InternalServerError",
+    "Message",
+    "Modus",
+    "ModusError",
+    "NotFoundError",
+    "Page",
+    "PermissionDeniedError",
+    "RateLimitError",
+    "RunCancelledError",
+    "Skill",
+    "SkillContextComposition",
+    "SkillStatus",
+    "StreamTimeoutError",
     "StreamTimeoutEvent",
+    "TokenEvent",
+    "UnprocessableError",
     "__version__",
 ]

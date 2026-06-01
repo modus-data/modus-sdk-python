@@ -1,7 +1,6 @@
 """Tests for client.skills.get_context()."""
 
 import httpx
-import pytest
 import respx
 from modus.types.context_compose import SkillContextComposition
 

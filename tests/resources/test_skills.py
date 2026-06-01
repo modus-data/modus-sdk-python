@@ -3,7 +3,7 @@
 import httpx
 import pytest
 import respx
-from modus import Modus, NotFoundError
+from modus import NotFoundError
 from modus.types.skills import Skill
 
 BASE = "https://api.modus.com"

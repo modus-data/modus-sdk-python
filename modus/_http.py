@@ -12,12 +12,13 @@ not here. This keeps each layer's responsibility clear.
 """
 
 from __future__ import annotations
+
 import json
-from typing import Any, AsyncIterator, Dict, Iterator, Optional
 import platform
+from importlib.metadata import PackageNotFoundError, version
+from typing import Any, AsyncIterator, Dict, Iterator, Optional
 
 import httpx
-from importlib.metadata import PackageNotFoundError, version
 
 from ._auth import auth_headers
 from ._config import ModusConfig

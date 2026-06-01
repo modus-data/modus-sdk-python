@@ -1,7 +1,9 @@
 """Tests for mgmt.skills.create/update/deploy/delete."""
 
 import json
+
 import httpx
+import pytest
 import respx
 from modus.management import ModusManagement
 from modus.management.types.skills import Skill
@@ -44,6 +46,21 @@ def test_skills_create_sends_only_provided_fields():
     _client().skills.create(name="Test", description="Desc")
     body = json.loads(route.calls[0].request.read())
     assert set(body.keys()) == {"name", "description"}
+
+
+@respx.mock
+def test_skills_create_raw_toolset_dict_warns():
+    route = respx.post(f"{BASE}/api/v1/skills").mock(
+        return_value=httpx.Response(201, json=SKILL_RESP)
+    )
+    with pytest.warns(DeprecationWarning, match="toolset"):
+        _client().skills.create(
+            name="X",
+            toolset={"sql": {"enabled": True}},
+        )
+    body = json.loads(route.calls[0].request.read())
+    assert body["toolset"] == {"sql": {"enabled": True}}
+    assert route.called
 
 
 @respx.mock

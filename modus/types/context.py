@@ -8,6 +8,7 @@ Matches the ContextItemDto shape from GET /api/v1/context/items.
 """
 
 from __future__ import annotations
+
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
 
@@ -52,7 +53,8 @@ class ContextItem(BaseModel):
     context_type: str
     title: Optional[str] = None
     description: Optional[str] = None
-    content: Optional[Any] = None  # string, dict, or list depending on context_type
+    content: Optional[Any] = None
+    """Polymorphic body (note text, saved-query fields, etc.) — shape depends on ``context_type``."""
     verification_status: Optional[str] = None
     user_feedback: Optional[str] = None
     topics: Optional[List[str]] = None

@@ -1,5 +1,4 @@
 import httpx
-import pytest
 import respx
 from modus import Modus
 from modus.types.context import ContextItem
@@ -57,7 +56,7 @@ def test_list_values_returns_page():
     )
     page = _client().context.items.list_values("abc-123", "metric", "amount")
     assert len(page) == 2
-    assert page.items[0] == {"value": 123}
+    assert page.items[0].value == 123
     # Verify required query params are sent correctly
     assert route.calls[0].request.url.params["contextType"] == "metric"
     assert route.calls[0].request.url.params["contentKeyPath"] == "amount"

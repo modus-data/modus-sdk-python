@@ -1,6 +1,7 @@
 """Context items resource — full CRUD for modus.management."""
 
 from __future__ import annotations
+
 from typing import Any, Dict, Optional
 from urllib.parse import quote
 
@@ -13,8 +14,9 @@ from modus._pagination import (
 )
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_page_size
-from ...types.context import ContextItem, ContextItemDeletion, ContextItemUpdate
 from modus.types.pagination import AsyncPage, Page
+
+from ...types.context import ContextItem, ContextItemDeletion, ContextItemUpdate
 
 
 def _context_list_params(
@@ -40,14 +42,6 @@ class ContextItemsResource:
         page_token: Optional[str] = None,
         context_type: Optional[str] = None,
     ) -> Page[ContextItem]:
-        """
-        List all Modus context items in the knowledge base.
-
-        Args:
-            page_size:    Maximum number of items to return (default 25).
-            page_token:   Token from a previous page's ``next_page_token``; omit for the first page.
-            context_type: Filter by type (e.g. ``"note"``, ``"metric"``).
-        """
         validate_page_size(page_size)
         return self._list_page(page_size, page_token, context_type)
 
@@ -70,7 +64,6 @@ class ContextItemsResource:
         )
 
     def get(self, uid: str) -> ContextItem:
-        """Retrieve a Modus context item by its UID."""
         safe_uid = quote(uid, safe="")
         data = with_retry(
             lambda: self._http.get(f"/api/v1/context/items/{safe_uid}"),
@@ -78,9 +71,22 @@ class ContextItemsResource:
         )
         return ContextItem.model_validate(data)
 
-    def update(self, uid: str, **kwargs: Any) -> ContextItem:
-        """Update a Modus context item (``title``, ``description``, ``content``, ``verification_status``, etc.)."""
-        payload = ContextItemUpdate(**kwargs).model_dump(by_alias=True, exclude_none=True)
+    def update(
+        self,
+        uid: str,
+        *,
+        title: Optional[str] = None,
+        description: Optional[str] = None,
+        content: Optional[Any] = None,
+        verification_status: Optional[str] = None,
+    ) -> ContextItem:
+        """Update a context item."""
+        payload = ContextItemUpdate(
+            title=title,
+            description=description,
+            content=content,
+            verification_status=verification_status,
+        ).model_dump(by_alias=True, exclude_none=True)
         safe_uid = quote(uid, safe="")
         with_retry(
             lambda: self._http.patch(f"/api/v1/context/items/{safe_uid}", json=payload),
@@ -109,14 +115,6 @@ class AsyncContextItemsResource:
         page_token: Optional[str] = None,
         context_type: Optional[str] = None,
     ) -> AsyncPage[ContextItem]:
-        """
-        List all Modus context items in the knowledge base.
-
-        Args:
-            page_size:    Maximum number of items to return (default 25).
-            page_token:   Token from a previous page's ``next_page_token``; omit for the first page.
-            context_type: Filter by type (e.g. ``"note"``, ``"metric"``).
-        """
         validate_page_size(page_size)
         return await self._list_page(page_size, page_token, context_type)
 
@@ -139,7 +137,6 @@ class AsyncContextItemsResource:
         )
 
     async def get(self, uid: str) -> ContextItem:
-        """Retrieve a Modus context item by its UID."""
         safe_uid = quote(uid, safe="")
         data = await async_with_retry(
             lambda: self._http.get(f"/api/v1/context/items/{safe_uid}"),
@@ -147,8 +144,21 @@ class AsyncContextItemsResource:
         )
         return ContextItem.model_validate(data)
 
-    async def update(self, uid: str, **kwargs: Any) -> ContextItem:
-        payload = ContextItemUpdate(**kwargs).model_dump(by_alias=True, exclude_none=True)
+    async def update(
+        self,
+        uid: str,
+        *,
+        title: Optional[str] = None,
+        description: Optional[str] = None,
+        content: Optional[Any] = None,
+        verification_status: Optional[str] = None,
+    ) -> ContextItem:
+        payload = ContextItemUpdate(
+            title=title,
+            description=description,
+            content=content,
+            verification_status=verification_status,
+        ).model_dump(by_alias=True, exclude_none=True)
         safe_uid = quote(uid, safe="")
         await async_with_retry(
             lambda: self._http.patch(f"/api/v1/context/items/{safe_uid}", json=payload),

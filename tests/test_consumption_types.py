@@ -1,7 +1,6 @@
 """Verify consumption Skill/Agent expose only identity fields."""
-import pytest
-from modus.types.skills import Skill
 from modus.types.agents import Agent
+from modus.types.skills import Skill
 
 
 def test_skill_has_no_variation_field():

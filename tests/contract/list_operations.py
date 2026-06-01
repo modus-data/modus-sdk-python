@@ -24,11 +24,7 @@ REJECTED_LIST_RESPONSE_BODY: Dict[str, Any] = {
 }
 
 # OpenAPI GET operations with pageSize not yet exposed on the Python SDK.
-SDK_LIST_OPS_EXCLUDED: frozenset[str] = frozenset(
-    {
-        "MemoriesController_list",
-    }
-)
+SDK_LIST_OPS_EXCLUDED: frozenset[str] = frozenset()
 
 FORBIDDEN_RESPONSE_KEYS = frozenset({"items", "data", "results"})
 
@@ -90,6 +86,11 @@ SAMPLE_RUN: Dict[str, Any] = {
     "status": "completed",
     "startedAt": "2026-01-01T00:00:00.000Z",
     "endedAt": "2026-01-01T01:00:00.000Z",
+}
+
+SAMPLE_MEMORY: Dict[str, Any] = {
+    "id": "mem_01",
+    "memory": "User prefers bullet points.",
 }
 
 SAMPLE_CONVERSATION_LIST_ITEM: Dict[str, Any] = {
@@ -174,6 +175,11 @@ def _conversations_management_invoke(client: Client) -> Any:
     return client.skills.conversations(42).list(
         42, page_size=25, page_token="tok_abc"
     )
+
+
+def _memories_invoke(client: Client) -> Any:
+    assert isinstance(client, ModusManagement)
+    return client.skills.memories(42).list(page_size=25, page_token="tok_abc")
 
 
 SDK_AIP_LIST_OPERATIONS: List[ListOperationSpec] = [
@@ -268,6 +274,15 @@ SDK_AIP_LIST_OPERATIONS: List[ListOperationSpec] = [
         sample_item=SAMPLE_CONVERSATION_LIST_ITEM,
         client_kind="management",
         invoke=_conversations_management_invoke,
+    ),
+    ListOperationSpec(
+        operation_id="MemoriesController_list",
+        mock_url_suffix="/api/v1/skills/42/memories",
+        items_key="memories",
+        wrong_items_key="skills",
+        sample_item=SAMPLE_MEMORY,
+        client_kind="management",
+        invoke=_memories_invoke,
     ),
 ]
 

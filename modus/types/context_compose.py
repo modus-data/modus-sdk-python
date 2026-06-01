@@ -1,14 +1,17 @@
 """Public types for skill context composition."""
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import List
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
+
+from .._wire.context_compose import _ComposeSkillContextResponseWire
+from .compose import ContextComposeItem
 
 
 class SkillContextComposition(BaseModel):
-    """Result of POST /api/v1/skills/{id}/context (RAG compose, no LLM)."""
+    """Context items Modus selected for a skill query (no chat response)."""
 
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -16,6 +19,15 @@ class SkillContextComposition(BaseModel):
         extra="allow",
     )
 
-    context_items: List[Dict[str, Any]]
+    context_items: List[ContextComposeItem]
     original_count: int
     session_id: str
+
+
+def composition_from_wire(wire: _ComposeSkillContextResponseWire) -> SkillContextComposition:
+    """Build public composition from API response."""
+    return SkillContextComposition(
+        context_items=[ContextComposeItem.model_validate(item) for item in wire.context_items],
+        original_count=wire.original_count,
+        session_id=wire.session_id,
+    )

@@ -15,6 +15,7 @@ from ..._wire.agent_runs import (
     _ListAutomationRunsResponseWire,
 )
 from ...types.agent_runs import AgentRun, AgentRunListItem
+from ...types.json_blob import JsonObject
 from ...types.pagination import AsyncPage, Page
 
 
@@ -32,7 +33,11 @@ def _translate_run_item(wire: _AutomationRunListItemWire) -> AgentRunListItem:
         ended_at=wire.ended_at,
         duration_ms=wire.duration_ms,
         summary=wire.summary,
-        pending_approval=wire.pending_approval,
+        pending_approval=(
+            JsonObject.model_validate(wire.pending_approval)
+            if wire.pending_approval is not None
+            else None
+        ),
     )
 
 
@@ -163,7 +168,11 @@ class AgentRunsResource:
             status=wire.status,
             started_at=wire.started_at,
             ended_at=wire.ended_at,
-            history=wire.history,
+            history=(
+                [JsonObject.model_validate(item) for item in wire.history]
+                if wire.history is not None
+                else None
+            ),
         )
 
 
@@ -294,5 +303,9 @@ class AsyncAgentRunsResource:
             status=wire.status,
             started_at=wire.started_at,
             ended_at=wire.ended_at,
-            history=wire.history,
+            history=(
+                [JsonObject.model_validate(item) for item in wire.history]
+                if wire.history is not None
+                else None
+            ),
         )

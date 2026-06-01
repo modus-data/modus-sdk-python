@@ -1,3 +1,3 @@
 from .skills import AsyncSkillsResource, SkillsResource
 
-__all__ = ["SkillsResource", "AsyncSkillsResource"]
+__all__ = ["AsyncSkillsResource", "SkillsResource"]

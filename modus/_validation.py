@@ -5,6 +5,7 @@ before making a network call. They raise ``ValueError`` — caller-visible bugs,
 not server-side conditions.
 """
 from __future__ import annotations
+
 from typing import Optional, Union
 
 # modus-api MAX_PAGE_SIZE (context list + values surfaces).

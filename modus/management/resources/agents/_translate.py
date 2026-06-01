@@ -5,9 +5,12 @@ guardrails always read from accessConfig.
 """
 from __future__ import annotations
 
-from ...types.access import AccessConfig
-from ...types.agents import Agent
 from ..._wire.agents import _AgentWire
+from ...types.access import AccessConfig
+from ...types.agent_selection import parse_agent_selection
+from ...types.agents import Agent
+from ...types.triggers import parse_trigger
+from ...types.workflow import parse_workflow_structure
 
 
 def _translate_agent(wire: _AgentWire) -> Agent:
@@ -29,6 +32,11 @@ def _translate_agent(wire: _AgentWire) -> Agent:
         # Variation fields
         instructions=variation.get("instructions"),
         model=variation.get("model"),
+        trigger=parse_trigger(variation.get("trigger")),
+        agent_selection=parse_agent_selection(variation.get("agentSelection") or variation.get("agent_selection")),
+        workflow_structure=parse_workflow_structure(
+            variation.get("workflowStructure") or variation.get("workflow_structure")
+        ),
         # Access config
         guardrails=access_raw.get("guardrails", []),
         access_config=AccessConfig(

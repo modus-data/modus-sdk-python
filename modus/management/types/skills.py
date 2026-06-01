@@ -1,13 +1,16 @@
 """Skill model for the management SDK — flat, variation fields at top level."""
 
 from __future__ import annotations
+
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 
 from .access import AccessConfig
+from .json_blob import JsonObject
+from .toolset import Toolset
 
 SkillStatus = Literal["draft", "active", "deleted"]
 
@@ -46,11 +49,11 @@ class Skill(BaseModel):
     instructions: Optional[List[str]] = None
     model: Optional[str] = None
     expected_output: Optional[str] = None
-    toolset: Optional[Dict[str, Any]] = None
-    connection_set: Optional[List[Any]] = None
-    context_selections: Optional[List[Any]] = None
-    interfaces: Optional[List[Any]] = None
-    evaluations: Optional[List[Any]] = None
+    toolset: Optional[Toolset] = None
+    connection_set: Optional[List[JsonObject]] = None
+    context_selections: Optional[List[JsonObject]] = None
+    interfaces: Optional[List[JsonObject]] = None
+    evaluations: Optional[List[JsonObject]] = None
 
     # Guardrails — from accessConfig, always present (default [])
     guardrails: List[str] = []

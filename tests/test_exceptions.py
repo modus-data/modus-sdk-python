@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
-import pytest
+
 import httpx
-from modus._http import _raise_for_status, _wrap_network_error
+import pytest
 from modus._exceptions import (
     AuthenticationError,
     ConflictError,
@@ -16,6 +16,7 @@ from modus._exceptions import (
     RateLimitError,
     UnprocessableError,
 )
+from modus._http import _raise_for_status, _wrap_network_error
 
 
 def resp(

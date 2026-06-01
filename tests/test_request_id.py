@@ -1,6 +1,5 @@
 import httpx
 import pytest
-import respx
 from modus._http import _raise_for_status
 
 

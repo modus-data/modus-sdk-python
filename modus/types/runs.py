@@ -1,9 +1,9 @@
 """SSE event types for chat streaming."""
 
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Union
-
 
 # ---------------------------------------------------------------------------
 # SSE event types — used by _streaming.py

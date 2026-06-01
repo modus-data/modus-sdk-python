@@ -1,5 +1,6 @@
 """Wire model for Agent — matches backend AgentDto exactly."""
 from __future__ import annotations
+
 from datetime import datetime
 from typing import Any, Dict, Optional
 

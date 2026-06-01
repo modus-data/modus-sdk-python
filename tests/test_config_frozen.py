@@ -1,5 +1,6 @@
-import pytest
 from dataclasses import FrozenInstanceError
+
+import pytest
 from modus._config import ModusConfig
 
 

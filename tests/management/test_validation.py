@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 import respx
-from modus.management import ModusManagement
 from modus._config import ModusConfig
+from modus.management import ModusManagement
 
 
 def _client() -> ModusManagement:

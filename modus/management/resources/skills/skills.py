@@ -1,20 +1,26 @@
 """Skills resource — /api/v1/skills (full CRUD, management SDK)"""
 
 from __future__ import annotations
-from typing import Any, Dict, List, Optional, Union
+
+from typing import List, Optional, Union
 from urllib.parse import quote
 
 from modus._config import ModusConfig
 from modus._http import AsyncHttpClient, HttpClient
-from modus._retry import async_with_retry, with_retry
 from modus._pagination import aip_list_params, build_aip_page_mapped, build_async_aip_page_mapped
+from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_id, validate_page_size
-from ..._wire.skills import _SkillWire
 from modus.types.pagination import AsyncPage, Page
+
+from ..._wire.skills import _SkillWire
+from ...types.access import AccessConfigInput, dump_access_config
+from ...types.json_blob import JsonObjectListInput, dump_json_object_list
 from ...types.skills import Skill
-from .conversations import AsyncConversationsResource, ConversationsResource
+from ...types.toolset import ToolsetInput, dump_toolset
 from ._translate import _translate_skill
 from ._update_body import _SkillCreateBody, _SkillUpdateBody
+from .conversations import AsyncConversationsResource, ConversationsResource
+from .memories import AsyncMemoriesResource, MemoriesResource
 
 
 def _map_skill(raw: dict) -> Skill:
@@ -43,6 +49,10 @@ class SkillsResource:
     def conversations(self, skill_id: Union[int, str]) -> ConversationsResource:
         """Access Modus skill conversations (pass ``skill_id`` to ``list`` and ``get``)."""
         return self._conversations
+
+    def memories(self, skill_id: Union[int, str]) -> MemoriesResource:
+        """Return the memories sub-resource scoped to ``skill_id``."""
+        return MemoriesResource(self._http, self._config, skill_id)
 
     def list(
         self,
@@ -90,19 +100,25 @@ class SkillsResource:
         description: Optional[str] = None,
         expected_output: Optional[str] = None,
         instructions: Optional[List[str]] = None,
-        toolset: Optional[Dict[str, Any]] = None,
+        toolset: Optional[ToolsetInput] = None,
         model: Optional[str] = None,
-        connection_set: Optional[List[Dict[str, Any]]] = None,
-        context_selections: Optional[List[Dict[str, Any]]] = None,
-        interfaces: Optional[List[Dict[str, Any]]] = None,
-        access_config: Optional[Dict[str, Any]] = None,
+        connection_set: Optional[JsonObjectListInput] = None,
+        context_selections: Optional[JsonObjectListInput] = None,
+        interfaces: Optional[JsonObjectListInput] = None,
+        access_config: Optional[AccessConfigInput] = None,
     ) -> Skill:
         """Create a new Modus skill in the organisation."""
         body = _SkillCreateBody(
             name=name, description=description, expected_output=expected_output,
-            instructions=instructions, toolset=toolset, model=model,
-            connection_set=connection_set, context_selections=context_selections,
-            interfaces=interfaces, access_config=access_config,
+            instructions=instructions,
+            toolset=dump_toolset(toolset),
+            model=model,
+            connection_set=dump_json_object_list(connection_set, field_name="connection_set"),
+            context_selections=dump_json_object_list(
+                context_selections, field_name="context_selections"
+            ),
+            interfaces=dump_json_object_list(interfaces, field_name="interfaces"),
+            access_config=dump_access_config(access_config),
         ).model_dump(by_alias=True, exclude_none=True)
         raw = with_retry(
             lambda: self._http.post("/api/v1/skills", json=body),
@@ -118,20 +134,27 @@ class SkillsResource:
         description: Optional[str] = None,
         expected_output: Optional[str] = None,
         instructions: Optional[List[str]] = None,
-        toolset: Optional[Dict[str, Any]] = None,
+        toolset: Optional[ToolsetInput] = None,
         model: Optional[str] = None,
-        connection_set: Optional[List[Dict[str, Any]]] = None,
-        context_selections: Optional[List[Dict[str, Any]]] = None,
-        interfaces: Optional[List[Dict[str, Any]]] = None,
-        access_config: Optional[Dict[str, Any]] = None,
+        connection_set: Optional[JsonObjectListInput] = None,
+        context_selections: Optional[JsonObjectListInput] = None,
+        interfaces: Optional[JsonObjectListInput] = None,
+        access_config: Optional[AccessConfigInput] = None,
         manager_id: Optional[str] = None,
     ) -> Skill:
         """Update a Modus skill's configuration."""
         body = _SkillUpdateBody(
             name=name, description=description, expected_output=expected_output,
-            instructions=instructions, toolset=toolset, model=model,
-            connection_set=connection_set, context_selections=context_selections,
-            interfaces=interfaces, access_config=access_config, manager_id=manager_id,
+            instructions=instructions,
+            toolset=dump_toolset(toolset),
+            model=model,
+            connection_set=dump_json_object_list(connection_set, field_name="connection_set"),
+            context_selections=dump_json_object_list(
+                context_selections, field_name="context_selections"
+            ),
+            interfaces=dump_json_object_list(interfaces, field_name="interfaces"),
+            access_config=dump_access_config(access_config),
+            manager_id=manager_id,
         ).model_dump(by_alias=True, exclude_none=True)
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")
@@ -171,6 +194,9 @@ class AsyncSkillsResource:
     def conversations(self, skill_id: Union[int, str]) -> AsyncConversationsResource:
         """Access Modus skill conversations (pass ``skill_id`` to ``list`` and ``get``)."""
         return self._conversations
+
+    def memories(self, skill_id: Union[int, str]) -> AsyncMemoriesResource:
+        return AsyncMemoriesResource(self._http, self._config, skill_id)
 
     async def list(
         self,
@@ -216,17 +242,25 @@ class AsyncSkillsResource:
     async def create(
         self, name: str, *,
         description: Optional[str] = None, expected_output: Optional[str] = None,
-        instructions: Optional[List[str]] = None, toolset: Optional[Dict[str, Any]] = None,
-        model: Optional[str] = None, connection_set: Optional[List[Dict[str, Any]]] = None,
-        context_selections: Optional[List[Dict[str, Any]]] = None,
-        interfaces: Optional[List[Dict[str, Any]]] = None,
-        access_config: Optional[Dict[str, Any]] = None,
+        instructions: Optional[List[str]] = None,
+        toolset: Optional[ToolsetInput] = None,
+        model: Optional[str] = None,
+        connection_set: Optional[JsonObjectListInput] = None,
+        context_selections: Optional[JsonObjectListInput] = None,
+        interfaces: Optional[JsonObjectListInput] = None,
+        access_config: Optional[AccessConfigInput] = None,
     ) -> Skill:
         body = _SkillCreateBody(
             name=name, description=description, expected_output=expected_output,
-            instructions=instructions, toolset=toolset, model=model,
-            connection_set=connection_set, context_selections=context_selections,
-            interfaces=interfaces, access_config=access_config,
+            instructions=instructions,
+            toolset=dump_toolset(toolset),
+            model=model,
+            connection_set=dump_json_object_list(connection_set, field_name="connection_set"),
+            context_selections=dump_json_object_list(
+                context_selections, field_name="context_selections"
+            ),
+            interfaces=dump_json_object_list(interfaces, field_name="interfaces"),
+            access_config=dump_access_config(access_config),
         ).model_dump(by_alias=True, exclude_none=True)
         raw = await async_with_retry(
             lambda: self._http.post("/api/v1/skills", json=body),
@@ -238,18 +272,26 @@ class AsyncSkillsResource:
         self, skill_id: Union[int, str], *,
         name: Optional[str] = None, description: Optional[str] = None,
         expected_output: Optional[str] = None, instructions: Optional[List[str]] = None,
-        toolset: Optional[Dict[str, Any]] = None, model: Optional[str] = None,
-        connection_set: Optional[List[Dict[str, Any]]] = None,
-        context_selections: Optional[List[Dict[str, Any]]] = None,
-        interfaces: Optional[List[Dict[str, Any]]] = None,
-        access_config: Optional[Dict[str, Any]] = None,
+        toolset: Optional[ToolsetInput] = None,
+        model: Optional[str] = None,
+        connection_set: Optional[JsonObjectListInput] = None,
+        context_selections: Optional[JsonObjectListInput] = None,
+        interfaces: Optional[JsonObjectListInput] = None,
+        access_config: Optional[AccessConfigInput] = None,
         manager_id: Optional[str] = None,
     ) -> Skill:
         body = _SkillUpdateBody(
             name=name, description=description, expected_output=expected_output,
-            instructions=instructions, toolset=toolset, model=model,
-            connection_set=connection_set, context_selections=context_selections,
-            interfaces=interfaces, access_config=access_config, manager_id=manager_id,
+            instructions=instructions,
+            toolset=dump_toolset(toolset),
+            model=model,
+            connection_set=dump_json_object_list(connection_set, field_name="connection_set"),
+            context_selections=dump_json_object_list(
+                context_selections, field_name="context_selections"
+            ),
+            interfaces=dump_json_object_list(interfaces, field_name="interfaces"),
+            access_config=dump_access_config(access_config),
+            manager_id=manager_id,
         ).model_dump(by_alias=True, exclude_none=True)
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")

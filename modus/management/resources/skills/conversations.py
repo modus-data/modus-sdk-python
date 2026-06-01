@@ -1,5 +1,6 @@
 """Modus skill conversations — /api/v1/skills/:id/conversations (management SDK)"""
 from __future__ import annotations
+
 from typing import Optional, Union
 from urllib.parse import quote
 
@@ -12,8 +13,9 @@ from modus._pagination import (
 )
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_id, validate_page_size
-from ...types.conversations import Conversation, ConversationListItem
 from modus.types.pagination import AsyncPage, Page
+
+from ...types.conversations import Conversation, ConversationListItem
 
 
 class ConversationsResource:

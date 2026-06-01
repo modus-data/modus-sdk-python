@@ -1,8 +1,7 @@
 """Test wire model parsing for management SDK."""
 
-from modus.management._wire.skills import _SkillWire
 from modus.management._wire.agents import _AgentWire
-
+from modus.management._wire.skills import _SkillWire
 
 SKILL_LIST_WIRE = {
     "id": 10, "slug": "snowflake-analyst", "name": "Snowflake Analyst",
@@ -66,10 +65,10 @@ def test_agent_wire_parses_list_row():
 
 # --- Public type translators (Task 7) -----------------------------------------
 
-from modus.management.resources.skills._translate import _translate_skill
 from modus.management.resources.agents._translate import _translate_agent
-from modus.management.types.skills import Skill
+from modus.management.resources.skills._translate import _translate_skill
 from modus.management.types.agents import Agent
+from modus.management.types.skills import Skill
 
 
 def test_translate_skill_list_row_has_none_variation_fields():
@@ -97,8 +96,10 @@ def test_translate_skill_detail_row_flattens_variation():
     assert skill.instructions == ["You are a Snowflake analyst.", "Use SQL."]
     assert skill.model == "gpt-4o"
     assert skill.expected_output == "JSON rows"
-    assert skill.toolset == {"sql": {"enabled": True}}
-    assert skill.connection_set == [{"connectionId": "conn-001"}]
+    assert skill.toolset is not None
+    assert skill.toolset.model_dump().get("sql") == {"enabled": True}
+    assert skill.connection_set is not None
+    assert skill.connection_set[0].model_dump(by_alias=True).get("connectionId") == "conn-001"
 
 
 def test_translate_skill_has_no_variation_attribute():

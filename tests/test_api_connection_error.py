@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 from modus._exceptions import APIConnectionError, ModusError
 from modus._retry import with_retry
 

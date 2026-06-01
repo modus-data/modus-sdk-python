@@ -1,6 +1,5 @@
 """Regression: uid path params must be URL-encoded in context items methods."""
 import httpx
-import pytest
 import respx
 from modus import Modus
 
