@@ -33,6 +33,11 @@
       ],
       "default": null,
       "title": "Description"
+    },
+    "hasUnpublishedChanges": {
+      "default": false,
+      "title": "HasUnpublishedChanges",
+      "type": "boolean"
     }
   },
   "required": [

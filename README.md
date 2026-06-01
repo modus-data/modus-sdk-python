@@ -53,18 +53,18 @@ List endpoints return a `Page[T]`. Iterating gives the current page.
 Use `.auto_paging_iter()` to iterate across all pages.
 
 ```python
-# Current page only (default 20 items)
-page = client.skills.list(limit=20)
+# Current page only (default 25 items)
+page = client.skills.list(page_size=25)
 for skill in page:
     print(skill.name)
 
-# All pages
+# All pages (follows nextPageToken via page.next_page_token)
 for skill in client.skills.list().auto_paging_iter():
     print(skill.name)
 
 # Manual control
 if page.has_next_page():
-    next_page = page.get_next_page()
+    next_page = page.get_next_page()  # uses page_token under the hood
 ```
 
 ## Async
@@ -130,7 +130,7 @@ client.agents.chat(agent_id, "Run report", model=MODEL)
 client.agents.runs.list(agent_id, page_size=20)
 ```
 
-See [`sdk/python/examples/`](../examples/), [`SDK_PYTHON_LOCAL_DEV.md`](../examples/SDK_PYTHON_LOCAL_DEV.md) (local API), and [`sdk/docs/CHAT_AND_STREAMING.md`](../../docs/CHAT_AND_STREAMING.md).
+See [`sdk/python/examples/`](../examples/), [`SDK_PYTHON_LOCAL_DEV.md`](../docs/SDK_PYTHON_LOCAL_DEV.md) (local API), and [`sdk/docs/CHAT_AND_STREAMING.md`](../../docs/CHAT_AND_STREAMING.md).
 
 ## Status
 

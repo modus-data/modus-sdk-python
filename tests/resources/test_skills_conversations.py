@@ -40,13 +40,8 @@ def make_conversation() -> dict:
 
 # ── Validation ────────────────────────────────────────────────────────────────
 
-def test_conversations_list_rejects_invalid_page(client):
-    with pytest.raises(ValueError, match="page must be >= 1"):
-        client.skills.conversations.list(42, page=0)
-
-
 def test_conversations_list_rejects_invalid_page_size(client):
-    with pytest.raises(ValueError, match="page_size must be >= 1"):
+    with pytest.raises(ValueError, match="page_size must be a positive int"):
         client.skills.conversations.list(42, page_size=0)
 
 
@@ -57,10 +52,8 @@ def test_conversations_list_returns_list_items(client):
     """list() returns ConversationListItem, not full Conversation objects."""
     respx.get(f"{BASE}/api/v1/skills/42/conversations").mock(
         return_value=httpx.Response(200, json={
-            "items": [make_list_item(0)],
-            "totalCount": 1,
-            "page": 0,
-            "pageSize": 20,
+            "conversations": [make_list_item(0)],
+            "nextPageToken": None,
         })
     )
     page = client.skills.conversations.list(42)
@@ -75,55 +68,54 @@ def test_conversations_list_returns_list_items(client):
 
 
 @respx.mock
-def test_conversations_list_sends_zero_based_page_to_api(client):
-    """SDK page is 1-based; the API receives 0-based. Page 1 → sends page=0."""
+def test_conversations_list_sends_aip_params(client):
+    """First page sends pageSize only; pageToken omitted."""
     route = respx.get(f"{BASE}/api/v1/skills/42/conversations").mock(
         return_value=httpx.Response(200, json={
-            "items": [], "totalCount": 0, "page": 0, "pageSize": 20,
+            "conversations": [],
+            "nextPageToken": None,
         })
     )
-    client.skills.conversations.list(42)  # default page=1
+    client.skills.conversations.list(42, page_size=25)
     params = route.calls[0].request.url.params
-    assert params["page"] == "0", "page=1 (SDK) must map to page=0 (API)"
+    assert params["pageSize"] == "25"
+    assert "pageToken" not in params
+    assert "page" not in params
 
 
 @respx.mock
-def test_conversations_list_page_offset_conversion(client):
-    """SDK page=3 must send page=2 to the API (0-based)."""
+def test_conversations_list_sends_page_token(client):
     route = respx.get(f"{BASE}/api/v1/skills/42/conversations").mock(
         return_value=httpx.Response(200, json={
-            "items": [], "totalCount": 0, "page": 2, "pageSize": 10,
+            "conversations": [],
+            "nextPageToken": None,
         })
     )
-    client.skills.conversations.list(42, page=3, page_size=10)
+    client.skills.conversations.list(42, page_size=10, page_token="tok_abc")
     params = route.calls[0].request.url.params
-    assert params["page"] == "2"
     assert params["pageSize"] == "10"
+    assert params["pageToken"] == "tok_abc"
 
 
 @respx.mock
 def test_conversations_list_has_next_page(client):
-    """has_next_page is True when page * page_size < totalCount."""
     respx.get(f"{BASE}/api/v1/skills/42/conversations").mock(
         return_value=httpx.Response(200, json={
-            "items": [make_list_item(i) for i in range(5)],
-            "totalCount": 12,
-            "page": 0,
-            "pageSize": 5,
+            "conversations": [make_list_item(i) for i in range(2)],
+            "nextPageToken": "tok_next",
         })
     )
-    page = client.skills.conversations.list(42, page_size=5)
+    page = client.skills.conversations.list(42, page_size=2)
     assert page.has_next_page() is True
+    assert page.next_page_token == "tok_next"
 
 
 @respx.mock
 def test_conversations_list_no_next_page(client):
     respx.get(f"{BASE}/api/v1/skills/42/conversations").mock(
         return_value=httpx.Response(200, json={
-            "items": [],
-            "totalCount": 3,
-            "page": 0,
-            "pageSize": 20,
+            "conversations": [],
+            "nextPageToken": None,
         })
     )
     page = client.skills.conversations.list(42)
@@ -132,19 +124,15 @@ def test_conversations_list_no_next_page(client):
 
 @respx.mock
 def test_conversations_auto_paging_iter(client):
-    """auto_paging_iter walks offset pages transparently."""
+    """auto_paging_iter follows nextPageToken."""
     respx.get(f"{BASE}/api/v1/skills/42/conversations").mock(side_effect=[
         httpx.Response(200, json={
-            "items": [make_list_item(0), make_list_item(1)],
-            "totalCount": 4,
-            "page": 0,
-            "pageSize": 2,
+            "conversations": [make_list_item(0), make_list_item(1)],
+            "nextPageToken": "tok_p2",
         }),
         httpx.Response(200, json={
-            "items": [make_list_item(2), make_list_item(3)],
-            "totalCount": 4,
-            "page": 1,
-            "pageSize": 2,
+            "conversations": [make_list_item(2), make_list_item(3)],
+            "nextPageToken": None,
         }),
     ])
 
@@ -153,6 +141,8 @@ def test_conversations_auto_paging_iter(client):
     assert len(all_threads) == 4
     assert all_threads[0].thread_id == "thread-0"
     assert all_threads[3].thread_id == "thread-3"
+    assert respx.calls.call_count == 2
+    assert respx.calls[1].request.url.params["pageToken"] == "tok_p2"
 
 
 # ── Get ───────────────────────────────────────────────────────────────────────

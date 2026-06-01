@@ -5,7 +5,8 @@ from modus import AsyncModus, Modus
 from modus._exceptions import AuthenticationError
 
 
-def test_sync_client_init():
+def test_sync_client_init(monkeypatch):
+    monkeypatch.delenv("MODUS_BASE_URL", raising=False)
     client = Modus(api_key="modus_testkey")
     assert repr(client) == "Modus(base_url='https://api.modus.com')"
 
@@ -40,8 +41,8 @@ def test_sync_client_has_skills():
     assert hasattr(client.skills, "conversations")
 
 
-def test_sync_client_does_not_expose_legacy_run_helpers():
-    """Legacy placeholders removed in favor of chat/chat_stream."""
+def test_sync_client_has_chat_not_old_run_stubs():
+    """run()/stream() stubs are not on the public surface; use chat/chat_stream."""
     client = Modus(api_key="modus_test")
     assert not hasattr(client.skills, "run")
     assert not hasattr(client.skills, "stream")
@@ -84,7 +85,8 @@ def test_explicit_base_url_takes_precedence_over_env(monkeypatch):
     assert "9999" in repr(client)
 
 
-def test_async_client_init():
+def test_async_client_init(monkeypatch):
+    monkeypatch.delenv("MODUS_BASE_URL", raising=False)
     client = AsyncModus(api_key="modus_testkey")
     assert repr(client) == "AsyncModus(base_url='https://api.modus.com')"
 

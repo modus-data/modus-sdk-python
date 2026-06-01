@@ -6,7 +6,12 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
-## [0.2.0] — 2026-05-29
+### Changed
+
+- List pagination uses Google AIP-158 throughout: `page_size` / `page_token` on
+  list methods, `pageSize` / `pageToken` on the wire, `Page.next_page_token`
+  from `nextPageToken`. Applies to `skills.list`, `skills.conversations.list`,
+  and management mirrors.
 
 ### Added
 
@@ -25,6 +30,43 @@ Versioning: [SemVer](https://semver.org/)
 
 - `DoneEvent` and SSE parser now carry `thread_id` from the `done` frame.
 - Error SSE frames may use an `error` field (OpenAPI `SkillChatErrorEventDto`).
+
+## [0.1.3] — 2026-05-31
+
+Bugfix release: align list pagination with modus-api AIP-158 (tag `sdk-python/v0.1.3`
+when publishing). Latest tagged release before this is `sdk-python/v0.1.2`.
+
+### Fixed
+
+- List endpoints (`skills.list`, `agents.list`, `context.items.list`,
+  `context.items.list_values`, and management mirrors) now send AIP-158
+  `pageSize` / `pageToken` and parse plural response keys (`skills`, `agents`,
+  `contextItems`, `values`, `nextPageToken`). Fixes `400` errors against
+  modus-api after PR #2252.
+- `context.items.lookup` parses `{ "item": … | null }` responses (no match
+  returns `None` instead of raising validation errors).
+- Examples `list_skills.py` / `list_agents.py` use `ModusManagement` for
+  configuration detail (timestamps, variation fields).
+
+### Changed
+
+- All paginated list methods (`skills.list`, `agents.list`, `context.items.list`,
+  `skills.conversations.list`, management mirrors, etc.) use `page_size` and
+  `page_token` (AIP-158 `pageSize` / `pageToken` on the wire). `Page.next_page_token`
+  maps from `nextPageToken` for iteration.
+- `validate_limit` renamed to `validate_page_size` (`list_values` enforces
+  max page size 200 client-side).
+- Context item list filter sends `contextTypes` (array) per OpenAPI.
+
+### Added
+
+- `tests/test_openapi_list_operations.py` — guards list query params against
+  `openapi/v1.json` (rejects non-AIP `limit` / `cursor` on list calls).
+- `tests/examples/test_example_imports.py` — `run_all.sh` scripts exist; examples
+  avoid management-only fields on consumption types.
+- `tests/integration/` — optional `-m integration` live API smoke tests.
+- Examples: `run_all.sh` auto-loads monorepo env/venv; per-script timing; heartbeat
+  in full mode only.
 
 ## [0.1.2] — 2026-05-28
 
@@ -75,7 +117,7 @@ conversations.
 - `ModusError.__init__` has new optional keyword arguments (`request_id`, `response_headers`, `body`, `code`)
 - `client.skills.run()` and `client.skills.stream()` removed from the public surface (no matching `@PublicApi` operation). Use `chat()` / `chat_stream()` since 0.2.0.
 - `client.agents.runs.list()` removed from the public surface. The backend endpoint `GET /api/v1/agents/:id/runs` has no `@PublicApi` decorator and rejects PAT tokens.
-- Public exports removed from `modus`: `RunResult`, `RunCancelledError`, `StreamTimeoutError`. The classes still exist as internal scaffolding for v0.3 (`modus.types.runs`, `modus._exceptions`) but are no longer part of the public API.
+- Public exports removed from `modus`: `RunCancelledError`, `StreamTimeoutError` (internal in `modus._exceptions`). SSE event types remain in `modus.types.runs`.
 - `examples/run_skill_when_ready.py` and `examples/chat_demo/` removed; both demonstrated APIs that are not in the spec. They will be re-added in v0.3 once the run endpoint lands.
 
 ### Contract principle

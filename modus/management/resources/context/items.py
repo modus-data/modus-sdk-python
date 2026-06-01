@@ -6,10 +6,26 @@ from urllib.parse import quote
 
 from modus._config import ModusConfig
 from modus._http import AsyncHttpClient, HttpClient
-from modus._pagination import build_async_page, build_page
+from modus._pagination import (
+    aip_list_params,
+    build_aip_page,
+    build_async_aip_page,
+)
 from modus._retry import async_with_retry, with_retry
+from modus._validation import validate_page_size
 from ...types.context import ContextItem, ContextItemDeletion, ContextItemUpdate
 from modus.types.pagination import AsyncPage, Page
+
+
+def _context_list_params(
+    page_size: int,
+    page_token: Optional[str],
+    context_type: Optional[str],
+) -> Dict[str, Any]:
+    extra: Dict[str, Any] = {}
+    if context_type is not None:
+        extra["contextTypes"] = [context_type]
+    return aip_list_params(page_size, page_token, **extra)
 
 
 class ContextItemsResource:
@@ -17,23 +33,33 @@ class ContextItemsResource:
         self._http = http
         self._config = config
 
-    def list(self, *, limit: int = 20, cursor: Optional[str] = None,
-             context_type: Optional[str] = None) -> Page[ContextItem]:
-        return self._list_page(limit, cursor, context_type)
+    def list(
+        self,
+        *,
+        page_size: int = 25,
+        page_token: Optional[str] = None,
+        context_type: Optional[str] = None,
+    ) -> Page[ContextItem]:
+        validate_page_size(page_size)
+        return self._list_page(page_size, page_token, context_type)
 
-    def _list_page(self, limit: int, cursor: Optional[str],
-                   context_type: Optional[str]) -> Page[ContextItem]:
-        params: Dict[str, Any] = {"limit": limit}
-        if cursor:
-            params["cursor"] = cursor
-        if context_type:
-            params["contextType"] = context_type
+    def _list_page(
+        self,
+        page_size: int,
+        page_token: Optional[str],
+        context_type: Optional[str],
+    ) -> Page[ContextItem]:
+        params = _context_list_params(page_size, page_token, context_type)
         data = with_retry(
             lambda: self._http.get("/api/v1/context/items", params=params),
             self._config.max_retries,
         )
-        return build_page(data, ContextItem,
-                          lambda cur: self._list_page(limit, cur, context_type))
+        return build_aip_page(
+            data,
+            "contextItems",
+            ContextItem,
+            lambda cur: self._list_page(page_size, cur, context_type),
+        )
 
     def get(self, uid: str) -> ContextItem:
         safe_uid = quote(uid, safe="")
@@ -67,23 +93,33 @@ class AsyncContextItemsResource:
         self._http = http
         self._config = config
 
-    async def list(self, *, limit: int = 20, cursor: Optional[str] = None,
-                   context_type: Optional[str] = None) -> AsyncPage[ContextItem]:
-        return await self._list_page(limit, cursor, context_type)
+    async def list(
+        self,
+        *,
+        page_size: int = 25,
+        page_token: Optional[str] = None,
+        context_type: Optional[str] = None,
+    ) -> AsyncPage[ContextItem]:
+        validate_page_size(page_size)
+        return await self._list_page(page_size, page_token, context_type)
 
-    async def _list_page(self, limit: int, cursor: Optional[str],
-                         context_type: Optional[str]) -> AsyncPage[ContextItem]:
-        params: Dict[str, Any] = {"limit": limit}
-        if cursor:
-            params["cursor"] = cursor
-        if context_type:
-            params["contextType"] = context_type
+    async def _list_page(
+        self,
+        page_size: int,
+        page_token: Optional[str],
+        context_type: Optional[str],
+    ) -> AsyncPage[ContextItem]:
+        params = _context_list_params(page_size, page_token, context_type)
         data = await async_with_retry(
             lambda: self._http.get("/api/v1/context/items", params=params),
             self._config.max_retries,
         )
-        return build_async_page(data, ContextItem,
-                                lambda cur: self._list_page(limit, cur, context_type))
+        return build_async_aip_page(
+            data,
+            "contextItems",
+            ContextItem,
+            lambda cur: self._list_page(page_size, cur, context_type),
+        )
 
     async def get(self, uid: str) -> ContextItem:
         safe_uid = quote(uid, safe="")

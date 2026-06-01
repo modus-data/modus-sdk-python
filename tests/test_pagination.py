@@ -4,7 +4,7 @@ import pytest
 from modus.types.pagination import AsyncPage, Page
 
 
-def _make_page(items, next_cursor=None, pages=None):
+def _make_page(items, next_page_token=None, pages=None):
     """Helper: create a Page with a fetch function cycling through `pages`."""
     call_count = {"n": 0}
 
@@ -16,7 +16,7 @@ def _make_page(items, next_cursor=None, pages=None):
             return _make_page(new_items, new_cursor, pages[idx + 1:] if idx + 1 < len(pages) else None)
         raise ValueError("Unexpected page fetch")
 
-    return Page(items=items, next_cursor=next_cursor, _fetch_page=fetch)
+    return Page(items=items, next_page_token=next_page_token, _fetch_page=fetch)
 
 
 def test_iterate_current_page_only():
@@ -25,24 +25,24 @@ def test_iterate_current_page_only():
 
 
 def test_has_next_page_true():
-    page = _make_page([1], next_cursor="cur_abc")
+    page = _make_page([1], next_page_token="cur_abc")
     assert page.has_next_page() is True
 
 
 def test_has_next_page_false():
-    page = _make_page([1], next_cursor=None)
+    page = _make_page([1], next_page_token=None)
     assert page.has_next_page() is False
 
 
 def test_get_next_page():
     next_page = _make_page([4, 5])
-    page = Page(items=[1, 2, 3], next_cursor="cur", _fetch_page=lambda _: next_page)
+    page = Page(items=[1, 2, 3], next_page_token="cur", _fetch_page=lambda _: next_page)
     result = page.get_next_page()
     assert list(result) == [4, 5]
 
 
 def test_get_next_page_raises_when_no_next():
-    page = _make_page([1], next_cursor=None)
+    page = _make_page([1], next_page_token=None)
     with pytest.raises(ValueError, match="No next page"):
         page.get_next_page()
 
@@ -53,15 +53,15 @@ def test_auto_paging_iter_single_page():
 
 
 def test_auto_paging_iter_two_pages():
-    page2 = _make_page([3, 4], next_cursor=None)
-    page1 = Page(items=[1, 2], next_cursor="c1", _fetch_page=lambda _: page2)
+    page2 = _make_page([3, 4], next_page_token=None)
+    page1 = Page(items=[1, 2], next_page_token="c1", _fetch_page=lambda _: page2)
     assert list(page1.auto_paging_iter()) == [1, 2, 3, 4]
 
 
 def test_auto_paging_iter_three_pages():
-    page3 = _make_page([5], next_cursor=None)
-    page2 = Page(items=[3, 4], next_cursor="c2", _fetch_page=lambda _: page3)
-    page1 = Page(items=[1, 2], next_cursor="c1", _fetch_page=lambda _: page2)
+    page3 = _make_page([5], next_page_token=None)
+    page2 = Page(items=[3, 4], next_page_token="c2", _fetch_page=lambda _: page3)
+    page1 = Page(items=[1, 2], next_page_token="c1", _fetch_page=lambda _: page2)
     assert list(page1.auto_paging_iter()) == [1, 2, 3, 4, 5]
 
 
@@ -71,7 +71,7 @@ def test_len():
 
 
 def test_repr_with_next():
-    page = _make_page([1, 2], next_cursor="abc")
+    page = _make_page([1, 2], next_page_token="abc")
     assert "has_next_page=True" in repr(page)
     assert "count=2" in repr(page)
 
@@ -86,7 +86,7 @@ def test_repr_without_next():
 # ---------------------------------------------------------------------------
 
 
-def _make_async_page(items, next_cursor=None, pages=None):
+def _make_async_page(items, next_page_token=None, pages=None):
     """Helper: create an AsyncPage with an async fetch function."""
 
     async def fetch(cursor):
@@ -95,7 +95,7 @@ def _make_async_page(items, next_cursor=None, pages=None):
             return _make_async_page(new_items, new_cursor, pages[1:] if len(pages) > 1 else None)
         raise ValueError("Unexpected page fetch")
 
-    return AsyncPage(items=items, next_cursor=next_cursor, _fetch_page=fetch)
+    return AsyncPage(items=items, next_page_token=next_page_token, _fetch_page=fetch)
 
 
 def test_async_page_iterate_current_page():
@@ -109,14 +109,14 @@ def test_async_page_len():
 
 
 def test_async_page_repr():
-    page = _make_async_page([1, 2], next_cursor="x")
+    page = _make_async_page([1, 2], next_page_token="x")
     assert "has_next_page=True" in repr(page)
     assert "count=2" in repr(page)
 
 
 def test_async_page_has_next_page():
-    assert _make_async_page([1], next_cursor="c").has_next_page() is True
-    assert _make_async_page([1], next_cursor=None).has_next_page() is False
+    assert _make_async_page([1], next_page_token="c").has_next_page() is True
+    assert _make_async_page([1], next_page_token=None).has_next_page() is False
 
 
 @pytest.mark.asyncio
@@ -124,14 +124,14 @@ async def test_async_page_get_next_page():
     async def fetch(_cursor):
         return _make_async_page([4, 5])
 
-    page = AsyncPage(items=[1, 2, 3], next_cursor="c", _fetch_page=fetch)
+    page = AsyncPage(items=[1, 2, 3], next_page_token="c", _fetch_page=fetch)
     result = await page.get_next_page()
     assert list(result) == [4, 5]
 
 
 @pytest.mark.asyncio
 async def test_async_page_get_next_page_raises_when_no_next():
-    page = _make_async_page([1], next_cursor=None)
+    page = _make_async_page([1], next_page_token=None)
     with pytest.raises(ValueError, match="No next page"):
         await page.get_next_page()
 
@@ -145,28 +145,28 @@ async def test_async_page_auto_paging_iter_single_page():
 
 @pytest.mark.asyncio
 async def test_async_page_auto_paging_iter_two_pages():
-    page2 = _make_async_page([3, 4], next_cursor=None)
+    page2 = _make_async_page([3, 4], next_page_token=None)
 
     async def fetch(_cursor):
         return page2
 
-    page1 = AsyncPage(items=[1, 2], next_cursor="c1", _fetch_page=fetch)
+    page1 = AsyncPage(items=[1, 2], next_page_token="c1", _fetch_page=fetch)
     result = [item async for item in page1.auto_paging_iter()]
     assert result == [1, 2, 3, 4]
 
 
 @pytest.mark.asyncio
 async def test_async_page_auto_paging_iter_three_pages():
-    page3 = _make_async_page([5], next_cursor=None)
+    page3 = _make_async_page([5], next_page_token=None)
 
     async def fetch2(_cursor):
         return page3
 
-    page2 = AsyncPage(items=[3, 4], next_cursor="c2", _fetch_page=fetch2)
+    page2 = AsyncPage(items=[3, 4], next_page_token="c2", _fetch_page=fetch2)
 
     async def fetch1(_cursor):
         return page2
 
-    page1 = AsyncPage(items=[1, 2], next_cursor="c1", _fetch_page=fetch1)
+    page1 = AsyncPage(items=[1, 2], next_page_token="c1", _fetch_page=fetch1)
     result = [item async for item in page1.auto_paging_iter()]
     assert result == [1, 2, 3, 4, 5]

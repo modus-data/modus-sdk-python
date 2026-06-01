@@ -33,19 +33,19 @@ def test_config_accepts_zero_max_retries():
     assert cfg.max_retries == 0
 
 
-# ---- limit validation on list endpoints --------------------------------------
+# ---- page_size validation on list endpoints ----------------------------------
 
 @respx.mock
-def test_skills_list_rejects_zero_limit():
-    with pytest.raises(ValueError, match="limit must be a positive int"):
-        _client().skills.list(limit=0)
+def test_skills_list_rejects_zero_page_size():
+    with pytest.raises(ValueError, match="page_size must be a positive int"):
+        _client().skills.list(page_size=0)
     assert not respx.calls
 
 
 @respx.mock
-def test_agents_list_rejects_negative_limit():
-    with pytest.raises(ValueError, match="limit must be a positive int"):
-        _client().agents.list(limit=-3)
+def test_agents_list_rejects_negative_page_size():
+    with pytest.raises(ValueError, match="page_size must be a positive int"):
+        _client().agents.list(page_size=-3)
     assert not respx.calls
 
 

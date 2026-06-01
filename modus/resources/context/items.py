@@ -7,10 +7,40 @@ from urllib.parse import quote
 from ..._config import ModusConfig
 from ..._exceptions import NotFoundError
 from ..._http import AsyncHttpClient, HttpClient
-from ..._pagination import build_async_page, build_page
+from ..._pagination import (
+    aip_list_params,
+    build_aip_page,
+    build_aip_page_raw,
+    build_async_aip_page,
+    build_async_aip_page_raw,
+)
 from ..._retry import async_with_retry, with_retry
+from ..._validation import DEFAULT_MAX_PAGE_SIZE, validate_page_size
 from ...types.context import ContextItem
 from ...types.pagination import AsyncPage, Page
+
+
+def _context_list_params(
+    page_size: int,
+    page_token: Optional[str],
+    context_type: Optional[str],
+) -> Dict[str, Any]:
+    extra: Dict[str, Any] = {}
+    if context_type is not None:
+        extra["contextTypes"] = [context_type]
+    return aip_list_params(page_size, page_token, **extra)
+
+
+def _parse_lookup_response(raw: Dict[str, Any]) -> Optional[ContextItem]:
+    """Map AIP lookup body ``{ \"item\": row | null }`` to ContextItem or None."""
+    if not isinstance(raw, dict):
+        raise ValueError("Unexpected lookup response shape")
+    if "item" in raw:
+        row = raw.get("item")
+        if row is None:
+            return None
+        return ContextItem.model_validate(row)
+    return ContextItem.model_validate(raw)
 
 
 class ContextItemsResource:
@@ -21,39 +51,37 @@ class ContextItemsResource:
     def list(
         self,
         *,
-        limit: int = 20,
-        cursor: Optional[str] = None,
+        page_size: int = 25,
+        page_token: Optional[str] = None,
         context_type: Optional[str] = None,
     ) -> Page[ContextItem]:
         """
         List context items in the knowledge base.
 
         Args:
-            limit:        Items per page (default 20).
-            cursor:       Pagination cursor.
+            page_size:    Items per page (default 25, AIP-158).
+            page_token:   Opaque token from a previous page's ``next_page_token``.
             context_type: Filter by type e.g. "note", "metric", "saved_query".
         """
-        return self._list_page(limit, cursor, context_type)
+        validate_page_size(page_size)
+        return self._list_page(page_size, page_token, context_type)
 
     def _list_page(
         self,
-        limit: int,
-        cursor: Optional[str],
+        page_size: int,
+        page_token: Optional[str],
         context_type: Optional[str],
     ) -> Page[ContextItem]:
-        params: Dict[str, Any] = {"limit": limit}
-        if cursor:
-            params["cursor"] = cursor
-        if context_type:
-            params["contextType"] = context_type
+        params = _context_list_params(page_size, page_token, context_type)
         data = with_retry(
             lambda: self._http.get("/api/v1/context/items", params=params),
             self._config.max_retries,
         )
-        return build_page(
+        return build_aip_page(
             data,
+            "contextItems",
             ContextItem,
-            lambda cur: self._list_page(limit, cur, context_type),
+            lambda cur: self._list_page(page_size, cur, context_type),
         )
 
     def get(self, uid: str) -> ContextItem:
@@ -98,7 +126,7 @@ class ContextItemsResource:
             )
         except NotFoundError:
             return None
-        return ContextItem.model_validate(raw)
+        return _parse_lookup_response(raw)
 
     def list_values(
         self,
@@ -106,8 +134,8 @@ class ContextItemsResource:
         context_type: str,
         content_key_path: str,
         *,
-        limit: int = 20,
-        cursor: Optional[str] = None,
+        page_size: int = 25,
+        page_token: Optional[str] = None,
     ) -> Page[Dict[str, Any]]:
         """
         List paginated values for a specific field within a context item.
@@ -118,42 +146,40 @@ class ContextItemsResource:
                                partition-aware reads, e.g. "salesforce_object_field").
             content_key_path:  Dot-separated JSON path to the array of values inside
                                ``content``. Example: ``"enumValues"`` or ``"sample.values"``.
-            limit:             Items per page (default 20, max 200).
-            cursor:            Pagination cursor from a previous page's next_cursor.
+            page_size:         Values per page (default 25, max 200).
+            page_token:        Opaque token from a previous page's ``next_page_token``.
 
         Returns:
             Page[Dict[str, Any]] of value entries.
         """
-        return self._list_values_page(uid, context_type, content_key_path, limit, cursor)
+        validate_page_size(page_size, max_page_size=DEFAULT_MAX_PAGE_SIZE)
+        return self._list_values_page(uid, context_type, content_key_path, page_size, page_token)
 
     def _list_values_page(
         self,
         uid: str,
         context_type: str,
         content_key_path: str,
-        limit: int,
-        cursor: Optional[str],
+        page_size: int,
+        page_token: Optional[str],
     ) -> Page[Dict[str, Any]]:
         safe_uid = quote(uid, safe="")
-        params: Dict[str, Any] = {
-            "contextType": context_type,
-            "contentKeyPath": content_key_path,
-            "limit": limit,
-        }
-        if cursor:
-            params["cursor"] = cursor
+        params = aip_list_params(
+            page_size,
+            page_token,
+            contextType=context_type,
+            contentKeyPath=content_key_path,
+        )
         data = with_retry(
             lambda: self._http.get(f"/api/v1/context/items/{safe_uid}/values", params=params),
             self._config.max_retries,
         )
-        if not isinstance(data, dict) or "items" not in data:
-            raise ValueError("Unexpected response shape from /values: missing 'items'")
-        raw_items = data.get("items", [])
-        next_cursor = data.get("nextCursor") or None
-        return Page(
-            items=raw_items,
-            next_cursor=next_cursor,
-            _fetch_page=lambda cur: self._list_values_page(uid, context_type, content_key_path, limit, cur),
+        return build_aip_page_raw(
+            data,
+            "values",
+            lambda cur: self._list_values_page(
+                uid, context_type, content_key_path, page_size, cur
+            ),
         )
 
 
@@ -165,31 +191,29 @@ class AsyncContextItemsResource:
     async def list(
         self,
         *,
-        limit: int = 20,
-        cursor: Optional[str] = None,
+        page_size: int = 25,
+        page_token: Optional[str] = None,
         context_type: Optional[str] = None,
     ) -> AsyncPage[ContextItem]:
-        return await self._list_page(limit, cursor, context_type)
+        validate_page_size(page_size)
+        return await self._list_page(page_size, page_token, context_type)
 
     async def _list_page(
         self,
-        limit: int,
-        cursor: Optional[str],
+        page_size: int,
+        page_token: Optional[str],
         context_type: Optional[str],
     ) -> AsyncPage[ContextItem]:
-        params: Dict[str, Any] = {"limit": limit}
-        if cursor:
-            params["cursor"] = cursor
-        if context_type:
-            params["contextType"] = context_type
+        params = _context_list_params(page_size, page_token, context_type)
         data = await async_with_retry(
             lambda: self._http.get("/api/v1/context/items", params=params),
             self._config.max_retries,
         )
-        return build_async_page(
+        return build_async_aip_page(
             data,
+            "contextItems",
             ContextItem,
-            lambda cur: self._list_page(limit, cur, context_type),
+            lambda cur: self._list_page(page_size, cur, context_type),
         )
 
     async def get(self, uid: str) -> ContextItem:
@@ -228,7 +252,7 @@ class AsyncContextItemsResource:
             )
         except NotFoundError:
             return None
-        return ContextItem.model_validate(raw)
+        return _parse_lookup_response(raw)
 
     async def list_values(
         self,
@@ -236,8 +260,8 @@ class AsyncContextItemsResource:
         context_type: str,
         content_key_path: str,
         *,
-        limit: int = 20,
-        cursor: Optional[str] = None,
+        page_size: int = 25,
+        page_token: Optional[str] = None,
     ) -> AsyncPage[Dict[str, Any]]:
         """
         List paginated values for a specific field within a context item.
@@ -248,40 +272,40 @@ class AsyncContextItemsResource:
                                partition-aware reads, e.g. "salesforce_object_field").
             content_key_path:  Dot-separated JSON path to the array of values inside
                                ``content``. Example: ``"enumValues"`` or ``"sample.values"``.
-            limit:             Items per page (default 20, max 200).
-            cursor:            Pagination cursor from a previous page's next_cursor.
+            page_size:         Values per page (default 25, max 200).
+            page_token:        Opaque token from a previous page's ``next_page_token``.
 
         Returns:
             AsyncPage[Dict[str, Any]] of value entries.
         """
-        return await self._list_values_page(uid, context_type, content_key_path, limit, cursor)
+        validate_page_size(page_size, max_page_size=DEFAULT_MAX_PAGE_SIZE)
+        return await self._list_values_page(
+            uid, context_type, content_key_path, page_size, page_token
+        )
 
     async def _list_values_page(
         self,
         uid: str,
         context_type: str,
         content_key_path: str,
-        limit: int,
-        cursor: Optional[str],
+        page_size: int,
+        page_token: Optional[str],
     ) -> AsyncPage[Dict[str, Any]]:
         safe_uid = quote(uid, safe="")
-        params: Dict[str, Any] = {
-            "contextType": context_type,
-            "contentKeyPath": content_key_path,
-            "limit": limit,
-        }
-        if cursor:
-            params["cursor"] = cursor
+        params = aip_list_params(
+            page_size,
+            page_token,
+            contextType=context_type,
+            contentKeyPath=content_key_path,
+        )
         data = await async_with_retry(
             lambda: self._http.get(f"/api/v1/context/items/{safe_uid}/values", params=params),
             self._config.max_retries,
         )
-        if not isinstance(data, dict) or "items" not in data:
-            raise ValueError("Unexpected response shape from /values: missing 'items'")
-        raw_items = data.get("items", [])
-        next_cursor = data.get("nextCursor") or None
-        return AsyncPage(
-            items=raw_items,
-            next_cursor=next_cursor,
-            _fetch_page=lambda cur: self._list_values_page(uid, context_type, content_key_path, limit, cur),
+        return build_async_aip_page_raw(
+            data,
+            "values",
+            lambda cur: self._list_values_page(
+                uid, context_type, content_key_path, page_size, cur
+            ),
         )

@@ -5,16 +5,20 @@ from typing import Any, Dict, List, Optional, Union
 from urllib.parse import quote
 
 from modus._config import ModusConfig
-from modus._exceptions import ModusError
 from modus._http import AsyncHttpClient, HttpClient
 from modus._retry import async_with_retry, with_retry
-from modus._validation import validate_id, validate_limit
+from modus._pagination import aip_list_params, build_aip_page_mapped, build_async_aip_page_mapped
+from modus._validation import validate_id, validate_page_size
 from ..._wire.skills import _SkillWire
 from modus.types.pagination import AsyncPage, Page
 from ...types.skills import Skill
 from .conversations import AsyncConversationsResource, ConversationsResource
 from ._translate import _translate_skill
 from ._update_body import _SkillCreateBody, _SkillUpdateBody
+
+
+def _map_skill(raw: dict) -> Skill:
+    return _translate_skill(_SkillWire.model_validate(raw))
 
 
 class SkillsResource:
@@ -42,24 +46,27 @@ class SkillsResource:
         # takes skill_id per-call, so just return the shared instance.
         return self._conversations
 
-    def list(self, *, limit: int = 20, cursor: Optional[str] = None) -> Page[Skill]:
-        validate_limit(limit)
-        return self._list_page(limit, cursor)
+    def list(
+        self,
+        *,
+        page_size: int = 25,
+        page_token: Optional[str] = None,
+    ) -> Page[Skill]:
+        validate_page_size(page_size)
+        return self._list_page(page_size, page_token)
 
-    def _list_page(self, limit: int, cursor: Optional[str]) -> Page[Skill]:
-        params: dict = {"limit": limit}
-        if cursor:
-            params["cursor"] = cursor
+    def _list_page(self, page_size: int, page_token: Optional[str]) -> Page[Skill]:
+        params = aip_list_params(page_size, page_token)
         data = with_retry(
             lambda: self._http.get("/api/v1/skills", params=params),
             self._config.max_retries,
         )
-        if not isinstance(data, dict) or "items" not in data:
-            raise ModusError("Unexpected list response: missing 'items'")
-        items = [_translate_skill(_SkillWire.model_validate(r)) for r in data.get("items", [])]
-        next_cursor = data.get("nextCursor") or None
-        return Page(items=items, next_cursor=next_cursor,
-                    _fetch_page=lambda cur: self._list_page(limit, cur))
+        return build_aip_page_mapped(
+            data,
+            "skills",
+            _map_skill,
+            lambda cur: self._list_page(page_size, cur),
+        )
 
     def get(self, skill_id: Union[int, str]) -> Skill:
         """Retrieve a skill with full variation detail (instructions, model, etc.)."""
@@ -155,24 +162,29 @@ class AsyncSkillsResource:
     def conversations(self, skill_id: Union[int, str]) -> AsyncConversationsResource:
         return self._conversations
 
-    async def list(self, *, limit: int = 20, cursor: Optional[str] = None) -> AsyncPage[Skill]:
-        validate_limit(limit)
-        return await self._list_page(limit, cursor)
+    async def list(
+        self,
+        *,
+        page_size: int = 25,
+        page_token: Optional[str] = None,
+    ) -> AsyncPage[Skill]:
+        validate_page_size(page_size)
+        return await self._list_page(page_size, page_token)
 
-    async def _list_page(self, limit: int, cursor: Optional[str]) -> AsyncPage[Skill]:
-        params: dict = {"limit": limit}
-        if cursor:
-            params["cursor"] = cursor
+    async def _list_page(
+        self, page_size: int, page_token: Optional[str]
+    ) -> AsyncPage[Skill]:
+        params = aip_list_params(page_size, page_token)
         data = await async_with_retry(
             lambda: self._http.get("/api/v1/skills", params=params),
             self._config.max_retries,
         )
-        if not isinstance(data, dict) or "items" not in data:
-            raise ModusError("Unexpected list response: missing 'items'")
-        items = [_translate_skill(_SkillWire.model_validate(r)) for r in data.get("items", [])]
-        next_cursor = data.get("nextCursor") or None
-        return AsyncPage(items=items, next_cursor=next_cursor,
-                         _fetch_page=lambda cur: self._list_page(limit, cur))
+        return build_async_aip_page_mapped(
+            data,
+            "skills",
+            _map_skill,
+            lambda cur: self._list_page(page_size, cur),
+        )
 
     async def get(self, skill_id: Union[int, str]) -> Skill:
         validate_id(skill_id, name="skill_id")

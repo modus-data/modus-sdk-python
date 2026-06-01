@@ -5,15 +5,6 @@ from dataclasses import dataclass, field
 from typing import Union
 
 
-@dataclass
-class RunResult:
-    """Legacy alias — prefer :class:`modus.ChatResult`."""
-
-    text: str
-    run_id: str
-    thread_id: str = ""
-
-
 # ---------------------------------------------------------------------------
 # SSE event types — used by _streaming.py
 # ---------------------------------------------------------------------------

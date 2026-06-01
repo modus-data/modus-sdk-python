@@ -62,10 +62,6 @@ def _wrap_network_error(exc: Exception, base_url: str) -> APIConnectionError:
     )
 
 
-# Backward-compat alias (imported by tests/test_exceptions.py)
-_wrap_connect_error = _wrap_network_error
-
-
 # ---------------------------------------------------------------------------
 # Error mapping
 # ---------------------------------------------------------------------------

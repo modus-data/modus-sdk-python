@@ -22,11 +22,20 @@ def _client():
 @respx.mock
 def test_lookup_returns_item_on_match():
     respx.post(f"{BASE}/api/v1/context/items/lookup").mock(
-        return_value=httpx.Response(200, json=ITEM)
+        return_value=httpx.Response(200, json={"item": ITEM})
     )
     item = _client().context.items.lookup("metric", ["finance", "revenue"])
     assert isinstance(item, ContextItem)
     assert item.uid == "abc-123"
+
+
+@respx.mock
+def test_lookup_returns_none_when_item_null():
+    respx.post(f"{BASE}/api/v1/context/items/lookup").mock(
+        return_value=httpx.Response(200, json={"item": None})
+    )
+    result = _client().context.items.lookup("metric", ["nonexistent"])
+    assert result is None
 
 
 @respx.mock
@@ -42,8 +51,8 @@ def test_lookup_returns_none_on_404():
 def test_list_values_returns_page():
     route = respx.get(f"{BASE}/api/v1/context/items/abc-123/values").mock(
         return_value=httpx.Response(200, json={
-            "items": [{"value": 123}, {"value": 456}],
-            "nextCursor": None,
+            "values": [{"value": 123}, {"value": 456}],
+            "nextPageToken": None,
         })
     )
     page = _client().context.items.list_values("abc-123", "metric", "amount")
@@ -57,7 +66,7 @@ def test_list_values_returns_page():
 @respx.mock
 def test_lookup_sends_correct_payload():
     route = respx.post(f"{BASE}/api/v1/context/items/lookup").mock(
-        return_value=httpx.Response(200, json=ITEM)
+        return_value=httpx.Response(200, json={"item": ITEM})
     )
     _client().context.items.lookup("metric", ["finance", "revenue"])
     import json

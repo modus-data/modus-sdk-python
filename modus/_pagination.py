@@ -1,16 +1,16 @@
 """
-Helpers to build Page[T] / AsyncPage[T] from a raw API list response.
+Helpers to build Page[T] / AsyncPage[T] from modus-api AIP-158 list responses.
 
-All list endpoints return the same shape:
-    { "items": [...], "nextCursor": "string-or-null" }
+Public list endpoints return resource-plural arrays and ``nextPageToken``:
+    { "skills": [...], "nextPageToken": "..." }
 
-Resources call build_page() (sync) or build_async_page() (async) and pass a
-fetch_page callable so the Page can transparently fetch further pages without
-knowing about HTTP or config.
+Query params use ``pageSize`` and ``pageToken``. Python resources expose
+``page_size`` / ``page_token``; ``Page.next_page_token`` maps from ``nextPageToken``.
 """
 
 from __future__ import annotations
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Type, TypeVar
+
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Type, TypeVar, Union
 
 from ._exceptions import ModusError
 from .types.pagination import AsyncPage, Page
@@ -18,51 +18,158 @@ from .types.pagination import AsyncPage, Page
 T = TypeVar("T")
 
 
-def build_page(
+def normalize_page_token(token: Optional[str]) -> Optional[str]:
+    """Treat None and blank strings as no page token."""
+    if token is None or not str(token).strip():
+        return None
+    return token
+
+
+def aip_list_params(
+    page_size: int,
+    page_token: Optional[str] = None,
+    **extra: Any,
+) -> Dict[str, Any]:
+    """Build AIP-158 query params (pageSize, pageToken) plus optional filters."""
+    params: Dict[str, Any] = {"pageSize": page_size, **extra}
+    token = normalize_page_token(page_token)
+    if token is not None:
+        params["pageToken"] = token
+    return params
+
+
+def _next_page_token_from_response(data: Dict[str, Any]) -> Optional[str]:
+    return normalize_page_token(data.get("nextPageToken"))
+
+
+def _require_items_list(data: Dict[str, Any], items_key: str) -> List[Any]:
+    """Return ``data[items_key]`` when it is a list; otherwise raise ModusError."""
+    value = data.get(items_key)
+    if not isinstance(value, list):
+        raise ModusError(
+            f"Unexpected list response shape: {items_key!r} must be a list, "
+            f"got {type(value).__name__}. This is likely a backend error."
+        )
+    return value
+
+
+def build_aip_page(
     data: Dict[str, Any],
+    items_key: str,
     item_class: Type[T],
     fetch_page: Callable[[str], Page[T]],
 ) -> Page[T]:
-    """
-    Construct a Page[T] from a raw list-endpoint response dict.
-
-    Args:
-        data:       Parsed JSON dict with "items" and "nextCursor" keys.
-        item_class: Pydantic model class — each raw item is validated via
-                    item_class.model_validate(raw).
-        fetch_page: Callable(cursor) -> Page[T] used for pagination.
-    """
-    if not isinstance(data, dict) or "items" not in data:
+    """Construct Page[T] from an AIP list response with a Pydantic item class."""
+    if not isinstance(data, dict) or items_key not in data:
         raise ModusError(
-            f"Unexpected list response shape: missing 'items'. "
+            f"Unexpected list response shape: missing {items_key!r}. "
             f"Got: {type(data).__name__}. This is likely a backend error."
         )
-    raw_items: List[Dict[str, Any]] = data.get("items", [])
+    raw_items: List[Dict[str, Any]] = _require_items_list(data, items_key)
     items = [item_class.model_validate(raw) for raw in raw_items]  # type: ignore[attr-defined]
-    next_cursor: Optional[str] = data.get("nextCursor") or None
-    return Page(items=items, next_cursor=next_cursor, _fetch_page=fetch_page)
+    return Page(
+        items=items,
+        next_page_token=_next_page_token_from_response(data),
+        _fetch_page=fetch_page,
+    )
 
 
-def build_async_page(
+def build_async_aip_page(
     data: Dict[str, Any],
+    items_key: str,
     item_class: Type[T],
     fetch_page: Callable[[str], Awaitable[AsyncPage[T]]],
 ) -> AsyncPage[T]:
-    """
-    Construct an AsyncPage[T] from a raw list-endpoint response dict.
-
-    Args:
-        data:       Parsed JSON dict with "items" and "nextCursor" keys.
-        item_class: Pydantic model class.
-        fetch_page: Async callable(cursor) -> AsyncPage[T] used for pagination.
-                    Typically a bound method: lambda cur: self._list_page(limit, cur)
-    """
-    if not isinstance(data, dict) or "items" not in data:
+    """Construct AsyncPage[T] from an AIP list response with a Pydantic item class."""
+    if not isinstance(data, dict) or items_key not in data:
         raise ModusError(
-            f"Unexpected list response shape: missing 'items'. "
+            f"Unexpected list response shape: missing {items_key!r}. "
             f"Got: {type(data).__name__}. This is likely a backend error."
         )
-    raw_items: List[Dict[str, Any]] = data.get("items", [])
+    raw_items: List[Dict[str, Any]] = _require_items_list(data, items_key)
     items = [item_class.model_validate(raw) for raw in raw_items]  # type: ignore[attr-defined]
-    next_cursor: Optional[str] = data.get("nextCursor") or None
-    return AsyncPage(items=items, next_cursor=next_cursor, _fetch_page=fetch_page)
+    return AsyncPage(
+        items=items,
+        next_page_token=_next_page_token_from_response(data),
+        _fetch_page=fetch_page,
+    )
+
+
+def build_aip_page_mapped(
+    data: Dict[str, Any],
+    items_key: str,
+    map_item: Callable[[Dict[str, Any]], T],
+    fetch_page: Callable[[str], Page[T]],
+) -> Page[T]:
+    """Construct Page[T] from an AIP list response using a per-item mapper."""
+    if not isinstance(data, dict) or items_key not in data:
+        raise ModusError(
+            f"Unexpected list response shape: missing {items_key!r}. "
+            f"Got: {type(data).__name__}. This is likely a backend error."
+        )
+    raw_items: List[Dict[str, Any]] = _require_items_list(data, items_key)
+    items = [map_item(raw) for raw in raw_items]
+    return Page(
+        items=items,
+        next_page_token=_next_page_token_from_response(data),
+        _fetch_page=fetch_page,
+    )
+
+
+def build_async_aip_page_mapped(
+    data: Dict[str, Any],
+    items_key: str,
+    map_item: Callable[[Dict[str, Any]], T],
+    fetch_page: Callable[[str], Awaitable[AsyncPage[T]]],
+) -> AsyncPage[T]:
+    """Construct AsyncPage[T] from an AIP list response using a per-item mapper."""
+    if not isinstance(data, dict) or items_key not in data:
+        raise ModusError(
+            f"Unexpected list response shape: missing {items_key!r}. "
+            f"Got: {type(data).__name__}. This is likely a backend error."
+        )
+    raw_items: List[Dict[str, Any]] = _require_items_list(data, items_key)
+    items = [map_item(raw) for raw in raw_items]
+    return AsyncPage(
+        items=items,
+        next_page_token=_next_page_token_from_response(data),
+        _fetch_page=fetch_page,
+    )
+
+
+def build_aip_page_raw(
+    data: Dict[str, Any],
+    items_key: str,
+    fetch_page: Callable[[str], Page[Dict[str, Any]]],
+) -> Page[Dict[str, Any]]:
+    """Construct Page[dict] from an AIP list response (e.g. context item values)."""
+    if not isinstance(data, dict) or items_key not in data:
+        raise ModusError(
+            f"Unexpected list response shape: missing {items_key!r}. "
+            f"Got: {type(data).__name__}. This is likely a backend error."
+        )
+    items: List[Dict[str, Any]] = [dict(x) for x in _require_items_list(data, items_key)]
+    return Page(
+        items=items,
+        next_page_token=_next_page_token_from_response(data),
+        _fetch_page=fetch_page,
+    )
+
+
+def build_async_aip_page_raw(
+    data: Dict[str, Any],
+    items_key: str,
+    fetch_page: Callable[[str], Awaitable[AsyncPage[Dict[str, Any]]]],
+) -> AsyncPage[Dict[str, Any]]:
+    """Construct AsyncPage[dict] from an AIP list response."""
+    if not isinstance(data, dict) or items_key not in data:
+        raise ModusError(
+            f"Unexpected list response shape: missing {items_key!r}. "
+            f"Got: {type(data).__name__}. This is likely a backend error."
+        )
+    items: List[Dict[str, Any]] = [dict(x) for x in _require_items_list(data, items_key)]
+    return AsyncPage(
+        items=items,
+        next_page_token=_next_page_token_from_response(data),
+        _fetch_page=fetch_page,
+    )

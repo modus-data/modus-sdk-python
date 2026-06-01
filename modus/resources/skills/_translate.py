@@ -11,4 +11,5 @@ def _translate_skill(wire: _SkillWire) -> Skill:
         name=wire.name,
         status=wire.status,  # type: ignore[arg-type]
         description=wire.description,
+        has_unpublished_changes=wire.has_unpublished_changes,
     )

@@ -12,7 +12,7 @@ BASE = "https://api.modus.com"
 @respx.mock
 def test_agents_list_row_has_none_variation_fields(client, agent_list_row):
     respx.get(f"{BASE}/api/v1/agents").mock(
-        return_value=httpx.Response(200, json={"items": [agent_list_row], "nextCursor": None})
+        return_value=httpx.Response(200, json={"agents": [agent_list_row], "nextPageToken": None})
     )
     agent = client.agents.list().items[0]
     assert isinstance(agent, Agent)

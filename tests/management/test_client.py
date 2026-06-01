@@ -5,7 +5,8 @@ from modus.management import ModusManagement, AsyncModusManagement
 from modus._exceptions import AuthenticationError
 
 
-def test_client_instantiates():
+def test_client_instantiates(monkeypatch):
+    monkeypatch.delenv("MODUS_BASE_URL", raising=False)
     client = ModusManagement(api_key="modus_test_key")
     assert repr(client) == "ModusManagement(base_url='https://api.modus.com')"
 
@@ -48,6 +49,7 @@ def test_client_raises_on_bad_key_format():
         ModusManagement(api_key="sk-wrong-format")
 
 
-def test_async_client_instantiates():
+def test_async_client_instantiates(monkeypatch):
+    monkeypatch.delenv("MODUS_BASE_URL", raising=False)
     client = AsyncModusManagement(api_key="modus_test_key")
     assert repr(client) == "AsyncModusManagement(base_url='https://api.modus.com')"

@@ -41,6 +41,16 @@
       ],
       "default": null,
       "title": "Description"
+    },
+    "hasUnpublishedChanges": {
+      "default": false,
+      "title": "HasUnpublishedChanges",
+      "type": "boolean"
+    },
+    "isEnabled": {
+      "default": false,
+      "title": "IsEnabled",
+      "type": "boolean"
     }
   },
   "required": [

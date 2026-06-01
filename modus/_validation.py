@@ -5,13 +5,20 @@ before making a network call. They raise ``ValueError`` — caller-visible bugs,
 not server-side conditions.
 """
 from __future__ import annotations
-from typing import Union
+from typing import Optional, Union
+
+# modus-api MAX_PAGE_SIZE (context list + values surfaces).
+DEFAULT_MAX_PAGE_SIZE = 200
 
 
-def validate_limit(limit: int) -> None:
-    """Reject limit values that the backend would reject anyway, locally."""
-    if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
-        raise ValueError(f"limit must be a positive int, got {limit!r}")
+def validate_page_size(page_size: int, *, max_page_size: Optional[int] = None) -> None:
+    """Reject page_size values that the backend would reject anyway, locally."""
+    if not isinstance(page_size, int) or isinstance(page_size, bool) or page_size < 1:
+        raise ValueError(f"page_size must be a positive int, got {page_size!r}")
+    if max_page_size is not None and page_size > max_page_size:
+        raise ValueError(
+            f"page_size must be <= {max_page_size}, got {page_size!r}"
+        )
 
 
 def validate_id(resource_id: Union[int, str], *, name: str = "id") -> None:

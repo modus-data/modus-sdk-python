@@ -15,7 +15,7 @@ class _SkillWire(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
-        extra="ignore",  # forward-compat: new backend fields don't break parsing
+        extra="ignore",  # ignore unknown API fields
     )
 
     id: int

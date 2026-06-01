@@ -62,6 +62,11 @@ def test_translate_skill_status_preserved():
     assert public.is_draft is False
 
 
+def test_translate_skill_has_unpublished_changes():
+    wire = WIRE_SKILL.model_copy(update={"has_unpublished_changes": True})
+    assert _translate_skill(wire).has_unpublished_changes is True
+
+
 def test_translate_agent_populates_all_public_fields():
     public = _translate_agent(WIRE_AGENT)
     assert isinstance(public, Agent)
@@ -74,3 +79,9 @@ def test_translate_agent_populates_all_public_fields():
 def test_translate_agent_type_preserved():
     public = _translate_agent(WIRE_AGENT)
     assert public.type == "task"
+
+
+def test_translate_agent_flags():
+    public = _translate_agent(WIRE_AGENT)
+    assert public.is_enabled is True
+    assert public.has_unpublished_changes is False

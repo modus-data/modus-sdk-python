@@ -12,7 +12,7 @@ BASE = "https://api.modus.com"
 @respx.mock
 def test_skills_list_returns_page_of_skills(client, skill_list_row):
     respx.get(f"{BASE}/api/v1/skills").mock(
-        return_value=httpx.Response(200, json={"items": [skill_list_row], "nextCursor": None})
+        return_value=httpx.Response(200, json={"skills": [skill_list_row], "nextPageToken": None})
     )
     page = client.skills.list()
     assert len(page) == 1
@@ -27,7 +27,7 @@ def test_skills_list_returns_page_of_skills(client, skill_list_row):
 def test_skills_list_row_has_none_instructions(client, skill_list_row):
     """List rows must have variation fields as None."""
     respx.get(f"{BASE}/api/v1/skills").mock(
-        return_value=httpx.Response(200, json={"items": [skill_list_row], "nextCursor": None})
+        return_value=httpx.Response(200, json={"skills": [skill_list_row], "nextPageToken": None})
     )
     skill = client.skills.list().items[0]
     assert skill.instructions is None
@@ -38,7 +38,7 @@ def test_skills_list_row_has_none_instructions(client, skill_list_row):
 def test_skills_list_row_has_guardrails(client, skill_list_row):
     """guardrails must be surfaced from accessConfig on list rows."""
     respx.get(f"{BASE}/api/v1/skills").mock(
-        return_value=httpx.Response(200, json={"items": [skill_list_row], "nextCursor": None})
+        return_value=httpx.Response(200, json={"skills": [skill_list_row], "nextPageToken": None})
     )
     skill = client.skills.list().items[0]
     assert skill.guardrails == ["no-pii"]

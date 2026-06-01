@@ -6,6 +6,7 @@ from urllib.parse import quote
 
 from ..._config import ModusConfig
 from ..._http import AsyncHttpClient, HttpClient
+from ..._pagination import normalize_page_token
 from ..._retry import async_with_retry, with_retry
 from ..._validation import validate_id
 from ..._wire.agent_runs import (
@@ -15,12 +16,6 @@ from ..._wire.agent_runs import (
 )
 from ...types.agent_runs import AgentRun, AgentRunListItem
 from ...types.pagination import AsyncPage, Page
-
-
-def _normalize_page_token(token: Optional[str]) -> Optional[str]:
-    if token is None or not str(token).strip():
-        return None
-    return token
 
 
 def _translate_run_item(wire: _AutomationRunListItemWire) -> AgentRunListItem:
@@ -100,10 +95,10 @@ class AgentRunsResource:
         )
         wire = _ListAutomationRunsResponseWire.model_validate(data)
         items = [_translate_run_item(r) for r in wire.runs]
-        next_cursor = _normalize_page_token(wire.next_page_token)
+        next_page_token = normalize_page_token(wire.next_page_token)
         return Page(
             items=items,
-            next_cursor=next_cursor,
+            next_page_token=next_page_token,
             _fetch_page=lambda tok: self._list_page(
                 agent_id,
                 page_size=page_size,
@@ -211,10 +206,10 @@ class AsyncAgentRunsResource:
         )
         wire = _ListAutomationRunsResponseWire.model_validate(data)
         items = [_translate_run_item(r) for r in wire.runs]
-        next_cursor = _normalize_page_token(wire.next_page_token)
+        next_page_token = normalize_page_token(wire.next_page_token)
         return AsyncPage(
             items=items,
-            next_cursor=next_cursor,
+            next_page_token=next_page_token,
             _fetch_page=lambda tok: self._list_page(
                 agent_id,
                 page_size=page_size,

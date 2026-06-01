@@ -27,6 +27,9 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "integration: live modus-api smoke (requires MODUS_API_KEY and reachable MODUS_BASE_URL)",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["modus"]

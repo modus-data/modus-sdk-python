@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import pytest
 import httpx
-from modus._http import _raise_for_status, _wrap_connect_error
+from modus._http import _raise_for_status, _wrap_network_error
 from modus._exceptions import (
     AuthenticationError,
     ConflictError,
@@ -149,18 +149,18 @@ def test_modus_error_base_message_and_status():
 
 
 # ---------------------------------------------------------------------------
-# _wrap_connect_error — connection failure carries the target URL
+# _wrap_network_error — connection failure carries the target URL
 # ---------------------------------------------------------------------------
 
 
-def test_wrap_connect_error_includes_base_url():
+def test_wrap_network_error_includes_base_url():
     raw = httpx.ConnectError("Connection refused")
-    wrapped = _wrap_connect_error(raw, "https://api.modus.com")
+    wrapped = _wrap_network_error(raw, "https://api.modus.com")
     assert isinstance(wrapped, ModusError)
     assert "https://api.modus.com" in wrapped.message
 
 
-def test_wrap_connect_error_mentions_env_var():
+def test_wrap_network_error_mentions_env_var():
     raw = httpx.ConnectError("getaddrinfo failed")
-    wrapped = _wrap_connect_error(raw, "http://localhost:3000")
+    wrapped = _wrap_network_error(raw, "http://localhost:3000")
     assert "MODUS_BASE_URL" in wrapped.message

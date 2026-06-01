@@ -51,7 +51,7 @@ def test_context_create_saved_query():
 @respx.mock
 def test_context_items_list(client, sample_context_item):
     respx.get(f"{BASE}/api/v1/context/items").mock(
-        return_value=httpx.Response(200, json={"items": [sample_context_item], "nextCursor": None})
+        return_value=httpx.Response(200, json={"contextItems": [sample_context_item], "nextPageToken": None})
     )
     page = client.context.items.list()
     assert len(page) == 1

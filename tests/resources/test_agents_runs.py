@@ -38,7 +38,7 @@ def test_agents_runs_list(client):
     assert isinstance(item, AgentRunListItem)
     assert item.id == "wf_1:temporal-1"
     assert item.status == "completed"
-    assert page.next_cursor == "page-2"
+    assert page.next_page_token == "page-2"
 
 
 @respx.mock

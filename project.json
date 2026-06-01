@@ -18,7 +18,7 @@
       "executor": "nx:run-commands",
       "dependsOn": ["install"],
       "options": {
-        "command": "mkdir -p reports && uv run pytest tests/ -v --junit-xml=reports/pytest-junit.xml --tb=short",
+        "command": "mkdir -p reports && uv run pytest tests/ -v -m \"not integration\" --junit-xml=reports/pytest-junit.xml --tb=short",
         "cwd": "{projectRoot}"
       },
       "cache": true,

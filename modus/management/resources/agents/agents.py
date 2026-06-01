@@ -5,15 +5,19 @@ from typing import Any, Dict, Optional, Union
 from urllib.parse import quote
 
 from modus._config import ModusConfig
-from modus._exceptions import ModusError
 from modus._http import AsyncHttpClient, HttpClient
 from modus._retry import async_with_retry, with_retry
-from modus._validation import validate_id, validate_limit
+from modus._pagination import aip_list_params, build_aip_page_mapped, build_async_aip_page_mapped
+from modus._validation import validate_id, validate_page_size
 from ..._wire.agents import _AgentWire
 from ...types.agents import Agent
 from modus.types.pagination import AsyncPage, Page
 from ._translate import _translate_agent
 from ._update_body import _AgentCreateBody, _AgentUpdateBody
+
+
+def _map_agent(raw: dict) -> Agent:
+    return _translate_agent(_AgentWire.model_validate(raw))
 
 
 class AgentsResource:
@@ -32,24 +36,27 @@ class AgentsResource:
         self._http = http
         self._config = config
 
-    def list(self, *, limit: int = 20, cursor: Optional[str] = None) -> Page[Agent]:
-        validate_limit(limit)
-        return self._list_page(limit, cursor)
+    def list(
+        self,
+        *,
+        page_size: int = 25,
+        page_token: Optional[str] = None,
+    ) -> Page[Agent]:
+        validate_page_size(page_size)
+        return self._list_page(page_size, page_token)
 
-    def _list_page(self, limit: int, cursor: Optional[str]) -> Page[Agent]:
-        params: dict = {"limit": limit}
-        if cursor:
-            params["cursor"] = cursor
+    def _list_page(self, page_size: int, page_token: Optional[str]) -> Page[Agent]:
+        params = aip_list_params(page_size, page_token)
         data = with_retry(
             lambda: self._http.get("/api/v1/agents", params=params),
             self._config.max_retries,
         )
-        if not isinstance(data, dict) or "items" not in data:
-            raise ModusError("Unexpected list response: missing 'items'")
-        items = [_translate_agent(_AgentWire.model_validate(r)) for r in data.get("items", [])]
-        next_cursor = data.get("nextCursor") or None
-        return Page(items=items, next_cursor=next_cursor,
-                    _fetch_page=lambda cur: self._list_page(limit, cur))
+        return build_aip_page_mapped(
+            data,
+            "agents",
+            _map_agent,
+            lambda cur: self._list_page(page_size, cur),
+        )
 
     def get(self, agent_id: Union[int, str]) -> Agent:
         validate_id(agent_id, name="agent_id")
@@ -130,24 +137,29 @@ class AsyncAgentsResource:
         self._http = http
         self._config = config
 
-    async def list(self, *, limit: int = 20, cursor: Optional[str] = None) -> AsyncPage[Agent]:
-        validate_limit(limit)
-        return await self._list_page(limit, cursor)
+    async def list(
+        self,
+        *,
+        page_size: int = 25,
+        page_token: Optional[str] = None,
+    ) -> AsyncPage[Agent]:
+        validate_page_size(page_size)
+        return await self._list_page(page_size, page_token)
 
-    async def _list_page(self, limit: int, cursor: Optional[str]) -> AsyncPage[Agent]:
-        params: dict = {"limit": limit}
-        if cursor:
-            params["cursor"] = cursor
+    async def _list_page(
+        self, page_size: int, page_token: Optional[str]
+    ) -> AsyncPage[Agent]:
+        params = aip_list_params(page_size, page_token)
         data = await async_with_retry(
             lambda: self._http.get("/api/v1/agents", params=params),
             self._config.max_retries,
         )
-        if not isinstance(data, dict) or "items" not in data:
-            raise ModusError("Unexpected list response: missing 'items'")
-        items = [_translate_agent(_AgentWire.model_validate(r)) for r in data.get("items", [])]
-        next_cursor = data.get("nextCursor") or None
-        return AsyncPage(items=items, next_cursor=next_cursor,
-                         _fetch_page=lambda cur: self._list_page(limit, cur))
+        return build_async_aip_page_mapped(
+            data,
+            "agents",
+            _map_agent,
+            lambda cur: self._list_page(page_size, cur),
+        )
 
     async def get(self, agent_id: Union[int, str]) -> Agent:
         validate_id(agent_id, name="agent_id")

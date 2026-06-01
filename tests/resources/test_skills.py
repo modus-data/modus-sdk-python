@@ -12,7 +12,7 @@ BASE = "https://api.modus.com"
 @respx.mock
 def test_skills_list(client, sample_skill):
     respx.get(f"{BASE}/api/v1/skills").mock(
-        return_value=httpx.Response(200, json={"items": [sample_skill], "nextCursor": None})
+        return_value=httpx.Response(200, json={"skills": [sample_skill], "nextPageToken": None})
     )
     page = client.skills.list()
     assert len(page) == 1
@@ -24,31 +24,31 @@ def test_skills_list(client, sample_skill):
 
 
 @respx.mock
-def test_skills_list_default_limit_in_params(client):
+def test_skills_list_default_page_size_in_params(client):
     route = respx.get(f"{BASE}/api/v1/skills").mock(
-        return_value=httpx.Response(200, json={"items": [], "nextCursor": None})
+        return_value=httpx.Response(200, json={"skills": [], "nextPageToken": None})
     )
     client.skills.list()
     assert route.called
-    assert route.calls[0].request.url.params["limit"] == "20"
+    assert route.calls[0].request.url.params["pageSize"] == "25"
 
 
 @respx.mock
-def test_skills_list_custom_limit(client):
+def test_skills_list_custom_page_size(client):
     route = respx.get(f"{BASE}/api/v1/skills").mock(
-        return_value=httpx.Response(200, json={"items": [], "nextCursor": None})
+        return_value=httpx.Response(200, json={"skills": [], "nextPageToken": None})
     )
-    client.skills.list(limit=5)
-    assert route.calls[0].request.url.params["limit"] == "5"
+    client.skills.list(page_size=5)
+    assert route.calls[0].request.url.params["pageSize"] == "5"
 
 
 @respx.mock
 def test_skills_list_pagination(client, sample_skill):
     skill2 = {**sample_skill, "id": 43, "slug": "churn-analysis", "name": "Churn Analysis"}
 
-    respx.get(f"{BASE}/api/v1/skills").mock(side_effect=[
-        httpx.Response(200, json={"items": [sample_skill], "nextCursor": "cursor_abc"}),
-        httpx.Response(200, json={"items": [skill2], "nextCursor": None}),
+    route = respx.get(f"{BASE}/api/v1/skills").mock(side_effect=[
+        httpx.Response(200, json={"skills": [sample_skill], "nextPageToken": "tok_page_2"}),
+        httpx.Response(200, json={"skills": [skill2], "nextPageToken": None}),
     ])
 
     page = client.skills.list()
@@ -58,13 +58,15 @@ def test_skills_list_pagination(client, sample_skill):
     assert len(all_skills) == 2
     assert all_skills[0].id == 42
     assert all_skills[1].id == 43
+    assert route.call_count == 2
+    assert route.calls[1].request.url.params["pageToken"] == "tok_page_2"
 
 
 @respx.mock
 def test_skills_list_iter_current_page_only(client, sample_skill):
     respx.get(f"{BASE}/api/v1/skills").mock(
         return_value=httpx.Response(
-            200, json={"items": [sample_skill], "nextCursor": "has_more"}
+            200, json={"skills": [sample_skill], "nextPageToken": "has_more"}
         )
     )
     page = client.skills.list()

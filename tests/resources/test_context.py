@@ -30,8 +30,8 @@ def test_context_item_title_is_optional(client):
     }
     respx.get(f"{BASE}/api/v1/context/items").mock(
         return_value=httpx.Response(200, json={
-            "items": [item_without_title],
-            "nextCursor": None,
+            "contextItems": [item_without_title],
+            "nextPageToken": None,
         })
     )
     page = client.context.items.list()
@@ -47,8 +47,8 @@ def test_context_item_title_is_optional(client):
 def test_context_items_list(client, sample_context_item):
     respx.get(f"{BASE}/api/v1/context/items").mock(
         return_value=httpx.Response(200, json={
-            "items": [sample_context_item],
-            "nextCursor": None,
+            "contextItems": [sample_context_item],
+            "nextPageToken": None,
         })
     )
     page = client.context.items.list()
@@ -62,10 +62,12 @@ def test_context_items_list(client, sample_context_item):
 @respx.mock
 def test_context_items_list_filter_by_type(client):
     route = respx.get(f"{BASE}/api/v1/context/items").mock(
-        return_value=httpx.Response(200, json={"items": [], "nextCursor": None})
+        return_value=httpx.Response(200, json={"contextItems": [], "nextPageToken": None})
     )
     client.context.items.list(context_type="metric")
-    assert route.calls[0].request.url.params["contextType"] == "metric"
+    url = str(route.calls[0].request.url)
+    assert "contextTypes=metric" in url
+    assert "pageSize=" in url
 
 
 @respx.mock

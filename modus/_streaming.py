@@ -5,7 +5,7 @@ parse_sse_stream() converts raw SSE lines into typed RunEvent objects.
 
 Events and their handling:
     token          -> TokenEvent  (yielded to text_stream)
-    done           -> DoneEvent   (ends iteration, populates RunResult)
+    done           -> DoneEvent   (ends iteration; use ChatResult from chat())
     error          -> ErrorEvent  (raised as ModusError)
     cancelled      -> CancelledEvent (raised as RunCancelledError)
     stream_timeout -> StreamTimeoutEvent (raised as StreamTimeoutError)

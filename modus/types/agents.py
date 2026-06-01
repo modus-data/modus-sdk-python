@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 AgentStatus = Literal["draft", "active", "deleted"]
@@ -30,6 +30,8 @@ class Agent(BaseModel):
     status: AgentStatus
     type: AgentType
     description: Optional[str] = None
+    has_unpublished_changes: bool = Field(default=False, title="HasUnpublishedChanges")
+    is_enabled: bool = Field(default=False, title="IsEnabled")
 
     @property
     def is_active(self) -> bool:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 SkillStatus = Literal["draft", "active", "deleted"]
@@ -28,6 +28,7 @@ class Skill(BaseModel):
     name: str
     status: SkillStatus
     description: Optional[str] = None
+    has_unpublished_changes: bool = Field(default=False, title="HasUnpublishedChanges")
 
     @property
     def is_active(self) -> bool:

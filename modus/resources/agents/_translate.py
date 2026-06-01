@@ -12,4 +12,6 @@ def _translate_agent(wire: _AgentWire) -> Agent:
         status=wire.status,  # type: ignore[arg-type]
         type=wire.type,  # type: ignore[arg-type]
         description=wire.description,
+        has_unpublished_changes=wire.has_unpublished_changes,
+        is_enabled=wire.is_enabled,
     )
