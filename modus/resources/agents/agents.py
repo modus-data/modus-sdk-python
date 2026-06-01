@@ -56,6 +56,7 @@ class AgentsResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> ChatResult:
+        """Send a message to a Modus agent and return the full reply."""
         return chat_buffered(
             self._http,
             "agents",
@@ -73,6 +74,7 @@ class AgentsResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> ChatStream:
+        """Stream a Modus agent chat reply over Server-Sent Events."""
         return chat_stream_session(
             self._http,
             "agents",
@@ -89,11 +91,11 @@ class AgentsResource:
         page_token: Optional[str] = None,
     ) -> Page[Agent]:
         """
-        List agents in the organisation.
+        List all Modus agents in the organisation.
 
         Args:
-            page_size:  Items per page (default 25, AIP-158).
-            page_token: Opaque token from a previous page's ``next_page_token``.
+            page_size:  Maximum number of items to return (default 25).
+            page_token: Token from a previous page's ``next_page_token``; omit for the first page.
         """
         validate_page_size(page_size)
         return self._list_page(page_size, page_token)
@@ -113,10 +115,10 @@ class AgentsResource:
 
     def get(self, agent_id: Union[int, str]) -> Agent:
         """
-        Retrieve an agent by ID or slug.
+        Retrieve a Modus agent by ID or slug.
 
         Raises:
-            NotFoundError: if no agent with this ID/slug exists.
+            NotFoundError: if no Modus agent with this ID or slug exists.
         """
         validate_id(agent_id, name="agent_id")
         safe_id = quote(str(agent_id), safe="")
@@ -150,6 +152,7 @@ class AsyncAgentsResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> ChatResult:
+        """Send a message to a Modus agent and return the full reply."""
         return await chat_buffered_async(
             self._http,
             "agents",
@@ -167,6 +170,7 @@ class AsyncAgentsResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> AsyncChatStream:
+        """Stream a Modus agent chat reply over Server-Sent Events."""
         return chat_stream_session_async(
             self._http,
             "agents",
@@ -182,6 +186,13 @@ class AsyncAgentsResource:
         page_size: int = 25,
         page_token: Optional[str] = None,
     ) -> AsyncPage[Agent]:
+        """
+        List all Modus agents in the organisation.
+
+        Args:
+            page_size:  Maximum number of items to return (default 25).
+            page_token: Token from a previous page's ``next_page_token``; omit for the first page.
+        """
         validate_page_size(page_size)
         return await self._list_page(page_size, page_token)
 
@@ -201,6 +212,12 @@ class AsyncAgentsResource:
         )
 
     async def get(self, agent_id: Union[int, str]) -> Agent:
+        """
+        Retrieve a Modus agent by ID or slug.
+
+        Raises:
+            NotFoundError: if no Modus agent with this ID or slug exists.
+        """
         validate_id(agent_id, name="agent_id")
         safe_id = quote(str(agent_id), safe="")
         data = await async_with_retry(

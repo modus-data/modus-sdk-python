@@ -31,7 +31,9 @@ htmlcov/
 # Environment variables
 .env
 .env.*
-!.env.example
+
+# Test / lint artifacts
+reports/
 
 # hatch-vcs: auto-generated at build time, never committed
 modus/_version.py

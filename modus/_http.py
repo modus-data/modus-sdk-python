@@ -58,7 +58,7 @@ def _wrap_network_error(exc: Exception, base_url: str) -> APIConnectionError:
     """Convert any network-level httpx error into a typed APIConnectionError."""
     return APIConnectionError(
         f"Network error communicating with Modus API at {base_url!r}: {exc}. "
-        "Check connectivity and that MODUS_BASE_URL is correct."
+        "Check connectivity and that base_url is correct."
     )
 
 

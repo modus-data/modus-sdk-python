@@ -160,7 +160,7 @@ def test_wrap_network_error_includes_base_url():
     assert "https://api.modus.com" in wrapped.message
 
 
-def test_wrap_network_error_mentions_env_var():
+def test_wrap_network_error_mentions_base_url():
     raw = httpx.ConnectError("getaddrinfo failed")
     wrapped = _wrap_network_error(raw, "http://localhost:3000")
-    assert "MODUS_BASE_URL" in wrapped.message
+    assert "base_url" in wrapped.message

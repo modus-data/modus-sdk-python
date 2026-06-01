@@ -1,37 +1,9 @@
 """
-Pagination types.
+Pagination types for list endpoints.
 
-All paginated list methods use AIP-158 (``page_size`` / ``page_token`` on the
-wire; ``nextPageToken`` in the response). ``Page.next_page_token`` maps that
-field for iteration via ``get_next_page()`` and ``auto_paging_iter()``.
-
-Page[T] (sync) and AsyncPage[T] follow a Stripe-like iteration pattern:
-  - Iterating a Page gives the CURRENT page's items only.
-  - .auto_paging_iter() transparently fetches all pages.
-  - .get_next_page() manually advances one page.
-
-Example (sync):
-    # Current page only (25 items by default):
-    page = client.skills.list(page_size=25)
-    for skill in page:
-        print(skill.name)
-
-    # All pages (makes additional API calls as needed):
-    for skill in client.skills.list().auto_paging_iter():
-        print(skill.name)
-
-    # Manual control:
-    page = client.skills.list(page_size=10)
-    while True:
-        process(page.items)
-        if not page.has_next_page():
-            break
-        page = page.get_next_page()
-
-Example (async):
-    page = await client.skills.list()
-    async for skill in page.auto_paging_iter():
-        print(skill.name)
+``Page`` and ``AsyncPage`` hold one page of results. Iterating a page yields
+only that page's items; use ``auto_paging_iter()`` to walk all pages, or
+``get_next_page()`` for manual control. See the package README for examples.
 """
 
 from __future__ import annotations

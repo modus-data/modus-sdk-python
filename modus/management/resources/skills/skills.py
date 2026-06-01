@@ -41,9 +41,7 @@ class SkillsResource:
         self._conversations = ConversationsResource(http, config)
 
     def conversations(self, skill_id: Union[int, str]) -> ConversationsResource:
-        """Return the conversations sub-resource scoped to skill_id."""
-        # We wrap it to bind the skill_id — but ConversationsResource already
-        # takes skill_id per-call, so just return the shared instance.
+        """Access Modus skill conversations (pass ``skill_id`` to ``list`` and ``get``)."""
         return self._conversations
 
     def list(
@@ -52,6 +50,13 @@ class SkillsResource:
         page_size: int = 25,
         page_token: Optional[str] = None,
     ) -> Page[Skill]:
+        """
+        List all Modus skills in the organisation.
+
+        Args:
+            page_size:  Maximum number of items to return (default 25).
+            page_token: Token from a previous page's ``next_page_token``; omit for the first page.
+        """
         validate_page_size(page_size)
         return self._list_page(page_size, page_token)
 
@@ -69,7 +74,7 @@ class SkillsResource:
         )
 
     def get(self, skill_id: Union[int, str]) -> Skill:
-        """Retrieve a skill with full variation detail (instructions, model, etc.)."""
+        """Retrieve a Modus skill with full configuration (instructions, model, and related fields)."""
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")
         data = with_retry(
@@ -92,6 +97,7 @@ class SkillsResource:
         interfaces: Optional[List[Dict[str, Any]]] = None,
         access_config: Optional[Dict[str, Any]] = None,
     ) -> Skill:
+        """Create a new Modus skill in the organisation."""
         body = _SkillCreateBody(
             name=name, description=description, expected_output=expected_output,
             instructions=instructions, toolset=toolset, model=model,
@@ -120,6 +126,7 @@ class SkillsResource:
         access_config: Optional[Dict[str, Any]] = None,
         manager_id: Optional[str] = None,
     ) -> Skill:
+        """Update a Modus skill's configuration."""
         body = _SkillUpdateBody(
             name=name, description=description, expected_output=expected_output,
             instructions=instructions, toolset=toolset, model=model,
@@ -135,6 +142,7 @@ class SkillsResource:
         return _translate_skill(_SkillWire.model_validate(raw))
 
     def deploy(self, skill_id: Union[int, str]) -> Skill:
+        """Publish the current draft of a Modus skill."""
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")
         raw = with_retry(
@@ -145,6 +153,7 @@ class SkillsResource:
         return _translate_skill(_SkillWire.model_validate(skill_data))
 
     def delete(self, skill_id: Union[int, str]) -> None:
+        """Delete a Modus skill."""
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")
         with_retry(
@@ -160,6 +169,7 @@ class AsyncSkillsResource:
         self._conversations = AsyncConversationsResource(http, config)
 
     def conversations(self, skill_id: Union[int, str]) -> AsyncConversationsResource:
+        """Access Modus skill conversations (pass ``skill_id`` to ``list`` and ``get``)."""
         return self._conversations
 
     async def list(
@@ -168,6 +178,13 @@ class AsyncSkillsResource:
         page_size: int = 25,
         page_token: Optional[str] = None,
     ) -> AsyncPage[Skill]:
+        """
+        List all Modus skills in the organisation.
+
+        Args:
+            page_size:  Maximum number of items to return (default 25).
+            page_token: Token from a previous page's ``next_page_token``; omit for the first page.
+        """
         validate_page_size(page_size)
         return await self._list_page(page_size, page_token)
 
@@ -187,6 +204,7 @@ class AsyncSkillsResource:
         )
 
     async def get(self, skill_id: Union[int, str]) -> Skill:
+        """Retrieve a Modus skill with full configuration (instructions, model, and related fields)."""
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")
         data = await async_with_retry(

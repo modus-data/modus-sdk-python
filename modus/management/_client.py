@@ -30,8 +30,10 @@ class ModusManagement:
     Args:
         api_key:     Your Modus API key (requires skills:write + agents:write scopes).
                      Falls back to MODUS_API_KEY env var.
-        base_url:    API base URL. Defaults to https://api.modus.com.
-        timeout:     Request timeout in seconds (default 60).
+        base_url:    API origin without a path suffix (default
+                     https://api.modus.com).
+        timeout:     Request timeout as seconds or httpx.Timeout. Default is
+                     5s connect and 300s read.
         max_retries: Retries on 429/5xx (default 2).
 
     Example:
@@ -92,6 +94,14 @@ class ModusManagement:
 class AsyncModusManagement:
     """
     Asynchronous Modus management client.
+
+    Args:
+        api_key:     Modus API key with write scopes. Falls back to MODUS_API_KEY.
+        base_url:    API origin without a path suffix (default
+                     https://api.modus.com).
+        timeout:     Request timeout as seconds or httpx.Timeout. Default is
+                     5s connect and 300s read.
+        max_retries: Retries on 429/5xx (default 2).
 
     Example:
         client = AsyncModusManagement(api_key="modus_xxx")

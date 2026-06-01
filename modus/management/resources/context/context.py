@@ -36,14 +36,14 @@ class ContextResource:
         return CreatedContextItem.model_validate(data)
 
     def create_note(self, title: str, content: str) -> CreatedContextItem:
-        """Add a free-form text note to the knowledge base."""
+        """Add a free-form text note to the Modus knowledge base."""
         return self._create("/api/v1/context/notes", {"title": title, "content": content})
 
     def create_saved_query(
         self, name: str, query: str, *, connection_id: str,
         description: Optional[str] = None, path: Optional[List[str]] = None,
     ) -> CreatedContextItem:
-        """Save a SQL query to the knowledge base."""
+        """Save a SQL query to the Modus knowledge base."""
         payload: Dict[str, Any] = {"name": name, "query": query, "connectionId": connection_id}
         if description is not None:
             payload["description"] = description
@@ -55,7 +55,7 @@ class ContextResource:
         self, url: str, *, title: Optional[str] = None,
         is_crawl: Optional[bool] = None, page_limit: Optional[int] = None,
     ) -> CreatedContextItem:
-        """Add a URL to the knowledge base."""
+        """Add a URL to the Modus knowledge base."""
         payload: Dict[str, Any] = {"url": url}
         if title is not None:
             payload["title"] = title

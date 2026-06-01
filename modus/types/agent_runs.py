@@ -28,7 +28,7 @@ class AgentRunListItem(BaseModel):
 
 
 class AgentRunListPage(BaseModel):
-    """Paginated agent runs (AIP-158 page tokens)."""
+    """Paginated agent runs with optional continuation token."""
 
     model_config = ConfigDict(extra="forbid")
 

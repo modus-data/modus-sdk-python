@@ -32,7 +32,7 @@ def _context_list_params(
 
 
 def _parse_lookup_response(raw: Dict[str, Any]) -> Optional[ContextItem]:
-    """Map AIP lookup body ``{ \"item\": row | null }`` to ContextItem or None."""
+    """Map lookup body ``{ \"item\": row | null }`` to ContextItem or None."""
     if not isinstance(raw, dict):
         raise ValueError("Unexpected lookup response shape")
     if "item" in raw:
@@ -56,11 +56,11 @@ class ContextItemsResource:
         context_type: Optional[str] = None,
     ) -> Page[ContextItem]:
         """
-        List context items in the knowledge base.
+        List all Modus context items in the knowledge base.
 
         Args:
-            page_size:    Items per page (default 25, AIP-158).
-            page_token:   Opaque token from a previous page's ``next_page_token``.
+            page_size:    Maximum number of items to return (default 25).
+            page_token:   Token from a previous page's ``next_page_token``; omit for the first page.
             context_type: Filter by type e.g. "note", "metric", "saved_query".
         """
         validate_page_size(page_size)
@@ -86,10 +86,10 @@ class ContextItemsResource:
 
     def get(self, uid: str) -> ContextItem:
         """
-        Retrieve a single context item by its UID.
+        Retrieve a Modus context item by its UID.
 
         Raises:
-            NotFoundError: if no item with this UID exists.
+            NotFoundError: if no Modus context item with this UID exists.
         """
         safe_uid = quote(uid, safe="")
         data = with_retry(
@@ -106,15 +106,15 @@ class ContextItemsResource:
         content_projection: Optional[Dict[str, Any]] = None,
     ) -> Optional[ContextItem]:
         """
-        POST /api/v1/context/items/lookup — returns None when no match (404).
+        Look up a Modus context item by type and data path.
 
         Args:
-            context_type:        The context type to search for.
-            data_path:           The data path to match.
+            context_type:        Modus context type to search for.
+            data_path:           Data path segments to match.
             content_projection:  Optional projection filter for content.
 
         Returns:
-            ContextItem if found, None if not found (404).
+            ContextItem if found, None if no match.
         """
         payload: Dict[str, Any] = {"contextType": context_type, "dataPath": data_path}
         if content_projection is not None:
@@ -138,7 +138,7 @@ class ContextItemsResource:
         page_token: Optional[str] = None,
     ) -> Page[Dict[str, Any]]:
         """
-        List paginated values for a specific field within a context item.
+        List paginated values for a field within a Modus context item.
 
         Args:
             uid:               The context item's UUID.
@@ -147,7 +147,7 @@ class ContextItemsResource:
             content_key_path:  Dot-separated JSON path to the array of values inside
                                ``content``. Example: ``"enumValues"`` or ``"sample.values"``.
             page_size:         Values per page (default 25, max 200).
-            page_token:        Opaque token from a previous page's ``next_page_token``.
+            page_token:        Token from a previous page's ``next_page_token``; omit for the first page.
 
         Returns:
             Page[Dict[str, Any]] of value entries.
@@ -195,6 +195,14 @@ class AsyncContextItemsResource:
         page_token: Optional[str] = None,
         context_type: Optional[str] = None,
     ) -> AsyncPage[ContextItem]:
+        """
+        List all Modus context items in the knowledge base.
+
+        Args:
+            page_size:    Maximum number of items to return (default 25).
+            page_token:   Token from a previous page's ``next_page_token``; omit for the first page.
+            context_type: Filter by type e.g. "note", "metric", "saved_query".
+        """
         validate_page_size(page_size)
         return await self._list_page(page_size, page_token, context_type)
 
@@ -217,6 +225,12 @@ class AsyncContextItemsResource:
         )
 
     async def get(self, uid: str) -> ContextItem:
+        """
+        Retrieve a Modus context item by its UID.
+
+        Raises:
+            NotFoundError: if no Modus context item with this UID exists.
+        """
         safe_uid = quote(uid, safe="")
         data = await async_with_retry(
             lambda: self._http.get(f"/api/v1/context/items/{safe_uid}"),
@@ -232,15 +246,15 @@ class AsyncContextItemsResource:
         content_projection: Optional[Dict[str, Any]] = None,
     ) -> Optional[ContextItem]:
         """
-        POST /api/v1/context/items/lookup — returns None when no match (404).
+        Look up a Modus context item by type and data path.
 
         Args:
-            context_type:        The context type to search for.
-            data_path:           The data path to match.
+            context_type:        Modus context type to search for.
+            data_path:           Data path segments to match.
             content_projection:  Optional projection filter for content.
 
         Returns:
-            ContextItem if found, None if not found (404).
+            ContextItem if found, None if no match.
         """
         payload: Dict[str, Any] = {"contextType": context_type, "dataPath": data_path}
         if content_projection is not None:
@@ -264,7 +278,7 @@ class AsyncContextItemsResource:
         page_token: Optional[str] = None,
     ) -> AsyncPage[Dict[str, Any]]:
         """
-        List paginated values for a specific field within a context item.
+        List paginated values for a field within a Modus context item.
 
         Args:
             uid:               The context item's UUID.
@@ -273,7 +287,7 @@ class AsyncContextItemsResource:
             content_key_path:  Dot-separated JSON path to the array of values inside
                                ``content``. Example: ``"enumValues"`` or ``"sample.values"``.
             page_size:         Values per page (default 25, max 200).
-            page_token:        Opaque token from a previous page's ``next_page_token``.
+            page_token:        Token from a previous page's ``next_page_token``; omit for the first page.
 
         Returns:
             AsyncPage[Dict[str, Any]] of value entries.

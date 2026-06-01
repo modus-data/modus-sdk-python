@@ -33,9 +33,10 @@ class Modus:
     Args:
         api_key:     Your Modus API key. If omitted, reads from the
                      MODUS_API_KEY environment variable.
-        base_url:    API base URL. Defaults to https://api.modus.com.
-                     Override for local dev: base_url="http://localhost:3080".
-        timeout:     Request timeout in seconds (default 60).
+        base_url:    API origin without a path suffix (default
+                     https://api.modus.com).
+        timeout:     Request timeout as seconds or httpx.Timeout. Default is
+                     5s connect and 300s read.
         max_retries: Number of automatic retries on 429/5xx (default 2).
 
     Example:
@@ -99,7 +100,15 @@ class Modus:
 
 class AsyncModus:
     """
-    Asynchronous Modus client. Use with async frameworks such as FastAPI, asyncio, or Jupyter.
+    Asynchronous Modus API client.
+
+    Args:
+        api_key:     Your Modus API key. If omitted, reads from MODUS_API_KEY.
+        base_url:    API origin without a path suffix (default
+                     https://api.modus.com).
+        timeout:     Request timeout as seconds or httpx.Timeout. Default is
+                     5s connect and 300s read.
+        max_retries: Retries on 429/5xx (default 2).
 
     Example:
         import modus

@@ -28,11 +28,21 @@ dev = [
 asyncio_mode = "auto"
 testpaths = ["tests"]
 markers = [
-    "integration: live modus-api smoke (requires MODUS_API_KEY and reachable MODUS_BASE_URL)",
+    "integration: live modus-api smoke (requires MODUS_API_KEY and reachable API)",
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["modus"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/tests",
+  "/reports",
+  "/.pytest_cache",
+  "/.mypy_cache",
+  "/.venv",
+  "/dist",
+]
 
 [tool.coverage.run]
 source = ["modus"]

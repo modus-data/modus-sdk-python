@@ -21,23 +21,26 @@ For usage questions and general support, use the
 
 ## Pull Requests
 
-The SDK source lives in the `modus-data/modus` monorepo. This repository
-is a release mirror — pull requests are not accepted here. If you have a
-proposed fix or feature, please open an issue and the team will handle it
-from the monorepo.
+This repository is a **release mirror** of the Python SDK package. Pull requests
+are not accepted here.
 
-## Development (monorepo)
+Development happens in the Modus monorepo. If you have a proposed fix or feature,
+open an issue in this repository and the team will route it internally.
 
-From the repository root (requires [Node.js](https://nodejs.org/) + [pnpm](https://pnpm.io/) per `.nvmrc`):
+## Running tests (from a source checkout)
+
+If you have cloned this mirror with the `tests/` directory:
 
 ```bash
-pnpm run sdk:setup             # installs uv if needed + uv sync (venv); run once per clone
-pnpm run sdk:test              # pytest (runs install automatically)
-pnpm run sdk:lint              # mypy
-pnpm run sdk:requirements-drift    # regenerate + verify Snyk requirements.txt files
-pnpm run sdk:build             # build wheel/sdist locally
+cd modus-sdk   # repository root after mirror split
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+pytest tests/ -m "not integration"
 ```
 
-These run via Nx (`modus-sdk` project). They are not included in `setup:local`,
-root `pnpm test` / `pnpm build`, or `dev:all` package builds (Python is excluded
-via `lang:python` tag). See `sdk/python/docs/SDK_PYTHON_LOCAL_DEV.md`.
+Optional live API smoke tests (require a valid token and reachable API):
+
+```bash
+export MODUS_API_KEY=modus_xxx
+pytest tests/integration/ -m integration
+```

@@ -1,4 +1,4 @@
-"""Skill conversations resource — identical to consumption SDK."""
+"""Modus skill conversations — /api/v1/skills/:id/conversations (management SDK)"""
 from __future__ import annotations
 from typing import Optional, Union
 from urllib.parse import quote
@@ -28,6 +28,14 @@ class ConversationsResource:
         page_size: int = 25,
         page_token: Optional[str] = None,
     ) -> Page[ConversationListItem]:
+        """
+        List all Modus conversation threads for a skill, newest first.
+
+        Args:
+            skill_id:   Modus skill ID or slug.
+            page_size:  Maximum number of items to return (default 25).
+            page_token: Token from a previous page's ``next_page_token``; omit for the first page.
+        """
         validate_id(skill_id, name="skill_id")
         validate_page_size(page_size)
         return self._list_page(skill_id, page_size, page_token)
@@ -52,6 +60,13 @@ class ConversationsResource:
         )
 
     def get(self, skill_id: Union[int, str], thread_id: str) -> Conversation:
+        """
+        Retrieve a Modus conversation thread with its full message history.
+
+        Args:
+            skill_id:  Modus skill ID or slug.
+            thread_id: Modus conversation thread ID.
+        """
         safe_id = quote(str(skill_id), safe="")
         safe_tid = quote(str(thread_id), safe="")
         data = with_retry(
@@ -73,6 +88,14 @@ class AsyncConversationsResource:
         page_size: int = 25,
         page_token: Optional[str] = None,
     ) -> AsyncPage[ConversationListItem]:
+        """
+        List all Modus conversation threads for a skill, newest first.
+
+        Args:
+            skill_id:   Modus skill ID or slug.
+            page_size:  Maximum number of items to return (default 25).
+            page_token: Token from a previous page's ``next_page_token``; omit for the first page.
+        """
         validate_id(skill_id, name="skill_id")
         validate_page_size(page_size)
         return await self._list_page(skill_id, page_size, page_token)
@@ -97,6 +120,13 @@ class AsyncConversationsResource:
         )
 
     async def get(self, skill_id: Union[int, str], thread_id: str) -> Conversation:
+        """
+        Retrieve a Modus conversation thread with its full message history.
+
+        Args:
+            skill_id:  Modus skill ID or slug.
+            thread_id: Modus conversation thread ID.
+        """
         safe_id = quote(str(skill_id), safe="")
         safe_tid = quote(str(thread_id), safe="")
         data = await async_with_retry(

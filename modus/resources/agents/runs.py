@@ -52,6 +52,18 @@ class AgentRunsResource:
         approval_scope: Optional[str] = None,
         search: Optional[str] = None,
     ) -> Page[AgentRunListItem]:
+        """
+        List Modus automation runs for an agent.
+
+        Args:
+            agent_id:        Modus agent ID or slug.
+            page_size:       Maximum number of items to return (default 25, max 100).
+            page_token:      Token from a previous page's ``next_page_token``; omit for the first page.
+            status:          Filter by run status.
+            timeframe:       Filter by time window.
+            approval_scope:  Filter by approval scope.
+            search:          Free-text search filter.
+        """
         validate_id(agent_id, name="agent_id")
         return self._list_page(
             agent_id,
@@ -117,6 +129,14 @@ class AgentRunsResource:
         *,
         temporal_run_id: Optional[str] = None,
     ) -> AgentRun:
+        """
+        Retrieve a Modus automation run by ID.
+
+        Args:
+            agent_id:         Modus agent ID or slug.
+            run_id:           Automation run ID.
+            temporal_run_id:  Optional Temporal run ID when disambiguating.
+        """
         validate_id(agent_id, name="agent_id")
         if not run_id or not str(run_id).strip():
             raise ValueError("run_id must be a non-empty string")
@@ -163,6 +183,18 @@ class AsyncAgentRunsResource:
         approval_scope: Optional[str] = None,
         search: Optional[str] = None,
     ) -> AsyncPage[AgentRunListItem]:
+        """
+        List Modus automation runs for an agent.
+
+        Args:
+            agent_id:        Modus agent ID or slug.
+            page_size:       Maximum number of items to return (default 25, max 100).
+            page_token:      Token from a previous page's ``next_page_token``; omit for the first page.
+            status:          Filter by run status.
+            timeframe:       Filter by time window.
+            approval_scope:  Filter by approval scope.
+            search:          Free-text search filter.
+        """
         validate_id(agent_id, name="agent_id")
         return await self._list_page(
             agent_id,
@@ -228,6 +260,14 @@ class AsyncAgentRunsResource:
         *,
         temporal_run_id: Optional[str] = None,
     ) -> AgentRun:
+        """
+        Retrieve a Modus automation run by ID.
+
+        Args:
+            agent_id:         Modus agent ID or slug.
+            run_id:           Automation run ID.
+            temporal_run_id:  Optional Temporal run ID when disambiguating.
+        """
         validate_id(agent_id, name="agent_id")
         if not run_id or not str(run_id).strip():
             raise ValueError("run_id must be a non-empty string")

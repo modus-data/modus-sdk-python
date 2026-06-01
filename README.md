@@ -1,7 +1,17 @@
+<p align="center">
+  <a href="https://modus.com">
+    <img
+      src="https://raw.githubusercontent.com/modus-data/modus-sdk-python/main/assets/modus-logo.svg"
+      alt="Modus"
+      width="280"
+    />
+  </a>
+</p>
+
 # Modus Python SDK
 
 [![PyPI version](https://img.shields.io/pypi/v/modus-sdk.svg)](https://pypi.org/project/modus-sdk/)
-[![Python versions](https://img.shields.io/pypi/pyversions/modus-sdk.svg)](https://pypi.org/project/modus-sdk/)
+[![Python versions](https://pypi.shields.io/pypi/pyversions/modus-sdk.svg)](https://pypi.org/project/modus-sdk/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 Official Python client for the [Modus](https://modus.com) AI data platform.
@@ -47,6 +57,33 @@ Or pass it directly:
 client = modus.Modus(api_key="modus_xxx")
 ```
 
+## Configuration
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `MODUS_API_KEY` | Yes | Personal access token (`modus_…`) |
+
+By default the client uses `https://api.modus.com`. For staging or other hosted
+environments, pass `base_url` when constructing the client. The token must be
+issued for the same environment.
+
+```python
+client = modus.Modus(
+    api_key="modus_xxx",
+    base_url="https://api.staging.getmodus.com",
+)
+```
+
+Optional constructor arguments: `timeout` (default 5s connect, 300s read) and
+`max_retries` (default `2` on 429/5xx).
+
+## API reference
+
+Interactive OpenAPI docs for the public REST API:
+
+- [Swagger UI](https://api.modus.com/api/v1/docs)
+- [OpenAPI JSON](https://api.modus.com/api/v1/docs-json)
+
 ## Pagination
 
 List endpoints return a `Page[T]`. Iterating gives the current page.
@@ -58,13 +95,13 @@ page = client.skills.list(page_size=25)
 for skill in page:
     print(skill.name)
 
-# All pages (follows nextPageToken via page.next_page_token)
+# All pages (uses page.next_page_token between requests)
 for skill in client.skills.list().auto_paging_iter():
     print(skill.name)
 
 # Manual control
 if page.has_next_page():
-    next_page = page.get_next_page()  # uses page_token under the hood
+    next_page = page.get_next_page()
 ```
 
 ## Async
@@ -130,11 +167,11 @@ client.agents.chat(agent_id, "Run report", model=MODEL)
 client.agents.runs.list(agent_id, page_size=20)
 ```
 
-See [`sdk/python/examples/`](../examples/), [`SDK_PYTHON_LOCAL_DEV.md`](../docs/SDK_PYTHON_LOCAL_DEV.md) (local API), and [`sdk/docs/CHAT_AND_STREAMING.md`](../../docs/CHAT_AND_STREAMING.md).
+## Release notes
 
-## Status
+See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-**v0.2.0** — Chat, context compose, and agent runs on `modus.Modus`, plus management CRUD.
+## Capabilities
 
 | Feature | Client |
 |---|---|
@@ -146,4 +183,3 @@ See [`sdk/python/examples/`](../examples/), [`SDK_PYTHON_LOCAL_DEV.md`](../docs/
 | `AsyncModusManagement` | `ModusManagement` |
 
 `ModusManagement` requires a PAT with `skills:write` / `agents:write` scopes.
-Upcoming: skill memories on management — [`sdk/docs/FUTURE.md`](../../docs/FUTURE.md).

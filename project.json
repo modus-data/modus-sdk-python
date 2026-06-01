@@ -57,6 +57,18 @@
       "inputs": ["{projectRoot}/pyproject.toml", "{projectRoot}/uv.lock", "default"],
       "outputs": ["{projectRoot}/dist"]
     },
+    "check-docstrings": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bash ../scripts/check-sdk-public-docstrings.sh",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/modus/**/*.py",
+        "{workspaceRoot}/sdk/python/scripts/check-sdk-public-docstrings.sh"
+      ]
+    },
     "requirements-drift": {
       "executor": "nx:run-commands",
       "dependsOn": ["install"],

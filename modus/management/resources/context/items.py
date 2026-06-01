@@ -40,6 +40,14 @@ class ContextItemsResource:
         page_token: Optional[str] = None,
         context_type: Optional[str] = None,
     ) -> Page[ContextItem]:
+        """
+        List all Modus context items in the knowledge base.
+
+        Args:
+            page_size:    Maximum number of items to return (default 25).
+            page_token:   Token from a previous page's ``next_page_token``; omit for the first page.
+            context_type: Filter by type (e.g. ``"note"``, ``"metric"``).
+        """
         validate_page_size(page_size)
         return self._list_page(page_size, page_token, context_type)
 
@@ -62,6 +70,7 @@ class ContextItemsResource:
         )
 
     def get(self, uid: str) -> ContextItem:
+        """Retrieve a Modus context item by its UID."""
         safe_uid = quote(uid, safe="")
         data = with_retry(
             lambda: self._http.get(f"/api/v1/context/items/{safe_uid}"),
@@ -70,7 +79,7 @@ class ContextItemsResource:
         return ContextItem.model_validate(data)
 
     def update(self, uid: str, **kwargs: Any) -> ContextItem:
-        """Update a context item. kwargs: title, description, content, verification_status."""
+        """Update a Modus context item (``title``, ``description``, ``content``, ``verification_status``, etc.)."""
         payload = ContextItemUpdate(**kwargs).model_dump(by_alias=True, exclude_none=True)
         safe_uid = quote(uid, safe="")
         with_retry(
@@ -100,6 +109,14 @@ class AsyncContextItemsResource:
         page_token: Optional[str] = None,
         context_type: Optional[str] = None,
     ) -> AsyncPage[ContextItem]:
+        """
+        List all Modus context items in the knowledge base.
+
+        Args:
+            page_size:    Maximum number of items to return (default 25).
+            page_token:   Token from a previous page's ``next_page_token``; omit for the first page.
+            context_type: Filter by type (e.g. ``"note"``, ``"metric"``).
+        """
         validate_page_size(page_size)
         return await self._list_page(page_size, page_token, context_type)
 
@@ -122,6 +139,7 @@ class AsyncContextItemsResource:
         )
 
     async def get(self, uid: str) -> ContextItem:
+        """Retrieve a Modus context item by its UID."""
         safe_uid = quote(uid, safe="")
         data = await async_with_retry(
             lambda: self._http.get(f"/api/v1/context/items/{safe_uid}"),

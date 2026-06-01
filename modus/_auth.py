@@ -49,8 +49,9 @@ def resolve_api_key(api_key: Optional[str]) -> str:
 
 def resolve_base_url(base_url: Optional[str]) -> Optional[str]:
     """
-    Resolve the base URL from an explicit argument or the MODUS_BASE_URL env var.
-    Returns None if neither is set (caller will use the default).
+    Resolve the base URL from an explicit constructor argument, or from the
+    ``MODUS_BASE_URL`` environment variable when set. Returns ``None`` if
+    neither is set (caller uses the production default).
     """
     return base_url or os.environ.get(_BASE_URL_ENV_VAR) or None
 

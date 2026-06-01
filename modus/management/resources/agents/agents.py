@@ -42,6 +42,13 @@ class AgentsResource:
         page_size: int = 25,
         page_token: Optional[str] = None,
     ) -> Page[Agent]:
+        """
+        List all Modus agents in the organisation.
+
+        Args:
+            page_size:  Maximum number of items to return (default 25).
+            page_token: Token from a previous page's ``next_page_token``; omit for the first page.
+        """
         validate_page_size(page_size)
         return self._list_page(page_size, page_token)
 
@@ -59,6 +66,7 @@ class AgentsResource:
         )
 
     def get(self, agent_id: Union[int, str]) -> Agent:
+        """Retrieve a Modus agent with full configuration."""
         validate_id(agent_id, name="agent_id")
         safe_id = quote(str(agent_id), safe="")
         data = with_retry(
@@ -78,6 +86,7 @@ class AgentsResource:
         workflow_structure: Optional[Dict[str, Any]] = None,
         access_config: Optional[Dict[str, Any]] = None,
     ) -> Agent:
+        """Create a new Modus agent in the organisation."""
         body = _AgentCreateBody(
             name=name, type=type, description=description,
             trigger=trigger, agent_selection=agent_selection,
@@ -100,6 +109,7 @@ class AgentsResource:
         workflow_structure: Optional[Dict[str, Any]] = None,
         access_config: Optional[Dict[str, Any]] = None,
     ) -> Agent:
+        """Update a Modus agent's configuration."""
         body = _AgentUpdateBody(
             name=name, description=description, trigger=trigger,
             agent_selection=agent_selection, workflow_structure=workflow_structure,
@@ -114,6 +124,7 @@ class AgentsResource:
         return _translate_agent(_AgentWire.model_validate(raw))
 
     def deploy(self, agent_id: Union[int, str]) -> Agent:
+        """Publish the current draft of a Modus agent."""
         validate_id(agent_id, name="agent_id")
         safe_id = quote(str(agent_id), safe="")
         raw = with_retry(
@@ -124,6 +135,7 @@ class AgentsResource:
         return _translate_agent(_AgentWire.model_validate(agent_data))
 
     def delete(self, agent_id: Union[int, str]) -> None:
+        """Delete a Modus agent."""
         validate_id(agent_id, name="agent_id")
         safe_id = quote(str(agent_id), safe="")
         with_retry(
@@ -143,6 +155,13 @@ class AsyncAgentsResource:
         page_size: int = 25,
         page_token: Optional[str] = None,
     ) -> AsyncPage[Agent]:
+        """
+        List all Modus agents in the organisation.
+
+        Args:
+            page_size:  Maximum number of items to return (default 25).
+            page_token: Token from a previous page's ``next_page_token``; omit for the first page.
+        """
         validate_page_size(page_size)
         return await self._list_page(page_size, page_token)
 
@@ -162,6 +181,7 @@ class AsyncAgentsResource:
         )
 
     async def get(self, agent_id: Union[int, str]) -> Agent:
+        """Retrieve a Modus agent with full configuration."""
         validate_id(agent_id, name="agent_id")
         safe_id = quote(str(agent_id), safe="")
         data = await async_with_retry(

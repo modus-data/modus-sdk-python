@@ -62,11 +62,11 @@ class SkillsResource:
         page_token: Optional[str] = None,
     ) -> Page[Skill]:
         """
-        List skills in the organisation.
+        List all Modus skills in the organisation.
 
         Args:
-            page_size:  Items per page (default 25, AIP-158).
-            page_token: Opaque token from a previous page's ``next_page_token``.
+            page_size:  Maximum number of items to return (default 25).
+            page_token: Token from a previous page's ``next_page_token``; omit for the first page.
         """
         validate_page_size(page_size)
         return self._list_page(page_size, page_token)
@@ -86,10 +86,10 @@ class SkillsResource:
 
     def get(self, skill_id: Union[int, str]) -> Skill:
         """
-        Retrieve a skill by ID or slug.
+        Retrieve a Modus skill by ID or slug.
 
         Raises:
-            NotFoundError: if no skill with this ID/slug exists.
+            NotFoundError: if no Modus skill with this ID or slug exists.
         """
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")
@@ -107,6 +107,7 @@ class SkillsResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> ChatResult:
+        """Send a message to a Modus skill and return the full reply."""
         return chat_buffered(
             self._http,
             "skills",
@@ -124,6 +125,7 @@ class SkillsResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> ChatStream:
+        """Stream a Modus skill chat reply over Server-Sent Events."""
         return chat_stream_session(
             self._http,
             "skills",
@@ -140,6 +142,14 @@ class SkillsResource:
         *,
         limit: Optional[int] = None,
     ) -> SkillContextComposition:
+        """
+        Compose relevant Modus context for a skill without invoking the LLM.
+
+        Args:
+            skill_id: Modus skill ID or slug.
+            message:  Query used to retrieve context.
+            limit:    Maximum number of Modus context items to include (request body field).
+        """
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")
         body = _ComposeSkillContextRequestWire(message=message, limit=limit)
@@ -176,6 +186,13 @@ class AsyncSkillsResource:
         page_size: int = 25,
         page_token: Optional[str] = None,
     ) -> AsyncPage[Skill]:
+        """
+        List all Modus skills in the organisation.
+
+        Args:
+            page_size:  Maximum number of items to return (default 25).
+            page_token: Token from a previous page's ``next_page_token``; omit for the first page.
+        """
         validate_page_size(page_size)
         return await self._list_page(page_size, page_token)
 
@@ -195,6 +212,12 @@ class AsyncSkillsResource:
         )
 
     async def get(self, skill_id: Union[int, str]) -> Skill:
+        """
+        Retrieve a Modus skill by ID or slug.
+
+        Raises:
+            NotFoundError: if no Modus skill with this ID or slug exists.
+        """
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")
         data = await async_with_retry(
@@ -211,6 +234,7 @@ class AsyncSkillsResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> ChatResult:
+        """Send a message to a Modus skill and return the full reply."""
         return await chat_buffered_async(
             self._http,
             "skills",
@@ -228,6 +252,7 @@ class AsyncSkillsResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> AsyncChatStream:
+        """Stream a Modus skill chat reply over Server-Sent Events."""
         return chat_stream_session_async(
             self._http,
             "skills",
@@ -244,6 +269,14 @@ class AsyncSkillsResource:
         *,
         limit: Optional[int] = None,
     ) -> SkillContextComposition:
+        """
+        Compose relevant Modus context for a skill without invoking the LLM.
+
+        Args:
+            skill_id: Modus skill ID or slug.
+            message:  Query used to retrieve context.
+            limit:    Maximum number of Modus context items to include (request body field).
+        """
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")
         body = _ComposeSkillContextRequestWire(message=message, limit=limit)
