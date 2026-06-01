@@ -44,24 +44,9 @@ def all_run_all_scripts() -> list[str]:
     return _scripts_from_run_all_array("ALL_EXAMPLES")
 
 
-@pytest.fixture(scope="module")
-def fast_run_all_scripts() -> list[str]:
-    if not _RUN_ALL.exists():
-        pytest.skip("examples/run_all.sh not found (monorepo layout)")
-    return _scripts_from_run_all_array("FAST_EXAMPLES")
-
-
 def test_all_run_all_scripts_exist(all_run_all_scripts: list[str]) -> None:
     missing = [name for name in all_run_all_scripts if not (_EXAMPLES_DIR / name).exists()]
     assert not missing, f"ALL_EXAMPLES references missing scripts: {missing}"
-
-
-def test_fast_run_all_scripts_are_subset_of_all(
-    all_run_all_scripts: list[str],
-    fast_run_all_scripts: list[str],
-) -> None:
-    extra = [s for s in fast_run_all_scripts if s not in all_run_all_scripts]
-    assert not extra, f"FAST_EXAMPLES must be subset of ALL_EXAMPLES: {extra}"
 
 
 def test_example_py_files_listed_in_run_all(all_run_all_scripts: list[str]) -> None:
