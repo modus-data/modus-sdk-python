@@ -2,11 +2,13 @@
 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · [SemVer](https://semver.org/)
 
-**Current release:** `0.1.2` on [TestPyPI](https://test.pypi.org/project/modus-sdk/) (`sdk-python/v0.1.2`). Production PyPI not published yet.
+**Current release:** `0.1.2` on [TestPyPI](https://test.pypi.org/project/modus-sdk/) (`sdk-python/v0.1.2`). Production PyPI not published yet. **`0.1.3`** — merge this changelog, then tag `sdk-python/v0.1.3` to publish.
 
 ## [Unreleased]
 
-Planned next release: **`0.1.3`** (tag `sdk-python/v0.1.3`).
+## [0.1.3] — 2026-06-01
+
+TestPyPI (`sdk-python/v0.1.3`).
 
 ### Added
 
