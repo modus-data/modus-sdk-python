@@ -28,14 +28,16 @@ from the monorepo.
 
 ## Development (monorepo)
 
-From the repository root (requires [Node.js](https://nodejs.org/) + [pnpm](https://pnpm.io/) per `.nvmrc`, and [uv](https://docs.astral.sh/uv/) on your `PATH`):
+From the repository root (requires [Node.js](https://nodejs.org/) + [pnpm](https://pnpm.io/) per `.nvmrc`):
 
 ```bash
-pnpm sdk:test                  # pytest
-pnpm sdk:lint                  # mypy
-pnpm sdk:requirements-drift    # regenerate + verify Snyk requirements.txt files
-pnpm sdk:build                 # build wheel/sdist locally
+pnpm run sdk:setup             # installs uv if needed + uv sync (venv); run once per clone
+pnpm run sdk:test              # pytest (runs install automatically)
+pnpm run sdk:lint              # mypy
+pnpm run sdk:requirements-drift    # regenerate + verify Snyk requirements.txt files
+pnpm run sdk:build             # build wheel/sdist locally
 ```
 
-These run via Nx (`modus-sdk` project). They are not included in root
-`pnpm test` / `pnpm build` (Python is excluded via `lang:python` tag).
+These run via Nx (`modus-sdk` project). They are not included in `setup:local`,
+root `pnpm test` / `pnpm build`, or `dev:all` package builds (Python is excluded
+via `lang:python` tag). See `sdk/python/docs/SDK_PYTHON_LOCAL_DEV.md`.
