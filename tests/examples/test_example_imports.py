@@ -1,5 +1,5 @@
 """
-Guards for sdk/python/examples/ — scripts referenced by run_all.sh exist and
+Guards for sdk/python/dev-examples/ — scripts referenced by run_all.sh exist and
 avoid consumption Skill/Agent fields that belong on ModusManagement only.
 """
 from __future__ import annotations
@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-_EXAMPLES_DIR = Path(__file__).resolve().parents[3] / "examples"
+_EXAMPLES_DIR = Path(__file__).resolve().parents[3] / "dev-examples"
 _RUN_ALL = _EXAMPLES_DIR / "run_all.sh"
 
 # Fields on modus.types.skills.Skill / agents.Agent (consumption), not management.
@@ -40,7 +40,7 @@ def _scripts_from_run_all_array(name: str) -> list[str]:
 @pytest.fixture(scope="module")
 def all_run_all_scripts() -> list[str]:
     if not _RUN_ALL.exists():
-        pytest.skip("examples/run_all.sh not found (monorepo layout)")
+        pytest.skip("dev-examples/run_all.sh not found (monorepo layout)")
     return _scripts_from_run_all_array("ALL_EXAMPLES")
 
 

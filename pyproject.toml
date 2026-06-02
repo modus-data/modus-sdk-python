@@ -53,7 +53,7 @@ omit = ["tests/*"]
 target-version = "py310"
 line-length = 100
 # Library, tests, and sibling examples under sdk/python/
-src = ["modus", "tests", "../examples"]
+src = ["modus", "tests", "../dev-examples"]
 
 [tool.ruff.lint]
 # F: pyflakes (unused imports, etc.); I: isort; RUF021: parenthesize mixed and/or

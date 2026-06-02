@@ -68,35 +68,51 @@ def _wrap_network_error(exc: Exception, base_url: str) -> APIConnectionError:
 # ---------------------------------------------------------------------------
 
 
-def _extract_message(response: httpx.Response) -> str:
-    """Pull a human-readable message out of a NestJS error response body."""
+def _read_response_bytes(response: httpx.Response) -> bytes:
+    """Return the full response body, including for unread streaming responses."""
     try:
-        body = response.json()
+        return response.content
+    except httpx.ResponseNotRead:
+        return response.read()
+
+
+async def _read_response_bytes_async(response: httpx.Response) -> bytes:
+    """Async variant for streaming responses from AsyncHttpClient."""
+    try:
+        return response.content
+    except httpx.ResponseNotRead:
+        return await response.aread()
+
+
+def _message_from_body(raw: str, status_code: int) -> str:
+    if not raw:
+        return f"HTTP {status_code}"
+    try:
+        body = json.loads(raw)
         if isinstance(body, dict):
-            # NestJS standard: { message: "..." } or { message: [...] }
             msg = body.get("message") or body.get("error")
             if isinstance(msg, list):
                 return "; ".join(str(m) for m in msg)
             if msg:
                 return str(msg)
-    except (json.JSONDecodeError, ValueError):
+    except json.JSONDecodeError:
         pass
-    return response.text or f"HTTP {response.status_code}"
+    return raw
 
 
-def _raise_for_status(response: httpx.Response) -> None:
+def _extract_message(response: httpx.Response) -> str:
+    """Pull a human-readable message out of a NestJS error response body."""
+    raw_bytes = _read_response_bytes(response)
+    raw = raw_bytes.decode(response.encoding or "utf-8", errors="replace")
+    return _message_from_body(raw, response.status_code)
+
+
+def _raise_for_status_with_body(response: httpx.Response, body: Optional[str]) -> None:
     """Map an HTTP error response to the appropriate ModusError subclass."""
-    if response.is_success:
-        return
-
-    message = _extract_message(response)
+    message = _message_from_body(body or "", response.status_code)
     status = response.status_code
     request_id = response.headers.get("x-request-id") or response.headers.get("X-Request-ID")
     headers = dict(response.headers)
-    try:
-        body = response.text
-    except Exception:
-        body = None
 
     kwargs: dict = dict(request_id=request_id, response_headers=headers, body=body)
 
@@ -109,10 +125,12 @@ def _raise_for_status(response: httpx.Response) -> None:
     if status == 409:
         raise ConflictError(message, **kwargs)
     if status == 422:
-        try:
-            errors = response.json()
-        except (json.JSONDecodeError, ValueError):
-            errors = None
+        errors = None
+        if body:
+            try:
+                errors = json.loads(body)
+            except json.JSONDecodeError:
+                errors = None
         raise UnprocessableError(message, errors=errors, **kwargs)
     if status == 429:
         retry_after: Optional[int] = None
@@ -124,6 +142,30 @@ def _raise_for_status(response: httpx.Response) -> None:
         raise InternalServerError(message, status_code=status, **kwargs)
 
     raise ModusError(message, status_code=status, **kwargs)
+
+
+def _decode_body(body_bytes: bytes, response: httpx.Response) -> Optional[str]:
+    return (
+        body_bytes.decode(response.encoding or "utf-8", errors="replace")
+        if body_bytes
+        else None
+    )
+
+
+def _raise_for_status(response: httpx.Response) -> None:
+    """Map an HTTP error response to the appropriate ModusError subclass."""
+    if response.is_success:
+        return
+    body = _decode_body(_read_response_bytes(response), response)
+    _raise_for_status_with_body(response, body)
+
+
+async def _raise_for_status_async(response: httpx.Response) -> None:
+    """Map an HTTP error response to ModusError (async streaming path)."""
+    if response.is_success:
+        return
+    body = _decode_body(await _read_response_bytes_async(response), response)
+    _raise_for_status_with_body(response, body)
 
 
 # ---------------------------------------------------------------------------
@@ -283,7 +325,7 @@ class AsyncHttpClient:
         """Streaming POST — yields raw SSE lines."""
         try:
             async with self._client.stream("POST", path, json=json) as response:
-                _raise_for_status(response)
+                await _raise_for_status_async(response)
                 async for line in response.aiter_lines():
                     if line.strip():
                         yield line

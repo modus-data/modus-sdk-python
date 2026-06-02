@@ -36,7 +36,7 @@
       "executor": "nx:run-commands",
       "dependsOn": ["install"],
       "options": {
-        "command": "bash -c 'set -o pipefail; mkdir -p reports && bash ../../../scripts/sdk-python/ensure-uv.sh run ruff check modus/ tests/ ../examples/ 2>&1 | tee reports/ruff.log && bash ../../../scripts/sdk-python/ensure-uv.sh run mypy modus/ 2>&1 | tee reports/mypy.log'",
+        "command": "bash -c 'set -o pipefail; mkdir -p reports && bash ../../../scripts/sdk-python/ensure-uv.sh run ruff check modus/ tests/ ../dev-examples/ 2>&1 | tee reports/ruff.log && bash ../../../scripts/sdk-python/ensure-uv.sh run mypy modus/ 2>&1 | tee reports/mypy.log'",
         "cwd": "{projectRoot}"
       },
       "cache": true,

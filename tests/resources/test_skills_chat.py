@@ -133,3 +133,16 @@ def test_skills_chat_not_found(client):
 
     with pytest.raises(NotFoundError):
         client.skills.chat(999, "Hi", model=MODEL)
+
+
+@respx.mock
+def test_skills_chat_stream_http_error_raises_modus_error(client):
+    """Streaming POST errors must not surface httpx.ResponseNotRead."""
+    respx.post(f"{BASE}/api/v1/skills/42/chat/stream").mock(
+        return_value=httpx.Response(502, json={"message": "Upstream unavailable"}),
+    )
+    from modus import InternalServerError
+
+    with pytest.raises(InternalServerError, match="Upstream unavailable"):
+        with client.skills.chat_stream(42, "Hi", model=MODEL) as stream:
+            list(stream.text_stream)
