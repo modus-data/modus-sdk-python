@@ -1,7 +1,7 @@
 <p align="center">
   <a href="https://modus.com">
     <img
-      src="https://raw.githubusercontent.com/modus-data/modus-sdk-python/main/assets/modus-logo.svg"
+      src="assets/modus-logo.svg"
       alt="Modus"
       width="280"
     />
@@ -10,16 +10,18 @@
 
 # Modus Python SDK
 
-[![PyPI version](https://img.shields.io/pypi/v/modus-sdk.svg)](https://pypi.org/project/modus-sdk/)
-[![Python versions](https://pypi.shields.io/pypi/pyversions/modus-sdk.svg)](https://pypi.org/project/modus-sdk/)
+[![TestPyPI version](https://img.shields.io/testpypi/v/modus-sdk)](https://test.pypi.org/project/modus-sdk/)
+[![Python versions](https://img.shields.io/testpypi/pyversions/modus-sdk)](https://test.pypi.org/project/modus-sdk/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 Official Python client for the [Modus](https://modus.com) AI data platform.
 
 ## Installation
 
+Published on [TestPyPI](https://test.pypi.org/project/modus-sdk/) (production PyPI coming later):
+
 ```bash
-pip install modus-sdk
+pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ modus-sdk
 ```
 
 ## Quick Start
