@@ -33,9 +33,9 @@ def test_weekly_requires_weekdays() -> None:
         TriggerSchedule(frequency="weekly", time_of_day="09:00", timezone="UTC")
 
 
-def test_dump_trigger_camel_case() -> None:
+def test_dump_trigger_snake_case() -> None:
     payload = dump_trigger(AgentTrigger.manual())
-    assert payload == {"triggerType": "manual"}
+    assert payload == {"trigger_type": "manual"}
 
 
 def test_dump_trigger_dict_deprecated() -> None:
@@ -74,4 +74,6 @@ def test_parse_trigger_round_trip() -> None:
     trigger = parse_trigger(raw)
     assert isinstance(trigger, ScheduleTrigger)
     assert trigger.schedule.timezone == "America/New_York"
-    assert dump_trigger(trigger)["triggerType"] == "schedule"
+    dumped = dump_trigger(trigger)
+    assert dumped["trigger_type"] == "schedule"
+    assert dumped["schedule"]["time_of_day"] == "09:00"

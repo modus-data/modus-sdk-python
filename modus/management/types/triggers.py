@@ -157,7 +157,10 @@ def dump_trigger(value: Optional[TriggerInput]) -> Optional[Dict[str, Any]]:
             stacklevel=3,
         )
         return value
-    return value.model_dump(by_alias=True, exclude_none=True)
+    # The agents API validates the trigger blob with snake_case keys
+    # (trigger_type, schedule.time_of_day, ...), unlike the camelCase top-level
+    # body. Dump by field name so AgentTrigger.* matches TriggerDto.
+    return value.model_dump(by_alias=False, exclude_none=True)
 
 
 def parse_trigger(raw: object) -> Optional[AgentTriggerValue]:

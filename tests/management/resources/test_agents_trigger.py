@@ -47,7 +47,7 @@ def test_agents_create_serializes_typed_trigger() -> None:
     )
     assert isinstance(agent, Agent)
     body = json.loads(route.calls[0].request.read())
-    assert body["trigger"]["triggerType"] == "manual"
+    assert body["trigger"]["trigger_type"] == "manual"
 
 
 @respx.mock

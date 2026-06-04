@@ -10,6 +10,10 @@
 
 TestPyPI (`sdk-python/v0.1.4`).
 
+### Fixed
+
+- `mgmt.agents.create()` / `update()`: typed triggers (`AgentTrigger.manual()`, `AgentTrigger.schedule_*()`, etc.) now serialize with snake_case keys (`trigger_type`, `schedule.time_of_day`, ...) to match the agents API, which previously rejected the camelCase payload. The `trigger={"trigger_type": ...}` dict workaround is no longer needed.
+
 ### Changed
 
 - README: relative logo path (private `modus-sdk-python` mirror), TestPyPI badges and install instructions.
