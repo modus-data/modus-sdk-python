@@ -1,7 +1,7 @@
 <p align="center">
   <a href="https://modus.com">
     <img
-      src="assets/modus-logo.svg"
+      src="https://raw.githubusercontent.com/modus-data/modus-sdk-python/main/assets/modus-logo.png"
       alt="Modus"
       width="280"
     />
@@ -10,8 +10,8 @@
 
 # Modus Python SDK
 
-[![TestPyPI version](https://img.shields.io/testpypi/v/modus-sdk)](https://test.pypi.org/project/modus-sdk/)
-[![Python versions](https://img.shields.io/testpypi/pyversions/modus-sdk)](https://test.pypi.org/project/modus-sdk/)
+[![TestPyPI](https://img.shields.io/badge/TestPyPI-modus--sdk-blue)](https://test.pypi.org/project/modus-sdk/)
+[![Python versions](https://img.shields.io/badge/python-3.10%2B-blue)](https://test.pypi.org/project/modus-sdk/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 Official Python client for the [Modus](https://modus.com) AI data platform.
