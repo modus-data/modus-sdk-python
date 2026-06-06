@@ -2,7 +2,7 @@
 
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · [SemVer](https://semver.org/)
 
-**Current release:** `0.1.3` on [TestPyPI](https://test.pypi.org/project/modus-sdk/) (`sdk-python/v0.1.3`). Production PyPI not published yet.
+**Current release:** `0.1.4` on [TestPyPI](https://test.pypi.org/project/modus-sdk/) (`sdk-python/v0.1.4`). Production PyPI not published yet.
 
 ## [Unreleased]
 
@@ -10,9 +10,13 @@
 
 - **Breaking:** `client.skills.get_context()` returns `SkillContextComposition.context` (composed markdown string) instead of `context_items`. `limit` applies only when the API falls back to structured JSON.
 
-## [0.1.4] — 2026-06-01
+## [0.1.4] — 2026-06-04
 
 TestPyPI (`sdk-python/v0.1.4`).
+
+### Added
+
+- Examples under `examples/`: runnable usage guides (`scripts/modus_sdk_guide.py` for the consumption client, `scripts/modus_management_guide.py` for the management surface) and a Streamlit app (`apps/modus_skill_chat/`) comparing streaming vs buffered skill chat.
 
 ### Fixed
 
@@ -20,7 +24,7 @@ TestPyPI (`sdk-python/v0.1.4`).
 
 ### Changed
 
-- README: relative logo path (private `modus-sdk-python` mirror), TestPyPI badges and install instructions.
+- README: absolute PNG logo served from the public `modus-sdk-python` mirror — PyPI renders the README standalone and raw GitHub serves `.svg` as `text/plain` (`nosniff`), so the previous relative SVG path did not render. Replaced the broken TestPyPI shields (no working `shields.io` TestPyPI endpoint) with static badges.
 
 ## [0.1.3] — 2026-06-01
 
