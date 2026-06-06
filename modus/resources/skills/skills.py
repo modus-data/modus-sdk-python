@@ -142,12 +142,12 @@ class SkillsResource:
         limit: Optional[int] = None,
     ) -> SkillContextComposition:
         """
-        Return context items Modus would use for a skill query, without running chat.
+        Return composed context Modus would use for a skill query, without running chat.
 
         Args:
             skill_id: Skill id or slug.
             message:  Natural-language query used to select context.
-            limit:    Optional cap on how many items to return.
+            limit:    Optional cap on structured fallback items when no markdown summary exists.
         """
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")
@@ -254,12 +254,12 @@ class AsyncSkillsResource:
         limit: Optional[int] = None,
     ) -> SkillContextComposition:
         """
-        Return context items Modus would use for a skill query, without running chat.
+        Return composed context Modus would use for a skill query, without running chat.
 
         Args:
             skill_id: Skill id or slug.
             message:  Natural-language query used to select context.
-            limit:    Optional cap on how many items to return.
+            limit:    Optional cap on structured fallback items when no markdown summary exists.
         """
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")

@@ -1,7 +1,7 @@
 """Wire models for POST /api/v1/skills/{id}/context."""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
@@ -25,6 +25,11 @@ class _ComposeSkillContextResponseWire(BaseModel):
         extra="ignore",
     )
 
-    context_items: List[Dict[str, Any]] = Field(alias="contextItems")
+    context: str
+    context_items: list[dict[str, Any]] = Field(
+        default_factory=list,
+        alias="contextItems",
+        description="Deprecated; always empty. Use context.",
+    )
     original_count: int = Field(alias="originalCount")
     session_id: str = Field(alias="sessionId")

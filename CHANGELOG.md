@@ -6,6 +6,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** `client.skills.get_context()` returns `SkillContextComposition.context` (composed markdown string) instead of `context_items`. `limit` applies only when the API falls back to structured JSON.
+
 ## [0.1.4] — 2026-06-01
 
 TestPyPI (`sdk-python/v0.1.4`).

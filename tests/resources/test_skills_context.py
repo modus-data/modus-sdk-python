@@ -13,7 +13,8 @@ def test_skills_get_context(client):
         return_value=httpx.Response(
             200,
             json={
-                "contextItems": [{"uid": "ctx-1", "title": "Churn table"}],
+                "context": "## Tables\n\ncustomers",
+                "contextItems": [],
                 "originalCount": 10,
                 "sessionId": "sess-abc",
             },
@@ -25,7 +26,7 @@ def test_skills_get_context(client):
     assert isinstance(result, SkillContextComposition)
     assert result.original_count == 10
     assert result.session_id == "sess-abc"
-    assert len(result.context_items) == 1
+    assert result.context == "## Tables\n\ncustomers"
 
 
 @respx.mock
@@ -34,6 +35,7 @@ def test_skills_get_context_omits_limit_when_none(client):
         return_value=httpx.Response(
             200,
             json={
+                "context": "",
                 "contextItems": [],
                 "originalCount": 0,
                 "sessionId": "sess-x",

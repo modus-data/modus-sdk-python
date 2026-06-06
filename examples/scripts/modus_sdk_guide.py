@@ -240,7 +240,7 @@ else:
                 "What context is relevant to revenue?",
                 limit=10,
             )
-            print(f"  {ctx.original_count} considered, {len(ctx.context_items)} selected")
+            print(f"  {ctx.original_count} considered, {len(ctx.context)} chars of context")
             print(f"  session_id={ctx.session_id}")
         except modus.NotFoundError:
             print(
