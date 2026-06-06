@@ -10,6 +10,7 @@ from pydantic.alias_generators import to_camel
 
 from .access import AccessConfig
 from .json_blob import JsonObject
+from .ownership import PendingOwnershipTransfer
 from .toolset import Toolset
 
 SkillStatus = Literal["draft", "active", "deleted"]
@@ -60,6 +61,9 @@ class Skill(BaseModel):
 
     # Full access config
     access_config: AccessConfig = AccessConfig()
+
+    # Ownership transfer in flight (populated on .get() when present)
+    pending_ownership_transfer: Optional[PendingOwnershipTransfer] = None
 
     # Timestamps
     created_at: datetime

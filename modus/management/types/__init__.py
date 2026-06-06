@@ -13,6 +13,7 @@ from .context import (
 from .conversations import Conversation, ConversationListItem, Message
 from .json_blob import JsonObject
 from .memories import Memory, MemorySearchRequest, MemoryUpdate
+from .ownership import PendingOwnershipTransfer
 from .skills import Skill, SkillStatus
 from .toolset import Toolset, ToolsetTool
 from .triggers import (
@@ -48,6 +49,7 @@ __all__ = [
     "MemoryUpdate",
     "Message",
     "Page",
+    "PendingOwnershipTransfer",
     "ScheduleTrigger",
     "Skill",
     "SkillStatus",

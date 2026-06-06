@@ -123,6 +123,40 @@ def test_translate_agent_list_row_has_none_variation_fields():
     assert agent.model is None
 
 
+PENDING_OWNERSHIP_TRANSFER = {
+    "pendingOwnerUserId": "user_pending",
+    "pendingOwnerEmail": "newowner@example.com",
+    "requestedByUserId": "user_owner",
+    "requestedAt": "2026-06-05T12:00:00.000Z",
+}
+
+
+def test_translate_skill_maps_pending_ownership_transfer():
+    wire = _SkillWire.model_validate({
+        **SKILL_DETAIL_WIRE,
+        "pendingOwnershipTransfer": PENDING_OWNERSHIP_TRANSFER,
+    })
+    skill = _translate_skill(wire)
+    assert skill.pending_ownership_transfer is not None
+    assert skill.pending_ownership_transfer.pending_owner_user_id == "user_pending"
+    assert skill.pending_ownership_transfer.pending_owner_email == "newowner@example.com"
+    assert skill.pending_ownership_transfer.requested_by_user_id == "user_owner"
+
+
+def test_translate_agent_maps_pending_ownership_transfer():
+    wire = _AgentWire.model_validate({
+        "id": 5, "slug": "r", "name": "Report", "status": "active",
+        "type": "task", "orgUuid": "org-xyz", "hasUnpublishedChanges": False,
+        "isEnabled": True, "accessConfig": {"guardrails": [], "permissions": {}},
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z", "deletedAt": None,
+        "pendingOwnershipTransfer": PENDING_OWNERSHIP_TRANSFER,
+    })
+    agent = _translate_agent(wire)
+    assert agent.pending_ownership_transfer is not None
+    assert agent.pending_ownership_transfer.pending_owner_user_id == "user_pending"
+
+
 def test_translate_agent_detail_row_flattens_variation():
     wire = _AgentWire.model_validate({
         "id": 5, "slug": "r", "name": "Report", "status": "active",

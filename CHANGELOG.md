@@ -17,6 +17,7 @@ TestPyPI (`sdk-python/v0.1.4`).
 ### Added
 
 - Examples under `examples/`: runnable usage guides (`scripts/modus_sdk_guide.py` for the consumption client, `scripts/modus_management_guide.py` for the management surface) and a Streamlit app (`apps/modus_skill_chat/`) comparing streaming vs buffered skill chat.
+- `mgmt.skills.get()` / `mgmt.agents.get()`: `pending_ownership_transfer` on skill and agent responses when an ownership transfer is in flight.
 
 ### Fixed
 

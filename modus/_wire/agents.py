@@ -7,6 +7,8 @@ from typing import Any, Dict, Optional
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 
+from .pending_ownership_transfer import _PendingOwnershipTransferWire
+
 
 class _AgentWire(BaseModel):
     model_config = ConfigDict(
@@ -32,4 +34,5 @@ class _AgentWire(BaseModel):
     created_at: datetime
     updated_at: datetime
     deleted_at: Optional[datetime] = None
+    pending_ownership_transfer: Optional[_PendingOwnershipTransferWire] = None
     variation: Optional[Dict[str, Any]] = None

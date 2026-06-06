@@ -10,6 +10,7 @@ from pydantic.alias_generators import to_camel
 
 from .access import AccessConfig
 from .agent_selection import AgentSelection
+from .ownership import PendingOwnershipTransfer
 from .triggers import AgentTriggerValue
 from .workflow import WorkflowGraph
 
@@ -60,6 +61,9 @@ class Agent(BaseModel):
 
     # Full access config
     access_config: AccessConfig = AccessConfig()
+
+    # Ownership transfer in flight (populated on .get() when present)
+    pending_ownership_transfer: Optional[PendingOwnershipTransfer] = None
 
     # Timestamps
     created_at: datetime
