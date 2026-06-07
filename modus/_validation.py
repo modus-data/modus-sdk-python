@@ -48,7 +48,7 @@ ALLOWED_CHAT_MODELS = frozenset({
     "gemini-3.1-pro-preview",
     "gemini-3-flash-preview",
     "grok-4",
-    "grok-4.1-fast",
+    "grok-4.3",
 })
 
 
