@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "modus-sdk"
 dynamic = ["version"]
-description = "Python SDK for the Modus AI data platform"
+description = "Official Python client for Modus — your organization's context layer for AI"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

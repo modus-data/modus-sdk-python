@@ -8,30 +8,33 @@ from __future__ import annotations
 
 import os
 from concurrent.futures import Future, ThreadPoolExecutor
+from pathlib import Path
 from typing import Any
-from urllib.parse import quote
 
 import modus
 import streamlit as st
-from modus._validation import ALLOWED_CHAT_MODELS
 from modus.types.chat import ChatResult
 
 DEFAULT_MODEL = "claude-sonnet-4.6"
-CHAT_MODELS = sorted(ALLOWED_CHAT_MODELS)
+# Keep in sync with modus-api SkillChatRequestDto allowed models.
+CHAT_MODELS = sorted(
+    (
+        "claude-sonnet-4.6",
+        "claude-opus-4.8",
+        "gpt-5.2",
+        "gpt-5.5",
+        "gpt-5-mini",
+        "gemini-3.1-pro-preview",
+        "gemini-3-flash-preview",
+    )
+)
+
+_LOGO_PATH = Path(__file__).resolve().parents[3] / "assets" / "modus-logo.png"
 
 _SETUP_HINT = """\
 export MODUS_API_KEY=modus_xxx
 streamlit run app.py\
 """
-
-
-def chat_path(skill_id: int | str, thread_id: str | None, *, stream: bool) -> str:
-    suffix = "/stream" if stream else ""
-    safe_id = quote(str(skill_id), safe="")
-    if thread_id:
-        safe_tid = quote(str(thread_id), safe="")
-        return f"/api/v1/skills/{safe_id}/conversations/{safe_tid}/chat{suffix}"
-    return f"/api/v1/skills/{safe_id}/chat{suffix}"
 
 
 def _init_session_state() -> None:
@@ -228,17 +231,13 @@ def main() -> None:
     st.set_page_config(page_title="Modus Skill Chat", layout="wide")
     _init_session_state()
 
-    st.title("Modus Skill Chat")
-    st.caption("Compare streaming (`/chat/stream`) vs buffered (`/chat`) side by side.")
-
     if not os.environ.get("MODUS_API_KEY"):
         st.error("MODUS_API_KEY is not set. Export your token before starting Streamlit:")
         st.code(_SETUP_HINT, language="bash")
         st.stop()
 
     try:
-        client = get_list_client()
-        base_url = client._config.base_url
+        get_list_client()
     except modus.AuthenticationError as exc:
         st.error(str(exc))
         st.stop()
@@ -247,9 +246,9 @@ def main() -> None:
     model = st.session_state.selected_model
 
     with st.sidebar:
-        st.subheader("Settings")
-        st.markdown(f"**API origin:** `{base_url}`")
-        st.markdown("**API key:** set")
+        if _LOGO_PATH.is_file():
+            st.image(str(_LOGO_PATH), width=140)
+        st.caption("Compare streaming vs buffered skill chat.")
 
         if st.button("Refresh skills"):
             load_active_skills.clear()
@@ -292,26 +291,15 @@ def main() -> None:
             _clear_conversations()
             st.rerun()
 
-        if skill_id is not None:
-            with st.expander("Thread IDs"):
-                st.text(f"Stream:   {st.session_state.stream_thread_id or '(new)'}")
-                st.text(f"Buffered: {st.session_state.buffered_thread_id or '(new)'}")
+    st.title("Modus Skill Chat")
 
     col_stream, col_buffered = st.columns(2)
 
     with col_stream:
         st.subheader("Streaming")
-        if skill_id is not None:
-            st.caption(
-                f"`POST {chat_path(skill_id, st.session_state.stream_thread_id, stream=True)}`"
-            )
 
     with col_buffered:
         st.subheader("Buffered")
-        if skill_id is not None:
-            st.caption(
-                f"`POST {chat_path(skill_id, st.session_state.buffered_thread_id, stream=False)}`"
-            )
 
     prompt = st.chat_input("Message")
 
