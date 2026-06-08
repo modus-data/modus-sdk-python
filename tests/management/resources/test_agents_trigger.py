@@ -22,7 +22,7 @@ AGENT_WITH_TRIGGER = {
     "isEnabled": False,
     "activeVariationId": None,
     "draftVariationId": "avar-new",
-    "accessConfig": {"guardrails": [], "permissions": {}},
+    "accessConfig": {"visibility": "shared", "groupPermissions": {"__everyone__": {"use": True, "manage": True}}, "guardrails": [], "sharedWith": []},
     "createdAt": "2026-01-01T00:00:00Z",
     "updatedAt": "2026-01-01T00:00:00Z",
     "deletedAt": None,

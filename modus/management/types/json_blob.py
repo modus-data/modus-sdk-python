@@ -1,11 +1,16 @@
-"""Open-ended JSON objects for integration-specific fields."""
+"""Open-ended JSON objects for integration-specific fields.
+
+These fields are genuinely free-form on the backend (it stores opaque JSON),
+so a plain ``dict`` is the natural input. ``JsonObject`` is offered as an
+optional convenience wrapper; both are accepted.
+"""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union
 
 from modus.types.json_blob import JsonObject, JsonObjectInput
 
-from ._serialize import dump_optional_model
+from ._serialize import dump_opaque_json
 
 JsonObjectListInput = Union[List[JsonObject], List[Dict[str, Any]]]
 
@@ -13,10 +18,7 @@ __all__ = ["JsonObject", "JsonObjectInput", "JsonObjectListInput"]
 
 
 def dump_json_object(value: Optional[JsonObjectInput]) -> Optional[Dict[str, Any]]:
-    dumped = dump_optional_model(
-        value, field_name="value", typed_label="JsonObject", stacklevel=4
-    )
-    return dumped if isinstance(dumped, dict) or dumped is None else None
+    return dump_opaque_json(value, field_name="value")
 
 
 def dump_json_object_list(
@@ -29,24 +31,15 @@ def dump_json_object_list(
     if not value:
         return []
     normalized: List[Dict[str, Any]] = []
-    saw_raw_dict = False
     for item in value:
         if isinstance(item, JsonObject):
             normalized.append(item.model_dump(by_alias=True, exclude_none=True))
         elif isinstance(item, dict):
-            saw_raw_dict = True
             normalized.append(item)
         else:
             raise TypeError(
                 f"{field_name} items must be JsonObject or dict, got {type(item).__name__}"
             )
-    if saw_raw_dict:
-        dump_optional_model(
-            cast(List[Dict[str, Any]], normalized),
-            field_name=field_name,
-            typed_label="JsonObject",
-            stacklevel=4,
-        )
     return normalized
 
 

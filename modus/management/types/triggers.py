@@ -1,7 +1,6 @@
 """Agent trigger types — Option B (Pydantic models + factories)."""
 from __future__ import annotations
 
-import warnings
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -142,21 +141,19 @@ AgentTriggerValue = Union[
     SlackTrigger,
 ]
 
-TriggerInput = Union[AgentTriggerValue, Dict[str, Any]]
+TriggerInput = AgentTriggerValue
 
 
 def dump_trigger(value: Optional[TriggerInput]) -> Optional[Dict[str, Any]]:
     """Serialize a trigger for the HTTP request body."""
     if value is None:
         return None
-    if isinstance(value, dict):
-        warnings.warn(
-            "Passing a raw dict for trigger= is deprecated; use AgentTrigger.manual() "
-            "or other typed triggers from modus.management.types.",
-            DeprecationWarning,
-            stacklevel=3,
+    if not isinstance(value, BaseModel):
+        raise TypeError(
+            "trigger= must be built with the AgentTrigger factories "
+            "(for example AgentTrigger.manual() or AgentTrigger.schedule_daily(...)), "
+            f"not {type(value).__name__}."
         )
-        return value
     # The agents API validates the trigger blob with snake_case keys
     # (trigger_type, schedule.time_of_day, ...), unlike the camelCase top-level
     # body. Dump by field name so AgentTrigger.* matches TriggerDto.

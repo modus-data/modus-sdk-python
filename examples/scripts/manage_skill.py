@@ -68,6 +68,7 @@ def main(write: bool, delete: bool) -> None:
         instructions=["Answer revenue questions using connected data sources."],
         model="gpt-4o",
         toolset=toolset,
+        guardrails=["no-pii"],
     )
     skill_id = created.id
     print(f"  id={skill_id}  status={created.status}")

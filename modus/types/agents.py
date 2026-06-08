@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
@@ -16,7 +16,10 @@ class Agent(BaseModel):
     A Modus agent (scheduled automation).
 
     Agents run unattended on a schedule or trigger.
-    To configure an agent (instructions, model, trigger), use modus.management.ModusManagement.
+
+    ``instructions`` and ``guardrails`` are populated on ``client.agents.get(id)``.
+    ``guardrails`` is also present on list rows. To change configuration, use
+    ``modus.management.ModusManagement``.
     """
 
     model_config = ConfigDict(
@@ -33,6 +36,10 @@ class Agent(BaseModel):
     description: Optional[str] = None
     has_unpublished_changes: bool = Field(default=False, title="HasUnpublishedChanges")
     is_enabled: bool = Field(default=False, title="IsEnabled")
+
+    # Read-only config surfaced for inspection (populated on .get(); guardrails on list too)
+    instructions: Optional[List[str]] = None
+    guardrails: List[str] = []
 
     @property
     def is_active(self) -> bool:

@@ -71,14 +71,23 @@ def test_agent_wire_matches_openapi(openapi):
     )
 
 
+# Fields the backend sends on ContextItemDto that the SDK deliberately omits.
+# Keep this list short and justified; the model still parses these (extra fields
+# are ignored), they are simply not surfaced as public attributes.
+#   org_id: redundant — the API key is already org-scoped, so it is the same
+#           value on every row the caller can see.
+_CONTEXT_ITEM_INTENTIONALLY_OMITTED = {"org_id"}
+
+
 def test_context_item_matches_openapi(openapi):
     from modus.types.context import ContextItem
     backend = {_camel_to_snake(f) for f in _backend_fields(openapi, "ContextItemDto")}
     public = _wire_fields(ContextItem)
-    missing = backend - public
+    missing = backend - public - _CONTEXT_ITEM_INTENTIONALLY_OMITTED
     assert not missing, (
         f"ContextItem is missing fields backend sends: {sorted(missing)}.\n"
-        f"Update modus/types/context.py"
+        f"Update modus/types/context.py (or add to the intentional-omission list "
+        f"with a reason if the omission is deliberate)."
     )
 
 

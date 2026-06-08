@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import List, Optional, Union
 from urllib.parse import quote
 
 from modus._config import ModusConfig
@@ -14,17 +14,34 @@ from modus._validation import validate_id, validate_page_size
 from modus.types.pagination import AsyncPage, Page
 
 from ..._wire.agents import _AgentWire
-from ...types.access import AccessConfigInput, dump_access_config
 from ...types.agent_selection import AgentSelectionInput, dump_agent_selection
 from ...types.agents import Agent, AgentType
 from ...types.triggers import TriggerInput, dump_trigger
 from ...types.workflow import WorkflowGraphInput, dump_workflow_structure
+from .._access_config_write import (
+    access_config_body_for_create,
+    access_config_body_for_update,
+)
 from ._translate import _translate_agent
 from ._update_body import _AgentCreateBody, _AgentUpdateBody
 
 
 def _map_agent(raw: dict) -> Agent:
     return _translate_agent(_AgentWire.model_validate(raw))
+
+
+def _agents_list_params(
+    page_size: int,
+    page_token: Optional[str],
+    search: Optional[str],
+    type: Optional[AgentType],
+) -> dict:
+    extra: dict = {}
+    if search is not None:
+        extra["search"] = search
+    if type is not None:
+        extra["type"] = type
+    return aip_list_params(page_size, page_token, **extra)
 
 
 class AgentsResource:
@@ -48,6 +65,8 @@ class AgentsResource:
         *,
         page_size: int = 25,
         page_token: Optional[str] = None,
+        search: Optional[str] = None,
+        type: Optional[AgentType] = None,
     ) -> Page[Agent]:
         """
         List all Modus agents in the organisation.
@@ -55,12 +74,20 @@ class AgentsResource:
         Args:
             page_size:  Maximum number of items to return (default 25).
             page_token: Token from a previous page's ``next_page_token``; omit for the first page.
+            search:     Case-insensitive substring filter on the agent name.
+            type:       Filter by agent type: ``"task"`` or ``"workflow"``.
         """
         validate_page_size(page_size)
-        return self._list_page(page_size, page_token)
+        return self._list_page(page_size, page_token, search, type)
 
-    def _list_page(self, page_size: int, page_token: Optional[str]) -> Page[Agent]:
-        params = aip_list_params(page_size, page_token)
+    def _list_page(
+        self,
+        page_size: int,
+        page_token: Optional[str],
+        search: Optional[str] = None,
+        type: Optional[AgentType] = None,
+    ) -> Page[Agent]:
+        params = _agents_list_params(page_size, page_token, search, type)
         data = with_retry(
             lambda: self._http.get("/api/v1/agents", params=params),
             self._config.max_retries,
@@ -69,7 +96,7 @@ class AgentsResource:
             data,
             "agents",
             _map_agent,
-            lambda cur: self._list_page(page_size, cur),
+            lambda cur: self._list_page(page_size, cur, search, type),
         )
 
     def get(self, agent_id: Union[int, str]) -> Agent:
@@ -91,7 +118,7 @@ class AgentsResource:
         trigger: Optional[TriggerInput] = None,
         agent_selection: Optional[AgentSelectionInput] = None,
         workflow_structure: Optional[WorkflowGraphInput] = None,
-        access_config: Optional[AccessConfigInput] = None,
+        guardrails: Optional[List[str]] = None,
     ) -> Agent:
         """Create a new Modus agent.
 
@@ -99,13 +126,17 @@ class AgentsResource:
             name: Display name for the agent.
             type: ``"task"`` for single-step skill orchestration, or ``"workflow"``
                   for a multi-step graph.
+            guardrails: Runtime guardrail labels (for example ``\"no-pii\"``).
+                When set, the agent is created with these labels under the
+                organisation default sharing rules. Omit (``None``) to create
+                with no guardrails. ACL fields cannot be set from the SDK.
         """
         body = _AgentCreateBody(
             name=name, type=type, description=description,
             trigger=dump_trigger(trigger),
             agent_selection=dump_agent_selection(agent_selection),
             workflow_structure=dump_workflow_structure(workflow_structure),
-            access_config=dump_access_config(access_config),
+            access_config=access_config_body_for_create(guardrails),
         ).model_dump(by_alias=True, exclude_none=True)
         raw = with_retry(
             lambda: self._http.post("/api/v1/agents", json=body),
@@ -123,7 +154,7 @@ class AgentsResource:
         trigger: Optional[TriggerInput] = None,
         agent_selection: Optional[AgentSelectionInput] = None,
         workflow_structure: Optional[WorkflowGraphInput] = None,
-        access_config: Optional[AccessConfigInput] = None,
+        guardrails: Optional[List[str]] = None,
         update_mask: Optional[str] = None,
     ) -> Agent:
         """Update a Modus agent's configuration.
@@ -132,16 +163,29 @@ class AgentsResource:
         ``update_mask`` (a comma-separated list of field names) and leave its
         argument unset — the server sets each masked field to null and leaves
         fields not named in the mask untouched.
+
+        Args:
+            guardrails: Runtime guardrail labels to set on the agent. Fetches
+                the current agent first and merges these labels into its access
+                configuration (an extra ``get`` request). Omit (``None``) to
+                leave guardrails unchanged. Pass ``[]`` to clear all guardrails.
         """
+        validate_id(agent_id, name="agent_id")
+        safe_id = quote(str(agent_id), safe="")
+        access_config = access_config_body_for_update(
+            guardrails,
+            lambda: with_retry(
+                lambda: self._http.get(f"/api/v1/agents/{safe_id}"),
+                self._config.max_retries,
+            ),
+        )
         body = _AgentUpdateBody(
             name=name, type=type, description=description,
             trigger=dump_trigger(trigger),
             agent_selection=dump_agent_selection(agent_selection),
             workflow_structure=dump_workflow_structure(workflow_structure),
-            access_config=dump_access_config(access_config),
+            access_config=access_config,
         ).model_dump(by_alias=True, exclude_none=update_mask is None)
-        validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
         path = _with_update_mask(f"/api/v1/agents/{safe_id}", update_mask)
         raw = with_retry(
             lambda: self._http.patch(path, json=body),
@@ -180,6 +224,8 @@ class AsyncAgentsResource:
         *,
         page_size: int = 25,
         page_token: Optional[str] = None,
+        search: Optional[str] = None,
+        type: Optional[AgentType] = None,
     ) -> AsyncPage[Agent]:
         """
         List all Modus agents in the organisation.
@@ -187,14 +233,20 @@ class AsyncAgentsResource:
         Args:
             page_size:  Maximum number of items to return (default 25).
             page_token: Token from a previous page's ``next_page_token``; omit for the first page.
+            search:     Case-insensitive substring filter on the agent name.
+            type:       Filter by agent type: ``"task"`` or ``"workflow"``.
         """
         validate_page_size(page_size)
-        return await self._list_page(page_size, page_token)
+        return await self._list_page(page_size, page_token, search, type)
 
     async def _list_page(
-        self, page_size: int, page_token: Optional[str]
+        self,
+        page_size: int,
+        page_token: Optional[str],
+        search: Optional[str] = None,
+        type: Optional[AgentType] = None,
     ) -> AsyncPage[Agent]:
-        params = aip_list_params(page_size, page_token)
+        params = _agents_list_params(page_size, page_token, search, type)
         data = await async_with_retry(
             lambda: self._http.get("/api/v1/agents", params=params),
             self._config.max_retries,
@@ -203,7 +255,7 @@ class AsyncAgentsResource:
             data,
             "agents",
             _map_agent,
-            lambda cur: self._list_page(page_size, cur),
+            lambda cur: self._list_page(page_size, cur, search, type),
         )
 
     async def get(self, agent_id: Union[int, str]) -> Agent:
@@ -221,13 +273,24 @@ class AsyncAgentsResource:
                      trigger: Optional[TriggerInput] = None,
                      agent_selection: Optional[AgentSelectionInput] = None,
                      workflow_structure: Optional[WorkflowGraphInput] = None,
-                     access_config: Optional[AccessConfigInput] = None) -> Agent:
+                     guardrails: Optional[List[str]] = None) -> Agent:
+        """Create a new Modus agent.
+
+        Args:
+            name: Display name for the agent.
+            type: ``"task"`` for single-step skill orchestration, or ``"workflow"``
+                  for a multi-step graph.
+            guardrails: Runtime guardrail labels (for example ``\"no-pii\"``).
+                When set, the agent is created with these labels under the
+                organisation default sharing rules. Omit (``None``) to create
+                with no guardrails. ACL fields cannot be set from the SDK.
+        """
         body = _AgentCreateBody(
             name=name, type=type, description=description,
             trigger=dump_trigger(trigger),
             agent_selection=dump_agent_selection(agent_selection),
             workflow_structure=dump_workflow_structure(workflow_structure),
-            access_config=dump_access_config(access_config),
+            access_config=access_config_body_for_create(guardrails),
         ).model_dump(by_alias=True, exclude_none=True)
         raw = await async_with_retry(
             lambda: self._http.post("/api/v1/agents", json=body),
@@ -241,17 +304,38 @@ class AsyncAgentsResource:
                      trigger: Optional[TriggerInput] = None,
                      agent_selection: Optional[AgentSelectionInput] = None,
                      workflow_structure: Optional[WorkflowGraphInput] = None,
-                     access_config: Optional[AccessConfigInput] = None,
+                     guardrails: Optional[List[str]] = None,
                      update_mask: Optional[str] = None) -> Agent:
+        """Update a Modus agent's configuration.
+
+        Only the fields you pass are changed. To clear a field, name it in
+        ``update_mask`` (a comma-separated list of field names) and leave its
+        argument unset — the server sets each masked field to null and leaves
+        fields not named in the mask untouched.
+
+        Args:
+            guardrails: Runtime guardrail labels to set on the agent. Fetches
+                the current agent first and merges these labels into its access
+                configuration (an extra ``get`` request). Omit (``None``) to
+                leave guardrails unchanged. Pass ``[]`` to clear all guardrails.
+        """
+        validate_id(agent_id, name="agent_id")
+        safe_id = quote(str(agent_id), safe="")
+        if guardrails is not None:
+            existing = await async_with_retry(
+                lambda: self._http.get(f"/api/v1/agents/{safe_id}"),
+                self._config.max_retries,
+            )
+            access_config = access_config_body_for_update(guardrails, lambda: existing)
+        else:
+            access_config = None
         body = _AgentUpdateBody(
             name=name, type=type, description=description,
             trigger=dump_trigger(trigger),
             agent_selection=dump_agent_selection(agent_selection),
             workflow_structure=dump_workflow_structure(workflow_structure),
-            access_config=dump_access_config(access_config),
+            access_config=access_config,
         ).model_dump(by_alias=True, exclude_none=update_mask is None)
-        validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
         path = _with_update_mask(f"/api/v1/agents/{safe_id}", update_mask)
         raw = await async_with_retry(
             lambda: self._http.patch(path, json=body),

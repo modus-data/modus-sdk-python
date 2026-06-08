@@ -39,6 +39,13 @@ def _map_skill(raw: dict) -> Skill:
     return _translate_skill(_SkillWire.model_validate(raw))
 
 
+def _skills_list_params(
+    page_size: int, page_token: Optional[str], search: Optional[str]
+) -> dict:
+    extra = {} if search is None else {"search": search}
+    return aip_list_params(page_size, page_token, **extra)
+
+
 class SkillsResource:
     """
     Read access to Modus skills.
@@ -64,6 +71,7 @@ class SkillsResource:
         *,
         page_size: int = 25,
         page_token: Optional[str] = None,
+        search: Optional[str] = None,
     ) -> Page[Skill]:
         """
         List skills in the organisation.
@@ -71,12 +79,15 @@ class SkillsResource:
         Args:
             page_size:  Items per page (default 25).
             page_token: Opaque token from a previous page's ``next_page_token``.
+            search:     Case-insensitive substring filter on the skill name.
         """
         validate_page_size(page_size)
-        return self._list_page(page_size, page_token)
+        return self._list_page(page_size, page_token, search)
 
-    def _list_page(self, page_size: int, page_token: Optional[str]) -> Page[Skill]:
-        params = aip_list_params(page_size, page_token)
+    def _list_page(
+        self, page_size: int, page_token: Optional[str], search: Optional[str] = None
+    ) -> Page[Skill]:
+        params = _skills_list_params(page_size, page_token, search)
         data = with_retry(
             lambda: self._http.get("/api/v1/skills", params=params),
             self._config.max_retries,
@@ -85,7 +96,7 @@ class SkillsResource:
             data,
             "skills",
             _map_skill,
-            lambda cur: self._list_page(page_size, cur),
+            lambda cur: self._list_page(page_size, cur, search),
         )
 
     def get(self, skill_id: Union[int, str]) -> Skill:
@@ -216,14 +227,23 @@ class AsyncSkillsResource:
         *,
         page_size: int = 25,
         page_token: Optional[str] = None,
+        search: Optional[str] = None,
     ) -> AsyncPage[Skill]:
+        """
+        List skills in the organisation.
+
+        Args:
+            page_size:  Items per page (default 25).
+            page_token: Opaque token from a previous page's ``next_page_token``.
+            search:     Case-insensitive substring filter on the skill name.
+        """
         validate_page_size(page_size)
-        return await self._list_page(page_size, page_token)
+        return await self._list_page(page_size, page_token, search)
 
     async def _list_page(
-        self, page_size: int, page_token: Optional[str]
+        self, page_size: int, page_token: Optional[str], search: Optional[str] = None
     ) -> AsyncPage[Skill]:
-        params = aip_list_params(page_size, page_token)
+        params = _skills_list_params(page_size, page_token, search)
         data = await async_with_retry(
             lambda: self._http.get("/api/v1/skills", params=params),
             self._config.max_retries,
@@ -232,7 +252,7 @@ class AsyncSkillsResource:
             data,
             "skills",
             _map_skill,
-            lambda cur: self._list_page(page_size, cur),
+            lambda cur: self._list_page(page_size, cur, search),
         )
 
     async def get(self, skill_id: Union[int, str]) -> Skill:

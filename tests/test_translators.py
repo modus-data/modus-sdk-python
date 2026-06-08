@@ -1,8 +1,6 @@
 """
 L2: Translator coverage test.
-Verifies that every field on the public Skill/Agent type is populated
-by the translator. Catches: new public field added but translator forgot
-to wire it up.
+Verifies that consumption Skill/Agent translators map wire payloads correctly.
 """
 from datetime import datetime, timezone
 
@@ -15,73 +13,102 @@ from modus.types.skills import Skill
 
 _NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
-WIRE_SKILL = _SkillWire(
+_ACCESS_CONFIG = {
+    "visibility": "shared",
+    "groupPermissions": {"__everyone__": {"use": True, "manage": True}},
+    "guardrails": ["no-pii"],
+    "sharedWith": [],
+}
+
+WIRE_SKILL_DETAIL = _SkillWire(
     id=1, slug="test-skill", name="Test Skill", status="active",
     org_uuid="org-uuid", has_unpublished_changes=False,
     active_variation_id="var-1", draft_variation_id=None,
-    access_config=None,
+    access_config=_ACCESS_CONFIG,
     created_at=_NOW, updated_at=_NOW, deleted_at=None,
     variation={"instructions": ["Do stuff"]},
 )
 
-WIRE_AGENT = _AgentWire(
+WIRE_SKILL_LIST = _SkillWire(
+    id=1, slug="test-skill", name="Test Skill", status="active",
+    org_uuid="org-uuid", has_unpublished_changes=False,
+    active_variation_id="var-1", draft_variation_id=None,
+    access_config=_ACCESS_CONFIG,
+    created_at=_NOW, updated_at=_NOW, deleted_at=None,
+    variation=None,
+)
+
+WIRE_AGENT_DETAIL = _AgentWire(
     id=2, slug="test-agent", name="Test Agent", status="active",
     type="task", org_uuid="org-uuid", has_unpublished_changes=False,
     active_variation_id="var-2", draft_variation_id=None,
-    is_enabled=True, access_config=None,
+    is_enabled=True, access_config=_ACCESS_CONFIG,
+    created_at=_NOW, updated_at=_NOW, deleted_at=None,
+    variation={"instructions": ["Run nightly"]},
+)
+
+WIRE_AGENT_LIST = _AgentWire(
+    id=2, slug="test-agent", name="Test Agent", status="active",
+    type="task", org_uuid="org-uuid", has_unpublished_changes=False,
+    active_variation_id="var-2", draft_variation_id=None,
+    is_enabled=True, access_config=_ACCESS_CONFIG,
     created_at=_NOW, updated_at=_NOW, deleted_at=None,
     variation=None,
 )
 
 
-def test_translate_skill_populates_all_public_fields():
-    public = _translate_skill(WIRE_SKILL)
+def test_translate_skill_detail_populates_instructions_and_guardrails():
+    public = _translate_skill(WIRE_SKILL_DETAIL)
     assert isinstance(public, Skill)
-    public_fields = set(Skill.model_fields.keys())
-    wire_fields = set(_SkillWire.model_fields.keys())
-    # Every public field must be derivable from wire fields (properties excluded)
-    unmapped = public_fields - wire_fields - {"is_active", "is_draft"}
-    assert not unmapped, f"Public Skill has fields not mapped by translator: {unmapped}"
+    assert public.instructions == ["Do stuff"]
+    assert public.guardrails == ["no-pii"]
+
+
+def test_translate_skill_list_row_has_guardrails_not_instructions():
+    public = _translate_skill(WIRE_SKILL_LIST)
+    assert public.instructions is None
+    assert public.guardrails == ["no-pii"]
 
 
 def test_translate_skill_variation_not_exposed():
     """Consumption Skill must not expose variation — both at the schema level
     and on the translated payload."""
-    public = _translate_skill(WIRE_SKILL)
-    # Schema-level: the type doesn't declare a `variation` field.
+    public = _translate_skill(WIRE_SKILL_DETAIL)
     assert "variation" not in Skill.model_fields
-    # Translator-level: the dumped instance doesn't expose it either.
-    # (catches a regression where the translator might leak the wire dict).
     assert "variation" not in public.model_dump()
 
 
 def test_translate_skill_status_preserved():
-    public = _translate_skill(WIRE_SKILL)
+    public = _translate_skill(WIRE_SKILL_DETAIL)
     assert public.status == "active"
     assert public.is_active is True
     assert public.is_draft is False
 
 
 def test_translate_skill_has_unpublished_changes():
-    wire = WIRE_SKILL.model_copy(update={"has_unpublished_changes": True})
+    wire = WIRE_SKILL_DETAIL.model_copy(update={"has_unpublished_changes": True})
     assert _translate_skill(wire).has_unpublished_changes is True
 
 
-def test_translate_agent_populates_all_public_fields():
-    public = _translate_agent(WIRE_AGENT)
+def test_translate_agent_detail_populates_instructions_and_guardrails():
+    public = _translate_agent(WIRE_AGENT_DETAIL)
     assert isinstance(public, Agent)
-    public_fields = set(Agent.model_fields.keys())
-    wire_fields = set(_AgentWire.model_fields.keys())
-    unmapped = public_fields - wire_fields - {"is_active", "is_draft"}
-    assert not unmapped, f"Public Agent has fields not mapped by translator: {unmapped}"
+    assert public.instructions == ["Run nightly"]
+    assert public.guardrails == ["no-pii"]
+
+
+def test_translate_agent_list_row_has_guardrails_not_instructions():
+    public = _translate_agent(WIRE_AGENT_LIST)
+    assert public.instructions is None
+    assert public.guardrails == ["no-pii"]
 
 
 def test_translate_agent_type_preserved():
-    public = _translate_agent(WIRE_AGENT)
+    public = _translate_agent(WIRE_AGENT_DETAIL)
     assert public.type == "task"
 
 
 def test_translate_agent_flags():
-    public = _translate_agent(WIRE_AGENT)
+    public = _translate_agent(WIRE_AGENT_DETAIL)
     assert public.is_enabled is True
     assert public.has_unpublished_changes is False

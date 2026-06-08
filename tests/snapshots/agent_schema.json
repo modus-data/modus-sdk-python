@@ -1,5 +1,5 @@
 {
-  "description": "A Modus agent (scheduled automation).\n\nAgents run unattended on a schedule or trigger.\nTo configure an agent (instructions, model, trigger), use modus.management.ModusManagement.",
+  "description": "A Modus agent (scheduled automation).\n\nAgents run unattended on a schedule or trigger.\n\n``instructions`` and ``guardrails`` are populated on ``client.agents.get(id)``.\n``guardrails`` is also present on list rows. To change configuration, use\n``modus.management.ModusManagement``.",
   "properties": {
     "id": {
       "title": "Id",
@@ -51,6 +51,29 @@
       "default": false,
       "title": "IsEnabled",
       "type": "boolean"
+    },
+    "instructions": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Instructions"
+    },
+    "guardrails": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Guardrails",
+      "type": "array"
     }
   },
   "required": [

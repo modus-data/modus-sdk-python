@@ -1,4 +1,4 @@
-"""Verify consumption Skill/Agent expose only identity fields."""
+"""Verify consumption Skill/Agent shape — read-only config subset."""
 from modus.types.agents import Agent
 from modus.types.skills import Skill
 
@@ -19,12 +19,23 @@ def test_agent_has_no_variation_field():
         "Agent.variation must not exist in consumption SDK"
 
 
+def test_skill_exposes_instructions_and_guardrails():
+    assert "instructions" in Skill.model_fields
+    assert "guardrails" in Skill.model_fields
+
+
+def test_agent_exposes_instructions_and_guardrails():
+    assert "instructions" in Agent.model_fields
+    assert "guardrails" in Agent.model_fields
+
+
 def test_skill_identity_fields_present():
     s = Skill(id=1, slug="s", name="N", status="active", description=None)
     assert s.id == 1
     assert s.slug == "s"
     assert s.status == "active"
     assert s.description is None
+    assert s.guardrails == []
 
 
 def test_agent_identity_fields_present():

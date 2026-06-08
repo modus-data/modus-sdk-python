@@ -15,7 +15,7 @@ SKILL_RESP = {
     "id": 1, "slug": "test-skill", "name": "Test Skill", "status": "draft",
     "description": None, "orgUuid": "org-xyz", "hasUnpublishedChanges": True,
     "activeVariationId": None, "draftVariationId": "var-new",
-    "accessConfig": {"guardrails": [], "permissions": {}},
+    "accessConfig": {"visibility": "shared", "groupPermissions": {"__everyone__": {"use": True, "manage": True}}, "guardrails": [], "sharedWith": []},
     "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z",
     "deletedAt": None,
 }
@@ -47,6 +47,64 @@ def test_skills_create_sends_only_provided_fields():
     _client().skills.create(name="Test", description="Desc")
     body = json.loads(route.calls[0].request.read())
     assert set(body.keys()) == {"name", "description"}
+
+
+
+@respx.mock
+def test_skills_create_guardrails_sends_full_access_config():
+    route = respx.post(f"{BASE}/api/v1/skills").mock(
+        return_value=httpx.Response(201, json=SKILL_RESP)
+    )
+    _client().skills.create(name="Test Skill", guardrails=["no-pii"])
+    body = json.loads(route.calls[0].request.read())
+    access = body["accessConfig"]
+    assert access["guardrails"] == ["no-pii"]
+    assert access["visibility"] == "shared"
+    assert access["groupPermissions"]["__everyone__"] == {"use": True, "manage": True}
+    assert "permissions" not in access
+
+
+_PRIVATE_ACCESS_CONFIG = {
+    "visibility": "private",
+    "groupPermissions": {},
+    "guardrails": [],
+    "sharedWith": [{"email": "alice@example.com"}],
+}
+
+
+@respx.mock
+def test_skills_update_guardrails_merges_existing_access_config():
+    get_route = respx.get(f"{BASE}/api/v1/skills/1").mock(
+        return_value=httpx.Response(
+            200,
+            json={**SKILL_RESP, "accessConfig": _PRIVATE_ACCESS_CONFIG},
+        )
+    )
+    patch_route = respx.patch(f"{BASE}/api/v1/skills/1").mock(
+        return_value=httpx.Response(200, json=SKILL_RESP)
+    )
+    _client().skills.update(1, guardrails=["no-pii"])
+    assert get_route.call_count == 1
+    assert patch_route.call_count == 1
+    body = json.loads(patch_route.calls[0].request.read())
+    access = body["accessConfig"]
+    assert access["guardrails"] == ["no-pii"]
+    assert access["visibility"] == "private"
+    assert access["sharedWith"] == [{"email": "alice@example.com"}]
+
+
+@respx.mock
+def test_skills_update_without_guardrails_skips_get():
+    patch_route = respx.patch(f"{BASE}/api/v1/skills/1").mock(
+        return_value=httpx.Response(200, json=SKILL_RESP)
+    )
+    get_route = respx.get(f"{BASE}/api/v1/skills/1")
+    _client().skills.update(1, name="Renamed")
+    assert patch_route.called
+    assert not get_route.called
+    body = json.loads(patch_route.calls[0].request.read())
+    assert body == {"name": "Renamed"}
+    assert "accessConfig" not in body
 
 
 @respx.mock
@@ -85,18 +143,15 @@ def test_skills_create_empty_toolset_is_omitted():
 
 
 @respx.mock
-def test_skills_create_raw_toolset_dict_warns():
-    route = respx.post(f"{BASE}/api/v1/skills").mock(
+def test_skills_create_raw_toolset_dict_rejected():
+    respx.post(f"{BASE}/api/v1/skills").mock(
         return_value=httpx.Response(201, json=SKILL_RESP)
     )
-    with pytest.warns(DeprecationWarning, match="toolset"):
+    with pytest.raises(TypeError, match="Toolset"):
         _client().skills.create(
             name="X",
             toolset={"sql_runner": ["SELECT:conn-1:analytics:public"]},
         )
-    body = json.loads(route.calls[0].request.read())
-    assert body["toolset"] == {"sql_runner": ["SELECT:conn-1:analytics:public"]}
-    assert route.called
 
 
 @respx.mock

@@ -1,7 +1,5 @@
 """Tests for AgentTrigger typed models and factories."""
 
-import warnings
-
 import pytest
 from modus.management.types.triggers import (
     AgentTrigger,
@@ -38,13 +36,9 @@ def test_dump_trigger_snake_case() -> None:
     assert payload == {"trigger_type": "manual"}
 
 
-def test_dump_trigger_dict_deprecated() -> None:
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        payload = dump_trigger({"trigger_type": "manual"})
-    assert len(caught) == 1
-    assert issubclass(caught[0].category, DeprecationWarning)
-    assert payload == {"trigger_type": "manual"}
+def test_dump_trigger_rejects_raw_dict() -> None:
+    with pytest.raises(TypeError, match="AgentTrigger"):
+        dump_trigger({"trigger_type": "manual"})
 
 
 def test_parse_trigger_schedule_without_client_validation() -> None:

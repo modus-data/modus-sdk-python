@@ -4,7 +4,7 @@ import json
 
 import httpx
 import respx
-from modus.management import ModusManagement
+from modus.management import AgentSelection, ModusManagement
 from modus.management.types.agents import Agent
 
 BASE = "https://api.modus.com"
@@ -14,7 +14,7 @@ AGENT_RESP = {
     "type": "task", "description": None, "orgUuid": "org-xyz",
     "hasUnpublishedChanges": True, "isEnabled": False,
     "activeVariationId": None, "draftVariationId": "avar-new",
-    "accessConfig": {"guardrails": [], "permissions": {}},
+    "accessConfig": {"visibility": "shared", "groupPermissions": {"__everyone__": {"use": True, "manage": True}}, "guardrails": [], "sharedWith": []},
     "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z",
     "deletedAt": None,
 }
@@ -34,6 +34,67 @@ def test_agents_create():
     body = json.loads(route.calls[0].request.read())
     assert body["name"] == "My Agent"
     assert body["type"] == "task"
+
+
+@respx.mock
+def test_agents_create_agent_selection_snake_case():
+    route = respx.post(f"{BASE}/api/v1/agents").mock(
+        return_value=httpx.Response(201, json=AGENT_RESP)
+    )
+    _client().agents.create(
+        name="My Agent",
+        type="task",
+        agent_selection=AgentSelection.single(17, model="gpt-4o"),
+    )
+    body = json.loads(route.calls[0].request.read())
+    entry = body["agentSelection"]["agents"][0]
+    assert "agent_id" in entry
+    assert "priority_order" in entry
+    assert "agentId" not in entry
+    assert "priorityOrder" not in entry
+
+
+@respx.mock
+def test_agents_create_guardrails_sends_full_access_config():
+    route = respx.post(f"{BASE}/api/v1/agents").mock(
+        return_value=httpx.Response(201, json=AGENT_RESP)
+    )
+    _client().agents.create(name="My Agent", type="task", guardrails=["no-pii"])
+    body = json.loads(route.calls[0].request.read())
+    access = body["accessConfig"]
+    assert access["guardrails"] == ["no-pii"]
+    assert access["visibility"] == "shared"
+    assert access["groupPermissions"]["__everyone__"] == {"use": True, "manage": True}
+    assert "permissions" not in access
+
+
+_PRIVATE_ACCESS_CONFIG = {
+    "visibility": "private",
+    "groupPermissions": {},
+    "guardrails": [],
+    "sharedWith": [{"email": "alice@example.com"}],
+}
+
+
+@respx.mock
+def test_agents_update_guardrails_merges_existing_access_config():
+    get_route = respx.get(f"{BASE}/api/v1/agents/1").mock(
+        return_value=httpx.Response(
+            200,
+            json={**AGENT_RESP, "accessConfig": _PRIVATE_ACCESS_CONFIG},
+        )
+    )
+    patch_route = respx.patch(f"{BASE}/api/v1/agents/1").mock(
+        return_value=httpx.Response(200, json=AGENT_RESP)
+    )
+    _client().agents.update(1, guardrails=["no-pii"])
+    assert get_route.call_count == 1
+    assert patch_route.call_count == 1
+    body = json.loads(patch_route.calls[0].request.read())
+    access = body["accessConfig"]
+    assert access["guardrails"] == ["no-pii"]
+    assert access["visibility"] == "private"
+    assert access["sharedWith"] == [{"email": "alice@example.com"}]
 
 
 @respx.mock

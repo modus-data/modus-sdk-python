@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 
-from ._serialize import dump_optional_model
+from ._serialize import dump_opaque_json
 
 WorkflowGraphInput = Union["WorkflowGraph", Dict[str, Any]]
 
@@ -36,13 +36,7 @@ class WorkflowGraph(BaseModel):
 def dump_workflow_structure(
     value: Optional[WorkflowGraphInput],
 ) -> Optional[Dict[str, Any]]:
-    dumped = dump_optional_model(
-        value,
-        field_name="workflow_structure",
-        typed_label="WorkflowGraph",
-        stacklevel=4,
-    )
-    return dumped if isinstance(dumped, dict) or dumped is None else None
+    return dump_opaque_json(value, field_name="workflow_structure")
 
 
 def parse_workflow_structure(raw: object) -> Optional[WorkflowGraph]:

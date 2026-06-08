@@ -20,7 +20,6 @@ _FORBIDDEN_CONSUMPTION_ATTRS = frozenset(
         "access_config",
         "created_at",
         "updated_at",
-        "instructions",
         "model",
         "toolset",
         "connection_set",

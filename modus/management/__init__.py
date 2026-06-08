@@ -10,7 +10,6 @@ Errors are the shared modus.* hierarchy (modus.NotFoundError, etc.).
 
 from ._client import AsyncModusManagement, ModusManagement
 from .types import (
-    AccessConfig,
     Agent,
     AgentSelection,
     AgentSelectionEntry,
@@ -42,7 +41,6 @@ from .types import (
 )
 
 __all__ = [
-    "AccessConfig",
     "Agent",
     "AgentSelection",
     "AgentSelectionEntry",

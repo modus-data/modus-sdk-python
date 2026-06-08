@@ -45,6 +45,24 @@ def test_skills_list_row_has_guardrails(client, skill_list_row):
 
 
 @respx.mock
+def test_skills_list_forwards_search_filter(client, skill_list_row):
+    route = respx.get(f"{BASE}/api/v1/skills").mock(
+        return_value=httpx.Response(200, json={"skills": [skill_list_row], "nextPageToken": None})
+    )
+    client.skills.list(search="churn")
+    assert route.calls[0].request.url.params["search"] == "churn"
+
+
+@respx.mock
+def test_skills_list_omits_search_when_not_set(client, skill_list_row):
+    route = respx.get(f"{BASE}/api/v1/skills").mock(
+        return_value=httpx.Response(200, json={"skills": [skill_list_row], "nextPageToken": None})
+    )
+    client.skills.list()
+    assert "search" not in route.calls[0].request.url.params
+
+
+@respx.mock
 def test_skills_get_populates_variation_fields(client, skill_detail_row):
     """get() must return Skill with instructions, model etc. populated."""
     respx.get(f"{BASE}/api/v1/skills/10").mock(

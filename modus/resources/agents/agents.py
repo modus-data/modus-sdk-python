@@ -23,7 +23,7 @@ from ..._pagination import (
 from ..._retry import async_with_retry, with_retry
 from ..._validation import validate_id, validate_page_size
 from ..._wire.agents import _AgentWire
-from ...types.agents import Agent
+from ...types.agents import Agent, AgentType
 from ...types.chat import ChatResult
 from ...types.pagination import AsyncPage, Page
 from ._translate import _translate_agent
@@ -32,6 +32,20 @@ from .runs import AgentRunsResource, AsyncAgentRunsResource
 
 def _map_agent(raw: dict) -> Agent:
     return _translate_agent(_AgentWire.model_validate(raw))
+
+
+def _agents_list_params(
+    page_size: int,
+    page_token: Optional[str],
+    search: Optional[str],
+    type: Optional[AgentType],
+) -> dict:
+    extra: dict = {}
+    if search is not None:
+        extra["search"] = search
+    if type is not None:
+        extra["type"] = type
+    return aip_list_params(page_size, page_token, **extra)
 
 
 class AgentsResource:
@@ -108,6 +122,8 @@ class AgentsResource:
         *,
         page_size: int = 25,
         page_token: Optional[str] = None,
+        search: Optional[str] = None,
+        type: Optional[AgentType] = None,
     ) -> Page[Agent]:
         """
         List agents in the organisation.
@@ -115,12 +131,20 @@ class AgentsResource:
         Args:
             page_size:  Items per page (default 25).
             page_token: Opaque token from a previous page's ``next_page_token``.
+            search:     Case-insensitive substring filter on the agent name.
+            type:       Filter by agent type: ``"task"`` or ``"workflow"``.
         """
         validate_page_size(page_size)
-        return self._list_page(page_size, page_token)
+        return self._list_page(page_size, page_token, search, type)
 
-    def _list_page(self, page_size: int, page_token: Optional[str]) -> Page[Agent]:
-        params = aip_list_params(page_size, page_token)
+    def _list_page(
+        self,
+        page_size: int,
+        page_token: Optional[str],
+        search: Optional[str] = None,
+        type: Optional[AgentType] = None,
+    ) -> Page[Agent]:
+        params = _agents_list_params(page_size, page_token, search, type)
         data = with_retry(
             lambda: self._http.get("/api/v1/agents", params=params),
             self._config.max_retries,
@@ -129,7 +153,7 @@ class AgentsResource:
             data,
             "agents",
             _map_agent,
-            lambda cur: self._list_page(page_size, cur),
+            lambda cur: self._list_page(page_size, cur, search, type),
         )
 
     def get(self, agent_id: Union[int, str]) -> Agent:
@@ -202,14 +226,29 @@ class AsyncAgentsResource:
         *,
         page_size: int = 25,
         page_token: Optional[str] = None,
+        search: Optional[str] = None,
+        type: Optional[AgentType] = None,
     ) -> AsyncPage[Agent]:
+        """
+        List agents in the organisation.
+
+        Args:
+            page_size:  Items per page (default 25).
+            page_token: Opaque token from a previous page's ``next_page_token``.
+            search:     Case-insensitive substring filter on the agent name.
+            type:       Filter by agent type: ``"task"`` or ``"workflow"``.
+        """
         validate_page_size(page_size)
-        return await self._list_page(page_size, page_token)
+        return await self._list_page(page_size, page_token, search, type)
 
     async def _list_page(
-        self, page_size: int, page_token: Optional[str]
+        self,
+        page_size: int,
+        page_token: Optional[str],
+        search: Optional[str] = None,
+        type: Optional[AgentType] = None,
     ) -> AsyncPage[Agent]:
-        params = aip_list_params(page_size, page_token)
+        params = _agents_list_params(page_size, page_token, search, type)
         data = await async_with_retry(
             lambda: self._http.get("/api/v1/agents", params=params),
             self._config.max_retries,
@@ -218,7 +257,7 @@ class AsyncAgentsResource:
             data,
             "agents",
             _map_agent,
-            lambda cur: self._list_page(page_size, cur),
+            lambda cur: self._list_page(page_size, cur, search, type),
         )
 
     async def get(self, agent_id: Union[int, str]) -> Agent:

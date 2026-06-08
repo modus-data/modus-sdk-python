@@ -14,10 +14,13 @@ from modus._validation import validate_id, validate_page_size
 from modus.types.pagination import AsyncPage, Page
 
 from ..._wire.skills import _SkillWire
-from ...types.access import AccessConfigInput, dump_access_config
 from ...types.json_blob import JsonObjectListInput, dump_json_object_list
 from ...types.skills import Skill
 from ...types.toolset import ToolsetInput, dump_toolset
+from .._access_config_write import (
+    access_config_body_for_create,
+    access_config_body_for_update,
+)
 from ._translate import _translate_skill
 from ._update_body import _SkillCreateBody, _SkillUpdateBody
 from .conversations import AsyncConversationsResource, ConversationsResource
@@ -26,6 +29,13 @@ from .memories import AsyncMemoriesResource, MemoriesResource
 
 def _map_skill(raw: dict) -> Skill:
     return _translate_skill(_SkillWire.model_validate(raw))
+
+
+def _skills_list_params(
+    page_size: int, page_token: Optional[str], search: Optional[str]
+) -> dict:
+    extra = {} if search is None else {"search": search}
+    return aip_list_params(page_size, page_token, **extra)
 
 
 class SkillsResource:
@@ -59,6 +69,7 @@ class SkillsResource:
         *,
         page_size: int = 25,
         page_token: Optional[str] = None,
+        search: Optional[str] = None,
     ) -> Page[Skill]:
         """
         List all Modus skills in the organisation.
@@ -66,12 +77,15 @@ class SkillsResource:
         Args:
             page_size:  Maximum number of items to return (default 25).
             page_token: Token from a previous page's ``next_page_token``; omit for the first page.
+            search:     Case-insensitive substring filter on the skill name.
         """
         validate_page_size(page_size)
-        return self._list_page(page_size, page_token)
+        return self._list_page(page_size, page_token, search)
 
-    def _list_page(self, page_size: int, page_token: Optional[str]) -> Page[Skill]:
-        params = aip_list_params(page_size, page_token)
+    def _list_page(
+        self, page_size: int, page_token: Optional[str], search: Optional[str] = None
+    ) -> Page[Skill]:
+        params = _skills_list_params(page_size, page_token, search)
         data = with_retry(
             lambda: self._http.get("/api/v1/skills", params=params),
             self._config.max_retries,
@@ -80,7 +94,7 @@ class SkillsResource:
             data,
             "skills",
             _map_skill,
-            lambda cur: self._list_page(page_size, cur),
+            lambda cur: self._list_page(page_size, cur, search),
         )
 
     def get(self, skill_id: Union[int, str]) -> Skill:
@@ -105,9 +119,16 @@ class SkillsResource:
         connection_set: Optional[JsonObjectListInput] = None,
         context_selections: Optional[JsonObjectListInput] = None,
         interfaces: Optional[JsonObjectListInput] = None,
-        access_config: Optional[AccessConfigInput] = None,
+        guardrails: Optional[List[str]] = None,
     ) -> Skill:
-        """Create a new Modus skill in the organisation."""
+        """Create a new Modus skill in the organisation.
+
+        Args:
+            guardrails: Runtime guardrail labels (for example ``\"no-pii\"``).
+                When set, the skill is created with these labels under the
+                organisation default sharing rules. Omit (``None``) to create
+                with no guardrails. ACL fields cannot be set from the SDK.
+        """
         body = _SkillCreateBody(
             name=name, description=description, expected_output=expected_output,
             instructions=instructions,
@@ -118,7 +139,7 @@ class SkillsResource:
                 context_selections, field_name="context_selections"
             ),
             interfaces=dump_json_object_list(interfaces, field_name="interfaces"),
-            access_config=dump_access_config(access_config),
+            access_config=access_config_body_for_create(guardrails),
         ).model_dump(by_alias=True, exclude_none=True)
         raw = with_retry(
             lambda: self._http.post("/api/v1/skills", json=body),
@@ -139,7 +160,7 @@ class SkillsResource:
         connection_set: Optional[JsonObjectListInput] = None,
         context_selections: Optional[JsonObjectListInput] = None,
         interfaces: Optional[JsonObjectListInput] = None,
-        access_config: Optional[AccessConfigInput] = None,
+        guardrails: Optional[List[str]] = None,
         manager_id: Optional[str] = None,
         evaluations: Optional[JsonObjectListInput] = None,
         supervision_subordinate_descriptions: Optional[Dict[str, str]] = None,
@@ -151,7 +172,22 @@ class SkillsResource:
         ``update_mask`` (a comma-separated list of field names) and leave its
         argument unset — the server sets each masked field to null and leaves
         fields not named in the mask untouched.
+
+        Args:
+            guardrails: Runtime guardrail labels to set on the skill. Fetches
+                the current skill first and merges these labels into its access
+                configuration (an extra ``get`` request). Omit (``None``) to
+                leave guardrails unchanged. Pass ``[]`` to clear all guardrails.
         """
+        validate_id(skill_id, name="skill_id")
+        safe_id = quote(str(skill_id), safe="")
+        access_config = access_config_body_for_update(
+            guardrails,
+            lambda: with_retry(
+                lambda: self._http.get(f"/api/v1/skills/{safe_id}"),
+                self._config.max_retries,
+            ),
+        )
         body = _SkillUpdateBody(
             name=name, description=description, expected_output=expected_output,
             instructions=instructions,
@@ -162,13 +198,11 @@ class SkillsResource:
                 context_selections, field_name="context_selections"
             ),
             interfaces=dump_json_object_list(interfaces, field_name="interfaces"),
-            access_config=dump_access_config(access_config),
+            access_config=access_config,
             manager_id=manager_id,
             evaluations=dump_json_object_list(evaluations, field_name="evaluations"),
             supervision_subordinate_descriptions=supervision_subordinate_descriptions,
         ).model_dump(by_alias=True, exclude_none=update_mask is None)
-        validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
         path = _with_update_mask(f"/api/v1/skills/{safe_id}", update_mask)
         raw = with_retry(
             lambda: self._http.patch(path, json=body),
@@ -214,6 +248,7 @@ class AsyncSkillsResource:
         *,
         page_size: int = 25,
         page_token: Optional[str] = None,
+        search: Optional[str] = None,
     ) -> AsyncPage[Skill]:
         """
         List all Modus skills in the organisation.
@@ -221,14 +256,15 @@ class AsyncSkillsResource:
         Args:
             page_size:  Maximum number of items to return (default 25).
             page_token: Token from a previous page's ``next_page_token``; omit for the first page.
+            search:     Case-insensitive substring filter on the skill name.
         """
         validate_page_size(page_size)
-        return await self._list_page(page_size, page_token)
+        return await self._list_page(page_size, page_token, search)
 
     async def _list_page(
-        self, page_size: int, page_token: Optional[str]
+        self, page_size: int, page_token: Optional[str], search: Optional[str] = None
     ) -> AsyncPage[Skill]:
-        params = aip_list_params(page_size, page_token)
+        params = _skills_list_params(page_size, page_token, search)
         data = await async_with_retry(
             lambda: self._http.get("/api/v1/skills", params=params),
             self._config.max_retries,
@@ -237,7 +273,7 @@ class AsyncSkillsResource:
             data,
             "skills",
             _map_skill,
-            lambda cur: self._list_page(page_size, cur),
+            lambda cur: self._list_page(page_size, cur, search),
         )
 
     async def get(self, skill_id: Union[int, str]) -> Skill:
@@ -259,8 +295,16 @@ class AsyncSkillsResource:
         connection_set: Optional[JsonObjectListInput] = None,
         context_selections: Optional[JsonObjectListInput] = None,
         interfaces: Optional[JsonObjectListInput] = None,
-        access_config: Optional[AccessConfigInput] = None,
+        guardrails: Optional[List[str]] = None,
     ) -> Skill:
+        """Create a new Modus skill in the organisation.
+
+        Args:
+            guardrails: Runtime guardrail labels (for example ``\"no-pii\"``).
+                When set, the skill is created with these labels under the
+                organisation default sharing rules. Omit (``None``) to create
+                with no guardrails. ACL fields cannot be set from the SDK.
+        """
         body = _SkillCreateBody(
             name=name, description=description, expected_output=expected_output,
             instructions=instructions,
@@ -271,7 +315,7 @@ class AsyncSkillsResource:
                 context_selections, field_name="context_selections"
             ),
             interfaces=dump_json_object_list(interfaces, field_name="interfaces"),
-            access_config=dump_access_config(access_config),
+            access_config=access_config_body_for_create(guardrails),
         ).model_dump(by_alias=True, exclude_none=True)
         raw = await async_with_retry(
             lambda: self._http.post("/api/v1/skills", json=body),
@@ -288,12 +332,35 @@ class AsyncSkillsResource:
         connection_set: Optional[JsonObjectListInput] = None,
         context_selections: Optional[JsonObjectListInput] = None,
         interfaces: Optional[JsonObjectListInput] = None,
-        access_config: Optional[AccessConfigInput] = None,
+        guardrails: Optional[List[str]] = None,
         manager_id: Optional[str] = None,
         evaluations: Optional[JsonObjectListInput] = None,
         supervision_subordinate_descriptions: Optional[Dict[str, str]] = None,
         update_mask: Optional[str] = None,
     ) -> Skill:
+        """Update a Modus skill's configuration.
+
+        Only the fields you pass are changed. To clear a field, name it in
+        ``update_mask`` (a comma-separated list of field names) and leave its
+        argument unset — the server sets each masked field to null and leaves
+        fields not named in the mask untouched.
+
+        Args:
+            guardrails: Runtime guardrail labels to set on the skill. Fetches
+                the current skill first and merges these labels into its access
+                configuration (an extra ``get`` request). Omit (``None``) to
+                leave guardrails unchanged. Pass ``[]`` to clear all guardrails.
+        """
+        validate_id(skill_id, name="skill_id")
+        safe_id = quote(str(skill_id), safe="")
+        if guardrails is not None:
+            existing = await async_with_retry(
+                lambda: self._http.get(f"/api/v1/skills/{safe_id}"),
+                self._config.max_retries,
+            )
+            access_config = access_config_body_for_update(guardrails, lambda: existing)
+        else:
+            access_config = None
         body = _SkillUpdateBody(
             name=name, description=description, expected_output=expected_output,
             instructions=instructions,
@@ -304,13 +371,11 @@ class AsyncSkillsResource:
                 context_selections, field_name="context_selections"
             ),
             interfaces=dump_json_object_list(interfaces, field_name="interfaces"),
-            access_config=dump_access_config(access_config),
+            access_config=access_config,
             manager_id=manager_id,
             evaluations=dump_json_object_list(evaluations, field_name="evaluations"),
             supervision_subordinate_descriptions=supervision_subordinate_descriptions,
         ).model_dump(by_alias=True, exclude_none=update_mask is None)
-        validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
         path = _with_update_mask(f"/api/v1/skills/{safe_id}", update_mask)
         raw = await async_with_retry(
             lambda: self._http.patch(path, json=body),

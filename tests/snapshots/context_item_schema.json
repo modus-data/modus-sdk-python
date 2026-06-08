@@ -106,18 +106,6 @@
       "default": null,
       "title": "Selectionid"
     },
-    "orgId": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Orgid"
-    },
     "dataPath": {
       "anyOf": [
         {

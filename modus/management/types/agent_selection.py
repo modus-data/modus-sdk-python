@@ -1,14 +1,10 @@
 """Task-agent skill selection types."""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
-
-from ._serialize import dump_optional_model
-
-AgentSelectionInput = Union["AgentSelection", Dict[str, Any]]
 
 
 class AgentSelectionEntry(BaseModel):
@@ -48,14 +44,20 @@ class AgentSelection(BaseModel):
         return cls(agents=agents, model=model)
 
 
+AgentSelectionInput = AgentSelection
+
+
 def dump_agent_selection(value: Optional[AgentSelectionInput]) -> Optional[Dict[str, Any]]:
-    dumped = dump_optional_model(
-        value,
-        field_name="agent_selection",
-        typed_label="AgentSelection",
-        stacklevel=4,
-    )
-    return dumped if isinstance(dumped, dict) or dumped is None else None
+    if value is None:
+        return None
+    if not isinstance(value, AgentSelection):
+        raise TypeError(
+            "agent_selection= must be an AgentSelection built with its factory methods "
+            f"(for example AgentSelection.single(agent_id)), not {type(value).__name__}."
+        )
+    # The agents API validates agent_selection with snake_case keys
+    # (agent_id, priority_order, ...), unlike the camelCase top-level body.
+    return value.model_dump(by_alias=False, exclude_none=True)
 
 
 def parse_agent_selection(raw: object) -> Optional[AgentSelection]:

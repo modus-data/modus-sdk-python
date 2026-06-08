@@ -60,7 +60,6 @@ class ContextItem(BaseModel):
     topics: Optional[List[str]] = None
     connection_id: Optional[str] = None
     selection_id: Optional[str] = None
-    org_id: Optional[str] = None
     data_path: Optional[List[str]] = None
     last_update_metadata: Optional[Dict[str, Any]] = None
     update_source: Optional[str] = None

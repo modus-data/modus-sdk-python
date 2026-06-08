@@ -14,7 +14,9 @@ from typing import Any, Callable, Dict, Set
 
 import pytest
 from modus._pagination import aip_list_params
+from modus.resources.agents.agents import _agents_list_params
 from modus.resources.context.items import _context_list_params
+from modus.resources.skills.skills import _skills_list_params
 
 _OPENAPI_PATH = Path(__file__).parents[4] / "apps/services/modus-api/openapi/v1.json"
 
@@ -72,8 +74,16 @@ def _assert_aip_params_subset(
             lambda: aip_list_params(25, None),
         ),
         (
+            "SkillsController_list",
+            lambda: _skills_list_params(25, None, "churn"),
+        ),
+        (
             "AgentsController_list",
             lambda: aip_list_params(25, "tok_abc"),
+        ),
+        (
+            "AgentsController_list",
+            lambda: _agents_list_params(25, None, "sales", "workflow"),
         ),
         (
             "ContextItemsController_list",
@@ -102,18 +112,29 @@ def test_list_operations_use_openapi_query_params(
     _assert_aip_params_subset(build_params(), operation_id=operation_id, openapi=openapi)
 
 
+# A list page must route its query params through one of the shared AIP param
+# builders (directly, or via a per-resource helper that wraps aip_list_params),
+# never assembling ad-hoc query dicts.
+_AIP_PARAM_BUILDERS = (
+    "aip_list_params",
+    "_context_list_params",
+    "_skills_list_params",
+    "_agents_list_params",
+)
+
+
 def test_skills_list_page_builds_aip_params() -> None:
     from modus.resources.skills.skills import SkillsResource
 
     source = inspect.getsource(SkillsResource._list_page)
-    assert "aip_list_params" in source
+    assert any(builder in source for builder in _AIP_PARAM_BUILDERS)
 
 
 def test_agents_list_page_builds_aip_params() -> None:
     from modus.resources.agents.agents import AgentsResource
 
     source = inspect.getsource(AgentsResource._list_page)
-    assert "aip_list_params" in source
+    assert any(builder in source for builder in _AIP_PARAM_BUILDERS)
 
 
 @pytest.mark.parametrize(
@@ -130,4 +151,4 @@ def test_management_list_pages_use_aip_helpers(module_path: str, class_name: str
     mod = importlib.import_module(module_path)
     cls = getattr(mod, class_name)
     source = inspect.getsource(cls._list_page)
-    assert "aip_list_params" in source or "_context_list_params" in source
+    assert any(builder in source for builder in _AIP_PARAM_BUILDERS)

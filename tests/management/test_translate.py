@@ -8,7 +8,7 @@ SKILL_LIST_WIRE = {
     "status": "active", "description": "Desc", "orgUuid": "org-xyz",
     "hasUnpublishedChanges": False, "activeVariationId": "var-001",
     "draftVariationId": None,
-    "accessConfig": {"guardrails": ["no-pii"], "permissions": {}},
+    "accessConfig": {"visibility": "shared", "groupPermissions": {"__everyone__": {"use": True, "manage": True}}, "guardrails": ["no-pii"], "sharedWith": []},
     "createdAt": "2026-01-01T00:00:00.000Z",
     "updatedAt": "2026-03-01T00:00:00.000Z",
     "deletedAt": None,
@@ -44,7 +44,7 @@ def test_skill_wire_parses_detail_row():
 
 def test_skill_wire_parses_guardrails_from_access_config():
     wire = _SkillWire.model_validate(SKILL_LIST_WIRE)
-    assert wire.access_config == {"guardrails": ["no-pii"], "permissions": {}}
+    assert wire.access_config["guardrails"] == ["no-pii"]
 
 
 def test_agent_wire_parses_list_row():
@@ -53,7 +53,7 @@ def test_agent_wire_parses_list_row():
         "status": "active", "type": "task", "description": "Reports",
         "orgUuid": "org-xyz", "hasUnpublishedChanges": False,
         "isEnabled": True, "activeVariationId": "avar-001", "draftVariationId": None,
-        "accessConfig": {"guardrails": [], "permissions": {}},
+        "accessConfig": {"visibility": "shared", "groupPermissions": {"__everyone__": {"use": True, "manage": True}}, "guardrails": [], "sharedWith": []},
         "createdAt": "2026-01-01T00:00:00.000Z",
         "updatedAt": "2026-02-01T00:00:00.000Z",
         "deletedAt": None,
@@ -113,7 +113,7 @@ def test_translate_agent_list_row_has_none_variation_fields():
     wire = _AgentWire.model_validate({
         "id": 5, "slug": "r", "name": "Report", "status": "active",
         "type": "task", "orgUuid": "org-xyz", "hasUnpublishedChanges": False,
-        "isEnabled": True, "accessConfig": {"guardrails": [], "permissions": {}},
+        "isEnabled": True, "accessConfig": {"visibility": "shared", "groupPermissions": {"__everyone__": {"use": True, "manage": True}}, "guardrails": [], "sharedWith": []},
         "createdAt": "2026-01-01T00:00:00.000Z",
         "updatedAt": "2026-01-01T00:00:00.000Z", "deletedAt": None,
     })
@@ -147,7 +147,7 @@ def test_translate_agent_maps_pending_ownership_transfer():
     wire = _AgentWire.model_validate({
         "id": 5, "slug": "r", "name": "Report", "status": "active",
         "type": "task", "orgUuid": "org-xyz", "hasUnpublishedChanges": False,
-        "isEnabled": True, "accessConfig": {"guardrails": [], "permissions": {}},
+        "isEnabled": True, "accessConfig": {"visibility": "shared", "groupPermissions": {"__everyone__": {"use": True, "manage": True}}, "guardrails": [], "sharedWith": []},
         "createdAt": "2026-01-01T00:00:00.000Z",
         "updatedAt": "2026-01-01T00:00:00.000Z", "deletedAt": None,
         "pendingOwnershipTransfer": PENDING_OWNERSHIP_TRANSFER,
@@ -161,7 +161,7 @@ def test_translate_agent_detail_row_flattens_variation():
     wire = _AgentWire.model_validate({
         "id": 5, "slug": "r", "name": "Report", "status": "active",
         "type": "task", "orgUuid": "org-xyz", "hasUnpublishedChanges": False,
-        "isEnabled": True, "accessConfig": {"guardrails": [], "permissions": {}},
+        "isEnabled": True, "accessConfig": {"visibility": "shared", "groupPermissions": {"__everyone__": {"use": True, "manage": True}}, "guardrails": [], "sharedWith": []},
         "createdAt": "2026-01-01T00:00:00.000Z",
         "updatedAt": "2026-01-01T00:00:00.000Z", "deletedAt": None,
         "variation": {"instructions": ["Run the SQL and email results."], "model": "gpt-4o-mini"},

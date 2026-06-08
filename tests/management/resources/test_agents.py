@@ -21,6 +21,28 @@ def test_agents_list_row_has_none_variation_fields(client, agent_list_row):
 
 
 @respx.mock
+def test_agents_list_forwards_search_and_type(client, agent_list_row):
+    route = respx.get(f"{BASE}/api/v1/agents").mock(
+        return_value=httpx.Response(200, json={"agents": [agent_list_row], "nextPageToken": None})
+    )
+    client.agents.list(search="sales", type="workflow")
+    params = route.calls[0].request.url.params
+    assert params["search"] == "sales"
+    assert params["type"] == "workflow"
+
+
+@respx.mock
+def test_agents_list_omits_filters_when_not_set(client, agent_list_row):
+    route = respx.get(f"{BASE}/api/v1/agents").mock(
+        return_value=httpx.Response(200, json={"agents": [agent_list_row], "nextPageToken": None})
+    )
+    client.agents.list()
+    params = route.calls[0].request.url.params
+    assert "search" not in params
+    assert "type" not in params
+
+
+@respx.mock
 def test_agents_get_populates_variation(client, agent_detail_row):
     respx.get(f"{BASE}/api/v1/agents/5").mock(
         return_value=httpx.Response(200, json=agent_detail_row)

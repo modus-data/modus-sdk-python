@@ -1,5 +1,5 @@
 {
-  "description": "A Modus skill.\n\nSkills are AI agents you can run interactively.\nTo configure a skill (instructions, model, tools), use modus.management.ModusManagement.",
+  "description": "A Modus skill.\n\nSkills are AI agents you can run interactively.\n\n``instructions`` and ``guardrails`` are populated on ``client.skills.get(id)``.\n``guardrails`` is also present on list rows. To change configuration, use\n``modus.management.ModusManagement``.",
   "properties": {
     "id": {
       "title": "Id",
@@ -38,6 +38,29 @@
       "default": false,
       "title": "HasUnpublishedChanges",
       "type": "boolean"
+    },
+    "instructions": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Instructions"
+    },
+    "guardrails": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Guardrails",
+      "type": "array"
     }
   },
   "required": [

@@ -18,7 +18,7 @@ Build a toolset with the factory methods and combine several with
 """
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, Optional, Union
+from typing import Any, Dict, Iterable, Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -38,9 +38,6 @@ INTEGRATIONS = (
     "teams",
     "zendesk",
 )
-
-ToolsetInput = Union["Toolset", Dict[str, Any]]
-
 
 class Toolset(BaseModel):
     """The tools a skill may use at run time.
@@ -221,11 +218,12 @@ class Toolset(BaseModel):
         return Toolset.combine(self, *others)
 
 
+ToolsetInput = Toolset
+
+
 def dump_toolset(value: Optional[ToolsetInput]) -> Optional[Dict[str, Any]]:
     """Serialize a toolset for the request body, omitting an empty toolset."""
-    dumped = dump_optional_model(
-        value, field_name="toolset", typed_label="Toolset", stacklevel=4
-    )
+    dumped = dump_optional_model(value, field_name="toolset", typed_label="Toolset")
     if isinstance(dumped, dict):
         return dumped or None
     return None

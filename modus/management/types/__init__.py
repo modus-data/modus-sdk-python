@@ -1,6 +1,5 @@
 from modus.types.pagination import AsyncPage, Page
 
-from .access import AccessConfig
 from .agent_selection import AgentSelection, AgentSelectionEntry
 from .agents import Agent, AgentStatus, AgentType
 from .context import (
@@ -26,7 +25,6 @@ from .triggers import (
 from .workflow import WorkflowGraph
 
 __all__ = [
-    "AccessConfig",
     "Agent",
     "AgentSelection",
     "AgentSelectionEntry",

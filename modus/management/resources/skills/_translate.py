@@ -8,7 +8,6 @@ guardrails is always read from accessConfig (default []).
 from __future__ import annotations
 
 from ..._wire.skills import _SkillWire
-from ...types.access import AccessConfig
 from ...types.json_blob import parse_json_object_list
 from ...types.ownership import parse_pending_ownership_transfer
 from ...types.skills import Skill
@@ -46,12 +45,7 @@ def _translate_skill(wire: _SkillWire) -> Skill:
             variation.get("interfaces")
         ),
         evaluations=variation.get("evaluations"),
-        # Guardrails + access config from accessConfig
         guardrails=access_raw.get("guardrails", []),
-        access_config=AccessConfig(
-            guardrails=access_raw.get("guardrails", []),
-            permissions=access_raw.get("permissions", {}),
-        ),
         pending_ownership_transfer=parse_pending_ownership_transfer(
             wire.pending_ownership_transfer
         ),

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
@@ -15,7 +15,10 @@ class Skill(BaseModel):
     A Modus skill.
 
     Skills are AI agents you can run interactively.
-    To configure a skill (instructions, model, tools), use modus.management.ModusManagement.
+
+    ``instructions`` and ``guardrails`` are populated on ``client.skills.get(id)``.
+    ``guardrails`` is also present on list rows. To change configuration, use
+    ``modus.management.ModusManagement``.
     """
 
     model_config = ConfigDict(
@@ -30,6 +33,10 @@ class Skill(BaseModel):
     status: SkillStatus
     description: Optional[str] = None
     has_unpublished_changes: bool = Field(default=False, title="HasUnpublishedChanges")
+
+    # Read-only config surfaced for inspection (populated on .get(); guardrails on list too)
+    instructions: Optional[List[str]] = None
+    guardrails: List[str] = []
 
     @property
     def is_active(self) -> bool:

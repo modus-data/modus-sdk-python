@@ -109,6 +109,11 @@ def test_dump_toolset_emits_surface_map():
     assert dump_toolset(Toolset.memory()) == {"memory": {"enabled": True}}
 
 
+def test_dump_toolset_rejects_raw_dict():
+    with pytest.raises(TypeError, match="Toolset"):
+        dump_toolset({"sql_runner": ["SELECT:conn-1:analytics:public"]})
+
+
 def test_parse_toolset_round_trips_surface_map():
     raw = {"slack": {"actions": ["SendMessage"]}, "sql_runner": ["SELECT:a:b"]}
     parsed = parse_toolset(raw)
