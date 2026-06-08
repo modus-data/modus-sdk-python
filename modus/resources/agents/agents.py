@@ -26,6 +26,7 @@ from ..._wire.agents import _AgentWire
 from ...types.agents import Agent, AgentType
 from ...types.chat import ChatResult
 from ...types.pagination import AsyncPage, Page
+from ...types.views import VariationView
 from ._translate import _translate_agent
 from .runs import AgentRunsResource, AsyncAgentRunsResource
 
@@ -39,12 +40,18 @@ def _agents_list_params(
     page_token: Optional[str],
     search: Optional[str],
     type: Optional[AgentType],
+    view: Optional[VariationView],
+    include_variation: Optional[bool],
 ) -> dict:
     extra: dict = {}
     if search is not None:
         extra["search"] = search
     if type is not None:
         extra["type"] = type
+    if view is not None:
+        extra["view"] = view
+    if include_variation is not None:
+        extra["includeVariation"] = include_variation
     return aip_list_params(page_size, page_token, **extra)
 
 
@@ -124,18 +131,24 @@ class AgentsResource:
         page_token: Optional[str] = None,
         search: Optional[str] = None,
         type: Optional[AgentType] = None,
+        view: Optional[VariationView] = None,
+        include_variation: Optional[bool] = None,
     ) -> Page[Agent]:
         """
         List agents in the organisation.
 
         Args:
-            page_size:  Items per page (default 25).
-            page_token: Opaque token from a previous page's ``next_page_token``.
-            search:     Case-insensitive substring filter on the agent name.
-            type:       Filter by agent type: ``"task"`` or ``"workflow"``.
+            page_size:         Items per page (default 25).
+            page_token:        Opaque token from a previous page's ``next_page_token``.
+            search:            Case-insensitive substring filter on the agent name.
+            type:              Filter by agent type: ``"task"`` or ``"workflow"``.
+            view:              Variation view — ``"active"`` (deployed) or ``"draft"``.
+            include_variation: Include variation payload on each list row.
         """
         validate_page_size(page_size)
-        return self._list_page(page_size, page_token, search, type)
+        return self._list_page(
+            page_size, page_token, search, type, view, include_variation
+        )
 
     def _list_page(
         self,
@@ -143,8 +156,12 @@ class AgentsResource:
         page_token: Optional[str],
         search: Optional[str] = None,
         type: Optional[AgentType] = None,
+        view: Optional[VariationView] = None,
+        include_variation: Optional[bool] = None,
     ) -> Page[Agent]:
-        params = _agents_list_params(page_size, page_token, search, type)
+        params = _agents_list_params(
+            page_size, page_token, search, type, view, include_variation
+        )
         data = with_retry(
             lambda: self._http.get("/api/v1/agents", params=params),
             self._config.max_retries,
@@ -153,20 +170,31 @@ class AgentsResource:
             data,
             "agents",
             _map_agent,
-            lambda cur: self._list_page(page_size, cur, search, type),
+            lambda cur: self._list_page(
+                page_size, cur, search, type, view, include_variation
+            ),
         )
 
-    def get(self, agent_id: Union[int, str]) -> Agent:
+    def get(
+        self,
+        agent_id: Union[int, str],
+        *,
+        view: Optional[VariationView] = None,
+    ) -> Agent:
         """
         Retrieve an agent by ID or slug.
+
+        Args:
+            view: Variation view — ``"active"`` (deployed) or ``"draft"``.
 
         Raises:
             NotFoundError: if no agent with this ID/slug exists.
         """
         validate_id(agent_id, name="agent_id")
         safe_id = quote(str(agent_id), safe="")
+        params = {} if view is None else {"view": view}
         data = with_retry(
-            lambda: self._http.get(f"/api/v1/agents/{safe_id}"),
+            lambda: self._http.get(f"/api/v1/agents/{safe_id}", params=params or None),
             self._config.max_retries,
         )
         return _translate_agent(_AgentWire.model_validate(data))
@@ -228,18 +256,24 @@ class AsyncAgentsResource:
         page_token: Optional[str] = None,
         search: Optional[str] = None,
         type: Optional[AgentType] = None,
+        view: Optional[VariationView] = None,
+        include_variation: Optional[bool] = None,
     ) -> AsyncPage[Agent]:
         """
         List agents in the organisation.
 
         Args:
-            page_size:  Items per page (default 25).
-            page_token: Opaque token from a previous page's ``next_page_token``.
-            search:     Case-insensitive substring filter on the agent name.
-            type:       Filter by agent type: ``"task"`` or ``"workflow"``.
+            page_size:         Items per page (default 25).
+            page_token:        Opaque token from a previous page's ``next_page_token``.
+            search:            Case-insensitive substring filter on the agent name.
+            type:              Filter by agent type: ``"task"`` or ``"workflow"``.
+            view:              Variation view — ``"active"`` (deployed) or ``"draft"``.
+            include_variation: Include variation payload on each list row.
         """
         validate_page_size(page_size)
-        return await self._list_page(page_size, page_token, search, type)
+        return await self._list_page(
+            page_size, page_token, search, type, view, include_variation
+        )
 
     async def _list_page(
         self,
@@ -247,8 +281,12 @@ class AsyncAgentsResource:
         page_token: Optional[str],
         search: Optional[str] = None,
         type: Optional[AgentType] = None,
+        view: Optional[VariationView] = None,
+        include_variation: Optional[bool] = None,
     ) -> AsyncPage[Agent]:
-        params = _agents_list_params(page_size, page_token, search, type)
+        params = _agents_list_params(
+            page_size, page_token, search, type, view, include_variation
+        )
         data = await async_with_retry(
             lambda: self._http.get("/api/v1/agents", params=params),
             self._config.max_retries,
@@ -257,14 +295,22 @@ class AsyncAgentsResource:
             data,
             "agents",
             _map_agent,
-            lambda cur: self._list_page(page_size, cur, search, type),
+            lambda cur: self._list_page(
+                page_size, cur, search, type, view, include_variation
+            ),
         )
 
-    async def get(self, agent_id: Union[int, str]) -> Agent:
+    async def get(
+        self,
+        agent_id: Union[int, str],
+        *,
+        view: Optional[VariationView] = None,
+    ) -> Agent:
         validate_id(agent_id, name="agent_id")
         safe_id = quote(str(agent_id), safe="")
+        params = {} if view is None else {"view": view}
         data = await async_with_retry(
-            lambda: self._http.get(f"/api/v1/agents/{safe_id}"),
+            lambda: self._http.get(f"/api/v1/agents/{safe_id}", params=params or None),
             self._config.max_retries,
         )
         return _translate_agent(_AgentWire.model_validate(data))

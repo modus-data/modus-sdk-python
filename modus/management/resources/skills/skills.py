@@ -12,6 +12,7 @@ from modus._query import with_update_mask as _with_update_mask
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_id, validate_page_size
 from modus.types.pagination import AsyncPage, Page
+from modus.types.views import VariationView
 
 from ..._wire.skills import _SkillWire
 from ...types.json_blob import JsonObjectListInput, dump_json_object_list
@@ -32,9 +33,19 @@ def _map_skill(raw: dict) -> Skill:
 
 
 def _skills_list_params(
-    page_size: int, page_token: Optional[str], search: Optional[str]
+    page_size: int,
+    page_token: Optional[str],
+    search: Optional[str],
+    view: Optional[VariationView],
+    manager_id: Optional[int],
 ) -> dict:
-    extra = {} if search is None else {"search": search}
+    extra: dict = {}
+    if search is not None:
+        extra["search"] = search
+    if view is not None:
+        extra["view"] = view
+    if manager_id is not None:
+        extra["managerId"] = manager_id
     return aip_list_params(page_size, page_token, **extra)
 
 
@@ -70,22 +81,31 @@ class SkillsResource:
         page_size: int = 25,
         page_token: Optional[str] = None,
         search: Optional[str] = None,
+        view: Optional[VariationView] = None,
+        manager_id: Optional[int] = None,
     ) -> Page[Skill]:
         """
         List all Modus skills in the organisation.
 
         Args:
-            page_size:  Maximum number of items to return (default 25).
-            page_token: Token from a previous page's ``next_page_token``; omit for the first page.
-            search:     Case-insensitive substring filter on the skill name.
+            page_size:   Maximum number of items to return (default 25).
+            page_token:  Token from a previous page's ``next_page_token``; omit for the first page.
+            search:      Case-insensitive substring filter on the skill name.
+            view:        Variation view — ``"active"`` (deployed) or ``"draft"``.
+            manager_id:  Return only skills supervised by this manager skill id.
         """
         validate_page_size(page_size)
-        return self._list_page(page_size, page_token, search)
+        return self._list_page(page_size, page_token, search, view, manager_id)
 
     def _list_page(
-        self, page_size: int, page_token: Optional[str], search: Optional[str] = None
+        self,
+        page_size: int,
+        page_token: Optional[str],
+        search: Optional[str] = None,
+        view: Optional[VariationView] = None,
+        manager_id: Optional[int] = None,
     ) -> Page[Skill]:
-        params = _skills_list_params(page_size, page_token, search)
+        params = _skills_list_params(page_size, page_token, search, view, manager_id)
         data = with_retry(
             lambda: self._http.get("/api/v1/skills", params=params),
             self._config.max_retries,
@@ -94,15 +114,21 @@ class SkillsResource:
             data,
             "skills",
             _map_skill,
-            lambda cur: self._list_page(page_size, cur, search),
+            lambda cur: self._list_page(page_size, cur, search, view, manager_id),
         )
 
-    def get(self, skill_id: Union[int, str]) -> Skill:
+    def get(
+        self,
+        skill_id: Union[int, str],
+        *,
+        view: Optional[VariationView] = None,
+    ) -> Skill:
         """Retrieve a Modus skill with full configuration (instructions, model, and related fields)."""
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")
+        params = {} if view is None else {"view": view}
         data = with_retry(
-            lambda: self._http.get(f"/api/v1/skills/{safe_id}"),
+            lambda: self._http.get(f"/api/v1/skills/{safe_id}", params=params or None),
             self._config.max_retries,
         )
         return _translate_skill(_SkillWire.model_validate(data))
@@ -249,22 +275,31 @@ class AsyncSkillsResource:
         page_size: int = 25,
         page_token: Optional[str] = None,
         search: Optional[str] = None,
+        view: Optional[VariationView] = None,
+        manager_id: Optional[int] = None,
     ) -> AsyncPage[Skill]:
         """
         List all Modus skills in the organisation.
 
         Args:
-            page_size:  Maximum number of items to return (default 25).
-            page_token: Token from a previous page's ``next_page_token``; omit for the first page.
-            search:     Case-insensitive substring filter on the skill name.
+            page_size:   Maximum number of items to return (default 25).
+            page_token:  Token from a previous page's ``next_page_token``; omit for the first page.
+            search:      Case-insensitive substring filter on the skill name.
+            view:        Variation view — ``"active"`` (deployed) or ``"draft"``.
+            manager_id:  Return only skills supervised by this manager skill id.
         """
         validate_page_size(page_size)
-        return await self._list_page(page_size, page_token, search)
+        return await self._list_page(page_size, page_token, search, view, manager_id)
 
     async def _list_page(
-        self, page_size: int, page_token: Optional[str], search: Optional[str] = None
+        self,
+        page_size: int,
+        page_token: Optional[str],
+        search: Optional[str] = None,
+        view: Optional[VariationView] = None,
+        manager_id: Optional[int] = None,
     ) -> AsyncPage[Skill]:
-        params = _skills_list_params(page_size, page_token, search)
+        params = _skills_list_params(page_size, page_token, search, view, manager_id)
         data = await async_with_retry(
             lambda: self._http.get("/api/v1/skills", params=params),
             self._config.max_retries,
@@ -273,15 +308,21 @@ class AsyncSkillsResource:
             data,
             "skills",
             _map_skill,
-            lambda cur: self._list_page(page_size, cur, search),
+            lambda cur: self._list_page(page_size, cur, search, view, manager_id),
         )
 
-    async def get(self, skill_id: Union[int, str]) -> Skill:
+    async def get(
+        self,
+        skill_id: Union[int, str],
+        *,
+        view: Optional[VariationView] = None,
+    ) -> Skill:
         """Retrieve a Modus skill with full configuration (instructions, model, and related fields)."""
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")
+        params = {} if view is None else {"view": view}
         data = await async_with_retry(
-            lambda: self._http.get(f"/api/v1/skills/{safe_id}"),
+            lambda: self._http.get(f"/api/v1/skills/{safe_id}", params=params or None),
             self._config.max_retries,
         )
         return _translate_skill(_SkillWire.model_validate(data))

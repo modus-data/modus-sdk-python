@@ -55,6 +55,8 @@ WRAPPED: dict[str, str] = {
     "ContextCreatorsController_createNote": "mgmt.context.create_note()",
     "ContextCreatorsController_createSavedQuery": "mgmt.context.create_saved_query()",
     "ContextCreatorsController_createLink": "mgmt.context.create_link()",
+    # --- Connections ---
+    "ConnectionsController_list": "client.connections.list()",
 }
 
 # operationId -> reason it is intentionally NOT exposed by the SDK.

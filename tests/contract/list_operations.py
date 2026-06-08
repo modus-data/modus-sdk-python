@@ -93,6 +93,12 @@ SAMPLE_MEMORY: Dict[str, Any] = {
     "memory": "User prefers bullet points.",
 }
 
+SAMPLE_CONNECTION: Dict[str, Any] = {
+    "id": "7a3f9d2c-1111-4000-a000-000000000abc",
+    "name": "Production Warehouse",
+    "type": "postgresql",
+}
+
 SAMPLE_CONVERSATION_LIST_ITEM: Dict[str, Any] = {
     "threadId": "thread-0",
     "skillId": 42,
@@ -149,6 +155,10 @@ def _agents_invoke(client: Client) -> Any:
     return client.agents.list(page_size=25, page_token="tok_abc")
 
 
+def _connections_invoke(client: Client) -> Any:
+    return client.connections.list(page_size=25, page_token="tok_abc")
+
+
 def _context_items_invoke(client: Client) -> Any:
     return client.context.items.list(page_size=25, page_token="tok_abc", context_type="note")
 
@@ -181,6 +191,15 @@ def _memories_invoke(client: Client) -> Any:
 
 
 SDK_AIP_LIST_OPERATIONS: List[ListOperationSpec] = [
+    ListOperationSpec(
+        operation_id="ConnectionsController_list",
+        mock_url_suffix="/api/v1/connections",
+        items_key="connections",
+        wrong_items_key="skills",
+        sample_item=SAMPLE_CONNECTION,
+        client_kind="modus",
+        invoke=_connections_invoke,
+    ),
     ListOperationSpec(
         operation_id="SkillsController_list",
         mock_url_suffix="/api/v1/skills",

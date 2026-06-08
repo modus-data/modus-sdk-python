@@ -75,7 +75,7 @@ def _assert_aip_params_subset(
         ),
         (
             "SkillsController_list",
-            lambda: _skills_list_params(25, None, "churn"),
+            lambda: _skills_list_params(25, None, "churn", None, None),
         ),
         (
             "AgentsController_list",
@@ -83,7 +83,7 @@ def _assert_aip_params_subset(
         ),
         (
             "AgentsController_list",
-            lambda: _agents_list_params(25, None, "sales", "workflow"),
+            lambda: _agents_list_params(25, None, "sales", "workflow", None, None),
         ),
         (
             "ContextItemsController_list",

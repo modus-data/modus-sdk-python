@@ -6,6 +6,9 @@
 
 ### Added
 
+- `client.connections.list()` / `find(name=...)` — discover integration connections (`id`, `name`, `type`) for saved-query and context workflows. Sync and async.
+- `view` and `manager_id` filters on `client.skills.list()` / `mgmt.skills.list()`; `view` on `get()`.
+- `view` and `include_variation` filters on `client.agents.list()` / `mgmt.agents.list()`; `view` on `get()`.
 - `Toolset` builders for attaching tools to a skill: `Toolset.slack(...)`, `Toolset.clickup(...)`, and other integrations, plus `Toolset.sql_runner(...)`, `Toolset.memory()`, and `Toolset.custom_mcps(...)`. Combine several with `Toolset.combine(...)` or `.merge(...)`.
 - `client.context.items.list_values_for(item, content_key_path)` — list a field's values straight from a `ContextItem` without repeating its `uid` and `context_type`.
 - `search` filter on `client.skills.list()` / `mgmt.skills.list()` and `client.agents.list()` / `mgmt.agents.list()` — case-insensitive substring match on the name.

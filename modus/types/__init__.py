@@ -3,6 +3,7 @@
 from .agent_runs import AgentRun, AgentRunListItem
 from .agents import Agent, AgentStatus, AgentType
 from .chat import ChatResult
+from .connections import Connection
 from .context import ContextItem, ContextType
 from .context_compose import SkillContextComposition
 from .conversations import Conversation, ConversationListItem, Message
@@ -17,6 +18,7 @@ __all__ = [
     "AgentType",
     "AsyncPage",
     "ChatResult",
+    "Connection",
     "ContextItem",
     "ContextType",
     "Conversation",

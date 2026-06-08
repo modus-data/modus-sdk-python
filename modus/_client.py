@@ -17,8 +17,10 @@ from ._http import AsyncHttpClient, HttpClient
 from .resources import (
     AgentsResource,
     AsyncAgentsResource,
+    AsyncConnectionsResource,
     AsyncContextResource,
     AsyncSkillsResource,
+    ConnectionsResource,
     ContextResource,
     SkillsResource,
 )
@@ -84,6 +86,7 @@ class Modus:
         self.skills: SkillsResource = SkillsResource(self._http, self._config)
         self.agents: AgentsResource = AgentsResource(self._http, self._config)
         self.context: ContextResource = ContextResource(self._http, self._config)
+        self.connections: ConnectionsResource = ConnectionsResource(self._http, self._config)
 
     def close(self) -> None:
         """Close the underlying HTTP connection pool."""
@@ -149,6 +152,9 @@ class AsyncModus:
         self.skills: AsyncSkillsResource = AsyncSkillsResource(self._http, self._config)
         self.agents: AsyncAgentsResource = AsyncAgentsResource(self._http, self._config)
         self.context: AsyncContextResource = AsyncContextResource(self._http, self._config)
+        self.connections: AsyncConnectionsResource = AsyncConnectionsResource(
+            self._http, self._config
+        )
 
     async def aclose(self) -> None:
         """Close the underlying async HTTP connection pool."""
