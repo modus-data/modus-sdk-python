@@ -52,12 +52,22 @@ def main(write: bool, delete: bool) -> None:
     mgmt = ModusManagement()
     name = _example_name()
     print(f"\n=== Creating skill: {name!r} ===")
+    # The SQL selector points at a specific connection/schema that won't exist in
+    # most orgs, so it's opt-in: set MODUS_SQL_SELECTOR to enable the SQL tool.
+    sql_selector = os.environ.get("MODUS_SQL_SELECTOR")
+    if sql_selector:
+        toolset = Toolset.combine(
+            Toolset.sql_runner([sql_selector]),
+            Toolset.memory(),
+        )
+    else:
+        toolset = Toolset.memory()
     created = mgmt.skills.create(
         name=name,
         description="Sample skill from manage_skill.py. Safe to delete.",
         instructions=["Answer revenue questions using connected data sources."],
         model="gpt-4o",
-        toolset=Toolset.model_validate({"sql": {"enabled": True}}),
+        toolset=toolset,
     )
     skill_id = created.id
     print(f"  id={skill_id}  status={created.status}")

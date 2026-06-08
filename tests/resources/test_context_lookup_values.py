@@ -29,6 +29,27 @@ def test_lookup_returns_item_on_match():
 
 
 @respx.mock
+def test_lookup_returns_item_without_timestamps():
+    # The lookup endpoint returns a lean row without createdAt/updatedAt.
+    lean = {
+        "uid": "abc-123",
+        "contextType": "slack_workspace_channel_list",
+        "content": {"channels": []},
+        "connectionId": "conn-1",
+        "selectionId": "sel-1",
+        "dataPath": ["ws-1", "T123"],
+    }
+    respx.post(f"{BASE}/api/v1/context/items/lookup").mock(
+        return_value=httpx.Response(200, json={"item": lean})
+    )
+    item = _client().context.items.lookup("slack_workspace_channel_list", ["ws-1", "T123"])
+    assert isinstance(item, ContextItem)
+    assert item.uid == "abc-123"
+    assert item.created_at is None
+    assert item.updated_at is None
+
+
+@respx.mock
 def test_lookup_returns_none_when_item_null():
     respx.post(f"{BASE}/api/v1/context/items/lookup").mock(
         return_value=httpx.Response(200, json={"item": None})

@@ -52,7 +52,7 @@ class ConversationListItem(BaseModel):
     """
     Lightweight conversation summary returned by the list endpoint.
 
-    Use ``client.skills.conversations.get(skill_id, thread_id)`` to fetch
+    Use ``client.skills.conversations(skill_id).get(thread_id)`` to fetch
     the full message history for a thread.
     """
 
@@ -76,7 +76,7 @@ class Conversation(BaseModel):
     """
     Full conversation thread with all messages.
 
-    Returned by ``client.skills.conversations.get(skill_id, thread_id)``.
+    Returned by ``client.skills.conversations(skill_id).get(thread_id)``.
     """
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)

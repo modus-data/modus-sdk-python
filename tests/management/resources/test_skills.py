@@ -55,7 +55,10 @@ def test_skills_get_populates_variation_fields(client, skill_detail_row):
     assert skill.model == "gpt-4o"
     assert skill.expected_output == "Structured JSON with data rows"
     assert skill.toolset is not None
-    assert skill.toolset.model_dump().get("sql") == {"enabled": True}
+    assert skill.toolset.tools() == {
+        "sql_runner": ["SELECT:conn-snowflake-001:analytics:public"],
+        "memory": {"enabled": True},
+    }
     assert skill.connection_set is not None
     assert skill.connection_set[0].model_dump(by_alias=True).get("connectionId") == "conn-snowflake-001"
 

@@ -54,7 +54,7 @@ ALLOWED_CHAT_MODELS = frozenset({
 
 def validate_chat_model(model: str) -> None:
     if model not in ALLOWED_CHAT_MODELS:
+        supported = ", ".join(sorted(ALLOWED_CHAT_MODELS))
         raise ValueError(
-            f"model must be one of the canonical ids allowed by the API "
-            f"(e.g. claude-sonnet-4.6), got {model!r}"
+            f"Unsupported model {model!r}. Choose one of: {supported}."
         )

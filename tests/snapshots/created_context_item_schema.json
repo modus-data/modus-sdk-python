@@ -12,17 +12,12 @@
     "title": {
       "title": "Title",
       "type": "string"
-    },
-    "s3Key": {
-      "title": "S3Key",
-      "type": "string"
     }
   },
   "required": [
     "contextItemId",
     "kind",
-    "title",
-    "s3Key"
+    "title"
   ],
   "title": "CreatedContextItem",
   "type": "object"

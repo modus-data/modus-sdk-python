@@ -46,6 +46,42 @@ def test_agents_update():
 
 
 @respx.mock
+def test_agents_update_type_and_mask():
+    route = respx.patch(f"{BASE}/api/v1/agents/1").mock(
+        return_value=httpx.Response(200, json=AGENT_RESP)
+    )
+    _client().agents.update(1, type="workflow", update_mask="type")
+    req = route.calls[0].request
+    assert req.url.params["updateMask"] == "type"
+    body = json.loads(req.read())
+    assert body["type"] == "workflow"
+
+
+@respx.mock
+def test_agents_update_without_mask_drops_unset_fields():
+    route = respx.patch(f"{BASE}/api/v1/agents/1").mock(
+        return_value=httpx.Response(200, json=AGENT_RESP)
+    )
+    _client().agents.update(1, name="Renamed Agent")
+    body = json.loads(route.calls[0].request.read())
+    # No mask → partial update: only the field we set is on the wire, no nulls.
+    assert body == {"name": "Renamed Agent"}
+
+
+@respx.mock
+def test_agents_update_clears_field_via_mask():
+    route = respx.patch(f"{BASE}/api/v1/agents/1").mock(
+        return_value=httpx.Response(200, json=AGENT_RESP)
+    )
+    # Name the field in the mask and leave it unset → server clears it (null).
+    _client().agents.update(1, update_mask="description")
+    req = route.calls[0].request
+    assert req.url.params["updateMask"] == "description"
+    body = json.loads(req.read())
+    assert "description" in body and body["description"] is None
+
+
+@respx.mock
 def test_agents_deploy():
     respx.post(f"{BASE}/api/v1/agents/1/deploy").mock(
         return_value=httpx.Response(200, json={"agent": {**AGENT_RESP, "status": "active"}})

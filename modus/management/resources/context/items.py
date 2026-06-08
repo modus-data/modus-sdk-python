@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
 from modus._config import ModusConfig
@@ -12,11 +12,17 @@ from modus._pagination import (
     build_aip_page,
     build_async_aip_page,
 )
+from modus._query import with_update_mask as _with_update_mask
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_page_size
 from modus.types.pagination import AsyncPage, Page
 
-from ...types.context import ContextItem, ContextItemDeletion, ContextItemUpdate
+from ...types.context import (
+    ContextItem,
+    ContextItemDeletion,
+    ContextItemUpdate,
+    UserFeedback,
+)
 
 
 def _context_list_params(
@@ -75,21 +81,39 @@ class ContextItemsResource:
         self,
         uid: str,
         *,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
         content: Optional[Any] = None,
-        verification_status: Optional[str] = None,
+        context_type: Optional[str] = None,
+        description: Optional[str] = None,
+        user_feedback: Optional[UserFeedback] = None,
+        topics: Optional[List[str]] = None,
+        update_mask: Optional[str] = None,
     ) -> ContextItem:
-        """Update a context item."""
+        """Update a context item.
+
+        Args:
+            uid:           UUID of the context item to update.
+            content:       Replacement type-specific content, if changing it.
+            context_type:  The item's type (e.g. ``"note"``). Required when ``content`` is supplied.
+            description:   New description, if changing it.
+            user_feedback: Feedback verdict — ``"positive"``, ``"neutral"``, or ``"negative"``.
+            topics:        Replacement topic tags. Pass ``[]`` to clear all tags.
+            update_mask:   Comma-separated field names to clear. Name a field here and
+                           leave its argument unset to set it to null on the server;
+                           fields not named in the mask are left untouched.
+
+        Only the fields you pass are changed; omitted fields are left as-is.
+        """
         payload = ContextItemUpdate(
-            title=title,
-            description=description,
             content=content,
-            verification_status=verification_status,
-        ).model_dump(by_alias=True, exclude_none=True)
+            context_type=context_type,
+            description=description,
+            user_feedback=user_feedback,
+            topics=topics,
+        ).model_dump(by_alias=True, exclude_none=update_mask is None)
         safe_uid = quote(uid, safe="")
+        path = _with_update_mask(f"/api/v1/context/items/{safe_uid}", update_mask)
         with_retry(
-            lambda: self._http.patch(f"/api/v1/context/items/{safe_uid}", json=payload),
+            lambda: self._http.patch(path, json=payload),
             self._config.max_retries,
         )
         return self.get(uid)
@@ -148,20 +172,25 @@ class AsyncContextItemsResource:
         self,
         uid: str,
         *,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
         content: Optional[Any] = None,
-        verification_status: Optional[str] = None,
+        context_type: Optional[str] = None,
+        description: Optional[str] = None,
+        user_feedback: Optional[UserFeedback] = None,
+        topics: Optional[List[str]] = None,
+        update_mask: Optional[str] = None,
     ) -> ContextItem:
+        """Update a context item. See the sync ``update`` for argument details."""
         payload = ContextItemUpdate(
-            title=title,
-            description=description,
             content=content,
-            verification_status=verification_status,
-        ).model_dump(by_alias=True, exclude_none=True)
+            context_type=context_type,
+            description=description,
+            user_feedback=user_feedback,
+            topics=topics,
+        ).model_dump(by_alias=True, exclude_none=update_mask is None)
         safe_uid = quote(uid, safe="")
+        path = _with_update_mask(f"/api/v1/context/items/{safe_uid}", update_mask)
         await async_with_retry(
-            lambda: self._http.patch(f"/api/v1/context/items/{safe_uid}", json=payload),
+            lambda: self._http.patch(path, json=payload),
             self._config.max_retries,
         )
         return await self.get(uid)

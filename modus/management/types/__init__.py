@@ -15,7 +15,7 @@ from .json_blob import JsonObject
 from .memories import Memory, MemorySearchRequest, MemoryUpdate
 from .ownership import PendingOwnershipTransfer
 from .skills import Skill, SkillStatus
-from .toolset import Toolset, ToolsetTool
+from .toolset import Toolset
 from .triggers import (
     AgentTrigger,
     AgentTriggerValue,
@@ -54,7 +54,6 @@ __all__ = [
     "Skill",
     "SkillStatus",
     "Toolset",
-    "ToolsetTool",
     "TriggerSchedule",
     "WorkflowGraph",
 ]

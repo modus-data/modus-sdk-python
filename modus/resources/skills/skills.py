@@ -45,8 +45,8 @@ class SkillsResource:
 
     client.skills.list()                               → Page[Skill]
     client.skills.get(skill_id)                        → Skill
-    client.skills.conversations.list(skill_id)         → Page[ConversationListItem]
-    client.skills.conversations.get(skill_id, thread)  → Conversation
+    client.skills.conversations(skill_id).list()       → Page[ConversationListItem]
+    client.skills.conversations(skill_id).get(thread)  → Conversation
 
     To create, update, or deploy skills use modus.management.ModusManagement.
     """
@@ -54,7 +54,10 @@ class SkillsResource:
     def __init__(self, http: HttpClient, config: ModusConfig) -> None:
         self._http = http
         self._config = config
-        self.conversations = ConversationsResource(http, config)
+
+    def conversations(self, skill_id: Union[int, str]) -> ConversationsResource:
+        """Return the conversations sub-resource scoped to ``skill_id``."""
+        return ConversationsResource(self._http, self._config, skill_id)
 
     def list(
         self,
@@ -108,6 +111,19 @@ class SkillsResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> ChatResult:
+        """
+        Send a message to a skill and get the complete reply.
+
+        Args:
+            skill_id:  Skill ID or slug.
+            message:   The message to send.
+            model:     Model to run this message with (required). One of the
+                       supported model IDs, e.g. ``"claude-sonnet-4.6"`` or ``"gpt-5.5"``.
+            thread_id: Continue an existing conversation; omit to start a new one.
+
+        Returns:
+            ChatResult with the reply ``text`` and the ``thread_id`` to continue the conversation.
+        """
         return chat_buffered(
             self._http,
             "skills",
@@ -125,6 +141,19 @@ class SkillsResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> ChatStream:
+        """
+        Send a message to a skill and stream the reply token by token.
+
+        Args:
+            skill_id:  Skill ID or slug.
+            message:   The message to send.
+            model:     Model to run this message with (required). One of the
+                       supported model IDs, e.g. ``"claude-sonnet-4.6"`` or ``"gpt-5.5"``.
+            thread_id: Continue an existing conversation; omit to start a new one.
+
+        Returns:
+            ChatStream you can iterate for text chunks; the final result carries the ``thread_id``.
+        """
         return chat_stream_session(
             self._http,
             "skills",
@@ -169,7 +198,7 @@ class AsyncSkillsResource:
 
     await client.skills.list()                               → AsyncPage[Skill]
     await client.skills.get(skill_id)                        → Skill
-    await client.skills.conversations.list(skill_id, ...)    → AsyncPage[ConversationListItem]
+    await client.skills.conversations(skill_id).list()       → AsyncPage[ConversationListItem]
 
     To create, update, or deploy skills use modus.management.ModusManagement.
     """
@@ -177,7 +206,10 @@ class AsyncSkillsResource:
     def __init__(self, http: AsyncHttpClient, config: ModusConfig) -> None:
         self._http = http
         self._config = config
-        self.conversations = AsyncConversationsResource(http, config)
+
+    def conversations(self, skill_id: Union[int, str]) -> AsyncConversationsResource:
+        """Return the conversations sub-resource scoped to ``skill_id``."""
+        return AsyncConversationsResource(self._http, self._config, skill_id)
 
     async def list(
         self,

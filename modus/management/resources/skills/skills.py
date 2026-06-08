@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 from urllib.parse import quote
 
 from modus._config import ModusConfig
 from modus._http import AsyncHttpClient, HttpClient
 from modus._pagination import aip_list_params, build_aip_page_mapped, build_async_aip_page_mapped
+from modus._query import with_update_mask as _with_update_mask
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_id, validate_page_size
 from modus.types.pagination import AsyncPage, Page
@@ -37,18 +38,17 @@ class SkillsResource:
     mgmt.skills.update(skill_id, *, ...)            → Skill
     mgmt.skills.deploy(skill_id)                    → Skill
     mgmt.skills.delete(skill_id)                    → None
-    mgmt.skills.conversations(skill_id).list(...)   → Page[ConversationListItem]
+    mgmt.skills.conversations(skill_id).list()      → Page[ConversationListItem]
     mgmt.skills.conversations(skill_id).get(tid)    → Conversation
     """
 
     def __init__(self, http: HttpClient, config: ModusConfig) -> None:
         self._http = http
         self._config = config
-        self._conversations = ConversationsResource(http, config)
 
     def conversations(self, skill_id: Union[int, str]) -> ConversationsResource:
-        """Access Modus skill conversations (pass ``skill_id`` to ``list`` and ``get``)."""
-        return self._conversations
+        """Return the conversations sub-resource scoped to ``skill_id``."""
+        return ConversationsResource(self._http, self._config, skill_id)
 
     def memories(self, skill_id: Union[int, str]) -> MemoriesResource:
         """Return the memories sub-resource scoped to ``skill_id``."""
@@ -141,8 +141,17 @@ class SkillsResource:
         interfaces: Optional[JsonObjectListInput] = None,
         access_config: Optional[AccessConfigInput] = None,
         manager_id: Optional[str] = None,
+        evaluations: Optional[JsonObjectListInput] = None,
+        supervision_subordinate_descriptions: Optional[Dict[str, str]] = None,
+        update_mask: Optional[str] = None,
     ) -> Skill:
-        """Update a Modus skill's configuration."""
+        """Update a Modus skill's configuration.
+
+        Only the fields you pass are changed. To clear a field, name it in
+        ``update_mask`` (a comma-separated list of field names) and leave its
+        argument unset — the server sets each masked field to null and leaves
+        fields not named in the mask untouched.
+        """
         body = _SkillUpdateBody(
             name=name, description=description, expected_output=expected_output,
             instructions=instructions,
@@ -155,11 +164,14 @@ class SkillsResource:
             interfaces=dump_json_object_list(interfaces, field_name="interfaces"),
             access_config=dump_access_config(access_config),
             manager_id=manager_id,
-        ).model_dump(by_alias=True, exclude_none=True)
+            evaluations=dump_json_object_list(evaluations, field_name="evaluations"),
+            supervision_subordinate_descriptions=supervision_subordinate_descriptions,
+        ).model_dump(by_alias=True, exclude_none=update_mask is None)
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")
+        path = _with_update_mask(f"/api/v1/skills/{safe_id}", update_mask)
         raw = with_retry(
-            lambda: self._http.patch(f"/api/v1/skills/{safe_id}", json=body),
+            lambda: self._http.patch(path, json=body),
             self._config.max_retries,
         )
         return _translate_skill(_SkillWire.model_validate(raw))
@@ -189,11 +201,10 @@ class AsyncSkillsResource:
     def __init__(self, http: AsyncHttpClient, config: ModusConfig) -> None:
         self._http = http
         self._config = config
-        self._conversations = AsyncConversationsResource(http, config)
 
     def conversations(self, skill_id: Union[int, str]) -> AsyncConversationsResource:
-        """Access Modus skill conversations (pass ``skill_id`` to ``list`` and ``get``)."""
-        return self._conversations
+        """Return the conversations sub-resource scoped to ``skill_id``."""
+        return AsyncConversationsResource(self._http, self._config, skill_id)
 
     def memories(self, skill_id: Union[int, str]) -> AsyncMemoriesResource:
         return AsyncMemoriesResource(self._http, self._config, skill_id)
@@ -279,6 +290,9 @@ class AsyncSkillsResource:
         interfaces: Optional[JsonObjectListInput] = None,
         access_config: Optional[AccessConfigInput] = None,
         manager_id: Optional[str] = None,
+        evaluations: Optional[JsonObjectListInput] = None,
+        supervision_subordinate_descriptions: Optional[Dict[str, str]] = None,
+        update_mask: Optional[str] = None,
     ) -> Skill:
         body = _SkillUpdateBody(
             name=name, description=description, expected_output=expected_output,
@@ -292,11 +306,14 @@ class AsyncSkillsResource:
             interfaces=dump_json_object_list(interfaces, field_name="interfaces"),
             access_config=dump_access_config(access_config),
             manager_id=manager_id,
-        ).model_dump(by_alias=True, exclude_none=True)
+            evaluations=dump_json_object_list(evaluations, field_name="evaluations"),
+            supervision_subordinate_descriptions=supervision_subordinate_descriptions,
+        ).model_dump(by_alias=True, exclude_none=update_mask is None)
         validate_id(skill_id, name="skill_id")
         safe_id = quote(str(skill_id), safe="")
+        path = _with_update_mask(f"/api/v1/skills/{safe_id}", update_mask)
         raw = await async_with_retry(
-            lambda: self._http.patch(f"/api/v1/skills/{safe_id}", json=body),
+            lambda: self._http.patch(path, json=body),
             self._config.max_retries,
         )
         return _translate_skill(_SkillWire.model_validate(raw))

@@ -168,13 +168,11 @@ def _agent_runs_invoke(client: Client) -> Any:
 
 
 def _conversations_invoke(client: Client) -> Any:
-    return client.skills.conversations.list(42, page_size=25, page_token="tok_abc")
+    return client.skills.conversations(42).list(page_size=25, page_token="tok_abc")
 
 
 def _conversations_management_invoke(client: Client) -> Any:
-    return client.skills.conversations(42).list(
-        42, page_size=25, page_token="tok_abc"
-    )
+    return client.skills.conversations(42).list(page_size=25, page_token="tok_abc")
 
 
 def _memories_invoke(client: Client) -> Any:

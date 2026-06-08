@@ -37,7 +37,6 @@ from .types import (
     Skill,
     SkillStatus,
     Toolset,
-    ToolsetTool,
     TriggerSchedule,
     WorkflowGraph,
 )
@@ -72,7 +71,6 @@ __all__ = [
     "Skill",
     "SkillStatus",
     "Toolset",
-    "ToolsetTool",
     "TriggerSchedule",
     "WorkflowGraph",
 ]

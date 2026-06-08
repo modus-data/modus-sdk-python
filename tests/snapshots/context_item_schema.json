@@ -159,21 +159,35 @@
       "title": "Updatesource"
     },
     "createdAt": {
-      "format": "date-time",
-      "title": "Createdat",
-      "type": "string"
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Createdat"
     },
     "updatedAt": {
-      "format": "date-time",
-      "title": "Updatedat",
-      "type": "string"
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Updatedat"
     }
   },
   "required": [
     "uid",
-    "contextType",
-    "createdAt",
-    "updatedAt"
+    "contextType"
   ],
   "title": "ContextItem",
   "type": "object"

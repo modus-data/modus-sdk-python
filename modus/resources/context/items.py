@@ -162,6 +162,35 @@ class ContextItemsResource:
         validate_page_size(page_size, max_page_size=DEFAULT_MAX_PAGE_SIZE)
         return self._list_values_page(uid, context_type, content_key_path, page_size, page_token)
 
+    def list_values_for(
+        self,
+        item: ContextItem,
+        content_key_path: str,
+        *,
+        page_size: int = 25,
+        page_token: Optional[str] = None,
+    ) -> Page[ContextValueRow]:
+        """
+        List paginated values for a field, reusing a context item you already have.
+
+        Same as ``list_values`` but takes a ``ContextItem`` (from ``list`` or
+        ``get``) so you do not have to repeat its ``uid`` and ``context_type``.
+
+        Args:
+            item:              A context item returned by ``list`` or ``get``.
+            content_key_path:  Dot-separated JSON path to the array of values inside
+                               ``content``. Example: ``"enumValues"`` or ``"sample.values"``.
+            page_size:         Values per page (default 25, max 200).
+            page_token:        Opaque token from a previous page's ``next_page_token``.
+        """
+        return self.list_values(
+            item.uid,
+            item.context_type,
+            content_key_path,
+            page_size=page_size,
+            page_token=page_token,
+        )
+
     def _list_values_page(
         self,
         uid: str,
@@ -289,6 +318,28 @@ class AsyncContextItemsResource:
         validate_page_size(page_size, max_page_size=DEFAULT_MAX_PAGE_SIZE)
         return await self._list_values_page(
             uid, context_type, content_key_path, page_size, page_token
+        )
+
+    async def list_values_for(
+        self,
+        item: ContextItem,
+        content_key_path: str,
+        *,
+        page_size: int = 25,
+        page_token: Optional[str] = None,
+    ) -> AsyncPage[ContextValueRow]:
+        """
+        List paginated values for a field, reusing a context item you already have.
+
+        Same as ``list_values`` but takes a ``ContextItem`` (from ``list`` or
+        ``get``) so you do not have to repeat its ``uid`` and ``context_type``.
+        """
+        return await self.list_values(
+            item.uid,
+            item.context_type,
+            content_key_path,
+            page_size=page_size,
+            page_token=page_token,
         )
 
     async def _list_values_page(

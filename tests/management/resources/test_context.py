@@ -75,15 +75,45 @@ def test_context_items_get(client, sample_context_item):
 @respx.mock
 def test_context_items_update(client, sample_context_item):
     uid = "7a3f9d2c-1111-4000-a000-000000000abc"
-    updated = {**sample_context_item, "title": "Updated Title"}
-    respx.patch(f"{BASE}/api/v1/context/items/{uid}").mock(
-        return_value=httpx.Response(200, json=updated)
+    updated = {**sample_context_item, "description": "Reviewed"}
+    patch_route = respx.patch(f"{BASE}/api/v1/context/items/{uid}").mock(
+        return_value=httpx.Response(200, json={"uid": uid})
     )
     respx.get(f"{BASE}/api/v1/context/items/{uid}").mock(
         return_value=httpx.Response(200, json=updated)
     )
-    item = client.context.items.update(uid, title="Updated Title")
-    assert item.title == "Updated Title"
+    item = client.context.items.update(
+        uid,
+        description="Reviewed",
+        user_feedback="positive",
+        topics=["analytics"],
+    )
+    assert item.description == "Reviewed"
+    # Body must match the API contract — only whitelisted fields, camelCased.
+    body = json.loads(patch_route.calls[0].request.read())
+    assert body == {
+        "description": "Reviewed",
+        "userFeedback": "positive",
+        "topics": ["analytics"],
+    }
+    assert "title" not in body and "verificationStatus" not in body
+
+
+@respx.mock
+def test_context_items_update_clears_field_via_mask(client, sample_context_item):
+    uid = "7a3f9d2c-1111-4000-a000-000000000abc"
+    patch_route = respx.patch(f"{BASE}/api/v1/context/items/{uid}").mock(
+        return_value=httpx.Response(200, json={"uid": uid})
+    )
+    respx.get(f"{BASE}/api/v1/context/items/{uid}").mock(
+        return_value=httpx.Response(200, json=sample_context_item)
+    )
+    # Name the field in the mask and leave it unset → server sets it to null.
+    client.context.items.update(uid, update_mask="description")
+    req = patch_route.calls[0].request
+    assert req.url.params["updateMask"] == "description"
+    body = json.loads(req.read())
+    assert "description" in body and body["description"] is None
 
 
 @respx.mock

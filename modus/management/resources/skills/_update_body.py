@@ -34,3 +34,5 @@ class _SkillUpdateBody(BaseModel):
     interfaces: Optional[List[Dict[str, Any]]] = None
     access_config: Optional[Dict[str, Any]] = None
     manager_id: Optional[str] = None
+    evaluations: Optional[List[Dict[str, Any]]] = None
+    supervision_subordinate_descriptions: Optional[Dict[str, str]] = None

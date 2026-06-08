@@ -21,7 +21,7 @@ SKILL_DETAIL_WIRE = {
         "instructions": ["You are a Snowflake analyst.", "Use SQL."],
         "model": "gpt-4o",
         "expectedOutput": "JSON rows",
-        "toolset": {"sql": {"enabled": True}},
+        "toolset": {"sql_runner": ["SELECT:conn-001:analytics:public"]},
         "connectionSet": [{"connectionId": "conn-001"}],
         "contextSelections": [],
         "interfaces": [],
@@ -97,7 +97,7 @@ def test_translate_skill_detail_row_flattens_variation():
     assert skill.model == "gpt-4o"
     assert skill.expected_output == "JSON rows"
     assert skill.toolset is not None
-    assert skill.toolset.model_dump().get("sql") == {"enabled": True}
+    assert skill.toolset.tools() == {"sql_runner": ["SELECT:conn-001:analytics:public"]}
     assert skill.connection_set is not None
     assert skill.connection_set[0].model_dump(by_alias=True).get("connectionId") == "conn-001"
 

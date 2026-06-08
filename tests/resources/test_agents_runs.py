@@ -71,8 +71,14 @@ def test_agents_runs_list_empty_next_page_token(client):
 
 @respx.mock
 def test_agents_runs_list_invalid_page_size(client):
-    with pytest.raises(ValueError, match="page_size must be between"):
+    with pytest.raises(ValueError, match="page_size must be a positive int"):
         client.agents.runs.list(7, page_size=0)
+
+
+@respx.mock
+def test_agents_runs_list_page_size_over_max(client):
+    with pytest.raises(ValueError, match="page_size must be <= 100"):
+        client.agents.runs.list(7, page_size=101)
 
 
 @respx.mock

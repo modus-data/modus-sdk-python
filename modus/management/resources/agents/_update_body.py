@@ -21,6 +21,7 @@ class _AgentCreateBody(BaseModel):
 class _AgentUpdateBody(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     name: Optional[str] = None
+    type: Optional[str] = None  # "task" | "workflow"
     description: Optional[str] = None
     trigger: Optional[Dict[str, Any]] = None
     agent_selection: Optional[Dict[str, Any]] = None

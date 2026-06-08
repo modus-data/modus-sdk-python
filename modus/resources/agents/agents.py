@@ -57,6 +57,16 @@ class AgentsResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> ChatResult:
+        """
+        Send a message to an agent and get the complete reply.
+
+        Args:
+            agent_id:  Agent ID or slug.
+            message:   The message to send.
+            model:     Model to run this message with (required). One of the
+                       supported model IDs, e.g. ``"claude-sonnet-4.6"`` or ``"gpt-5.5"``.
+            thread_id: Continue an existing conversation; omit to start a new one.
+        """
         return chat_buffered(
             self._http,
             "agents",
@@ -74,6 +84,16 @@ class AgentsResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> ChatStream:
+        """
+        Send a message to an agent and stream the reply token by token.
+
+        Args:
+            agent_id:  Agent ID or slug.
+            message:   The message to send.
+            model:     Model to run this message with (required). One of the
+                       supported model IDs, e.g. ``"claude-sonnet-4.6"`` or ``"gpt-5.5"``.
+            thread_id: Continue an existing conversation; omit to start a new one.
+        """
         return chat_stream_session(
             self._http,
             "agents",

@@ -64,8 +64,10 @@ class ContextItem(BaseModel):
     data_path: Optional[List[str]] = None
     last_update_metadata: Optional[Dict[str, Any]] = None
     update_source: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    """When the item was created. Present on list/get; omitted by lookup."""
+    updated_at: Optional[datetime] = None
+    """When the item was last updated. Present on list/get; omitted by lookup."""
 
 
 class CreatedContextItem(BaseModel):
@@ -87,20 +89,6 @@ class CreatedContextItem(BaseModel):
 
     title: str
     """The title that was stored."""
-
-    s3_key: str
-    """Internal S3 object key where the content is stored."""
-
-
-class ContextItemUpdate(BaseModel):
-    """Fields that can be updated on an existing context item."""
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-    title: Optional[str] = None
-    description: Optional[str] = None
-    content: Optional[Any] = None  # string, dict, or list — matches ContextItem.content
-    verification_status: Optional[str] = None
 
 
 class ContextItemDeletion(BaseModel):

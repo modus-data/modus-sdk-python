@@ -1,4 +1,4 @@
-"""Tests for client.skills.conversations.list() and .get()."""
+"""Tests for client.skills.conversations(skill_id).list() and .get()."""
 
 import httpx
 import pytest
@@ -42,7 +42,7 @@ def make_conversation() -> dict:
 
 def test_conversations_list_rejects_invalid_page_size(client):
     with pytest.raises(ValueError, match="page_size must be a positive int"):
-        client.skills.conversations.list(42, page_size=0)
+        client.skills.conversations(42).list(page_size=0)
 
 
 # ── List ──────────────────────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ def test_conversations_list_returns_list_items(client):
             "nextPageToken": None,
         })
     )
-    page = client.skills.conversations.list(42)
+    page = client.skills.conversations(42).list()
     assert len(page) == 1
     item = page.items[0]
     assert isinstance(item, ConversationListItem)
@@ -76,7 +76,7 @@ def test_conversations_list_sends_aip_params(client):
             "nextPageToken": None,
         })
     )
-    client.skills.conversations.list(42, page_size=25)
+    client.skills.conversations(42).list(page_size=25)
     params = route.calls[0].request.url.params
     assert params["pageSize"] == "25"
     assert "pageToken" not in params
@@ -91,7 +91,7 @@ def test_conversations_list_sends_page_token(client):
             "nextPageToken": None,
         })
     )
-    client.skills.conversations.list(42, page_size=10, page_token="tok_abc")
+    client.skills.conversations(42).list(page_size=10, page_token="tok_abc")
     params = route.calls[0].request.url.params
     assert params["pageSize"] == "10"
     assert params["pageToken"] == "tok_abc"
@@ -105,7 +105,7 @@ def test_conversations_list_has_next_page(client):
             "nextPageToken": "tok_next",
         })
     )
-    page = client.skills.conversations.list(42, page_size=2)
+    page = client.skills.conversations(42).list(page_size=2)
     assert page.has_next_page() is True
     assert page.next_page_token == "tok_next"
 
@@ -118,7 +118,7 @@ def test_conversations_list_no_next_page(client):
             "nextPageToken": None,
         })
     )
-    page = client.skills.conversations.list(42)
+    page = client.skills.conversations(42).list()
     assert page.has_next_page() is False
 
 
@@ -136,7 +136,7 @@ def test_conversations_auto_paging_iter(client):
         }),
     ])
 
-    page = client.skills.conversations.list(42, page_size=2)
+    page = client.skills.conversations(42).list(page_size=2)
     all_threads = list(page.auto_paging_iter())
     assert len(all_threads) == 4
     assert all_threads[0].thread_id == "thread-0"
@@ -153,7 +153,7 @@ def test_conversations_get(client):
     respx.get(f"{BASE}/api/v1/skills/42/conversations/thread-abc").mock(
         return_value=httpx.Response(200, json=make_conversation())
     )
-    conv = client.skills.conversations.get(42, "thread-abc")
+    conv = client.skills.conversations(42).get("thread-abc")
     assert isinstance(conv, Conversation)
     assert conv.thread_id == "thread-abc"
     assert len(conv.messages) == 2
@@ -184,7 +184,7 @@ def test_conversations_get_with_tool_calls(client):
             "updatedAt": "2026-01-01T00:00:00.000Z",
         })
     )
-    conv = client.skills.conversations.get(42, "thread-tools")
+    conv = client.skills.conversations(42).get("thread-tools")
     ai_msg = conv.messages[1]
     assert ai_msg.tool_calls is not None
     assert len(ai_msg.tool_calls) == 1

@@ -73,7 +73,7 @@ def test_skills_chat_continue(client):
 
 @respx.mock
 def test_skills_chat_invalid_model(client):
-    with pytest.raises(ValueError, match="model must be one of"):
+    with pytest.raises(ValueError, match="Unsupported model"):
         client.skills.chat(42, "Hi", model="not-a-real-model")
 
 

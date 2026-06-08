@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, List, Literal, Optional
+from typing import Any, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
@@ -14,6 +14,9 @@ ContextType = Literal[
     "bigquery_table", "snowflake_table", "databricks_table",
     "postgresql_table", "clickhouse_table",
 ]
+
+#: Feedback verdict accepted when updating a context item.
+UserFeedback = Union[Literal["negative", "neutral", "positive"], str]
 
 
 class ContextItem(BaseModel):
@@ -38,16 +41,16 @@ class CreatedContextItem(BaseModel):
     context_item_id: str
     kind: str
     title: str
-    s3_key: str
 
 
 class ContextItemUpdate(BaseModel):
     """Fields that can be updated on an existing context item."""
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="ignore")
-    title: Optional[str] = None
-    description: Optional[str] = None
+    context_type: Optional[str] = None
     content: Optional[Any] = None
-    verification_status: Optional[str] = None
+    description: Optional[str] = None
+    user_feedback: Optional[str] = None
+    topics: Optional[List[str]] = None
 
 
 class ContextItemDeletion(BaseModel):

@@ -4,9 +4,35 @@
 
 ## [Unreleased]
 
+### Added
+
+- `Toolset` builders for attaching tools to a skill: `Toolset.slack(...)`, `Toolset.clickup(...)`, and other integrations, plus `Toolset.sql_runner(...)`, `Toolset.memory()`, and `Toolset.custom_mcps(...)`. Combine several with `Toolset.combine(...)` or `.merge(...)`.
+- `client.context.items.list_values_for(item, content_key_path)` — list a field's values straight from a `ContextItem` without repeating its `uid` and `context_type`.
+
 ### Changed
 
 - **Breaking:** `client.skills.get_context()` returns `SkillContextComposition.context` (composed markdown string) instead of `context_items`. `limit` applies only when the API falls back to structured JSON.
+- **Breaking:** skill conversations are now scoped per skill: use `client.skills.conversations(skill_id).list()` / `.get(thread_id)` (previously `conversations.list(skill_id)`). This matches `mgmt.skills.memories(skill_id)`.
+- `mgmt.agents.create(type=...)` now accepts `"task"` or `"workflow"` with editor autocomplete.
+- `client.agents.runs.list(...)` documents the accepted `status`, `timeframe`, and `approval_scope` values and surfaces them as editor hints.
+- Clearer error message when an unsupported chat `model` is passed.
+- `mgmt.skills.update(...)` now accepts `evaluations` and `supervision_subordinate_descriptions`.
+- `mgmt.agents.update(...)` now accepts `type` (change an agent between `"task"` and `"workflow"`).
+- `mgmt.skills.update`, `mgmt.agents.update`, and `mgmt.context.items.update` now accept `update_mask` to explicitly clear fields.
+- `mgmt.context.create_saved_query(...)` makes `query` optional, matching the API.
+- `ContextItem.created_at` / `updated_at` are now optional. They are returned by `list()`/`get()` and omitted by `lookup()`.
+
+### Fixed
+
+- `client.context.items.lookup(...)` no longer raises when the matched item has no timestamps.
+- `mgmt.context.items.update(...)` now matches the API contract. It previously sent `title` and `verificationStatus`, which the server rejects with `400`. Use `content`, `context_type`, `description`, `user_feedback` (`"positive"`/`"neutral"`/`"negative"`), and `topics` instead.
+- `update_mask` now actually clears fields. On `mgmt.skills.update`, `mgmt.agents.update`, and `mgmt.context.items.update`, naming a field in `update_mask` and leaving its argument unset now sends `null` for that field (previously it was dropped, so the clear never happened).
+- Input validation fails fast on obvious mistakes: an empty/whitespace `update_mask`, a blank `thread_id` in `conversations.get(...)`, and passing a bare string (instead of a list) to `Toolset.sql_runner`/`custom_mcps`/integration factories now raise `ValueError` before any request is made.
+
+### Removed
+
+- **Breaking:** removed the non-functional `Toolset(tools=[...])` / `Toolset.from_tools(...)` write path and the `ToolsetTool` type. Use the `Toolset` builders above.
+- Removed the `s3_key` field from `CreatedContextItem` (consumption and management). Use `context_item_id` with `client.context.items.get(...)` for the full item.
 
 ## [0.1.5] — 2026-06-04
 

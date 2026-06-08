@@ -8,6 +8,7 @@ from urllib.parse import quote
 from modus._config import ModusConfig
 from modus._http import AsyncHttpClient, HttpClient
 from modus._pagination import aip_list_params, build_aip_page_mapped, build_async_aip_page_mapped
+from modus._query import with_update_mask as _with_update_mask
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_id, validate_page_size
 from modus.types.pagination import AsyncPage, Page
@@ -15,7 +16,7 @@ from modus.types.pagination import AsyncPage, Page
 from ..._wire.agents import _AgentWire
 from ...types.access import AccessConfigInput, dump_access_config
 from ...types.agent_selection import AgentSelectionInput, dump_agent_selection
-from ...types.agents import Agent
+from ...types.agents import Agent, AgentType
 from ...types.triggers import TriggerInput, dump_trigger
 from ...types.workflow import WorkflowGraphInput, dump_workflow_structure
 from ._translate import _translate_agent
@@ -84,7 +85,7 @@ class AgentsResource:
     def create(
         self,
         name: str,
-        type: str,  # "task" | "workflow"
+        type: AgentType,
         *,
         description: Optional[str] = None,
         trigger: Optional[TriggerInput] = None,
@@ -92,7 +93,13 @@ class AgentsResource:
         workflow_structure: Optional[WorkflowGraphInput] = None,
         access_config: Optional[AccessConfigInput] = None,
     ) -> Agent:
-        """Create a new Modus agent in the organisation."""
+        """Create a new Modus agent.
+
+        Args:
+            name: Display name for the agent.
+            type: ``"task"`` for single-step skill orchestration, or ``"workflow"``
+                  for a multi-step graph.
+        """
         body = _AgentCreateBody(
             name=name, type=type, description=description,
             trigger=dump_trigger(trigger),
@@ -111,24 +118,33 @@ class AgentsResource:
         agent_id: Union[int, str],
         *,
         name: Optional[str] = None,
+        type: Optional[AgentType] = None,
         description: Optional[str] = None,
         trigger: Optional[TriggerInput] = None,
         agent_selection: Optional[AgentSelectionInput] = None,
         workflow_structure: Optional[WorkflowGraphInput] = None,
         access_config: Optional[AccessConfigInput] = None,
+        update_mask: Optional[str] = None,
     ) -> Agent:
-        """Update a Modus agent's configuration."""
+        """Update a Modus agent's configuration.
+
+        Only the fields you pass are changed. To clear a field, name it in
+        ``update_mask`` (a comma-separated list of field names) and leave its
+        argument unset — the server sets each masked field to null and leaves
+        fields not named in the mask untouched.
+        """
         body = _AgentUpdateBody(
-            name=name, description=description,
+            name=name, type=type, description=description,
             trigger=dump_trigger(trigger),
             agent_selection=dump_agent_selection(agent_selection),
             workflow_structure=dump_workflow_structure(workflow_structure),
             access_config=dump_access_config(access_config),
-        ).model_dump(by_alias=True, exclude_none=True)
+        ).model_dump(by_alias=True, exclude_none=update_mask is None)
         validate_id(agent_id, name="agent_id")
         safe_id = quote(str(agent_id), safe="")
+        path = _with_update_mask(f"/api/v1/agents/{safe_id}", update_mask)
         raw = with_retry(
-            lambda: self._http.patch(f"/api/v1/agents/{safe_id}", json=body),
+            lambda: self._http.patch(path, json=body),
             self._config.max_retries,
         )
         return _translate_agent(_AgentWire.model_validate(raw))
@@ -200,7 +216,7 @@ class AsyncAgentsResource:
         )
         return _translate_agent(_AgentWire.model_validate(data))
 
-    async def create(self, name: str, type: str, *,
+    async def create(self, name: str, type: AgentType, *,
                      description: Optional[str] = None,
                      trigger: Optional[TriggerInput] = None,
                      agent_selection: Optional[AgentSelectionInput] = None,
@@ -220,22 +236,25 @@ class AsyncAgentsResource:
         return _translate_agent(_AgentWire.model_validate(raw))
 
     async def update(self, agent_id: Union[int, str], *,
-                     name: Optional[str] = None, description: Optional[str] = None,
+                     name: Optional[str] = None, type: Optional[AgentType] = None,
+                     description: Optional[str] = None,
                      trigger: Optional[TriggerInput] = None,
                      agent_selection: Optional[AgentSelectionInput] = None,
                      workflow_structure: Optional[WorkflowGraphInput] = None,
-                     access_config: Optional[AccessConfigInput] = None) -> Agent:
+                     access_config: Optional[AccessConfigInput] = None,
+                     update_mask: Optional[str] = None) -> Agent:
         body = _AgentUpdateBody(
-            name=name, description=description,
+            name=name, type=type, description=description,
             trigger=dump_trigger(trigger),
             agent_selection=dump_agent_selection(agent_selection),
             workflow_structure=dump_workflow_structure(workflow_structure),
             access_config=dump_access_config(access_config),
-        ).model_dump(by_alias=True, exclude_none=True)
+        ).model_dump(by_alias=True, exclude_none=update_mask is None)
         validate_id(agent_id, name="agent_id")
         safe_id = quote(str(agent_id), safe="")
+        path = _with_update_mask(f"/api/v1/agents/{safe_id}", update_mask)
         raw = await async_with_retry(
-            lambda: self._http.patch(f"/api/v1/agents/{safe_id}", json=body),
+            lambda: self._http.patch(path, json=body),
             self._config.max_retries,
         )
         return _translate_agent(_AgentWire.model_validate(raw))

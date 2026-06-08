@@ -1,14 +1,14 @@
 """Agent runs — GET /api/v1/agents/{id}/runs."""
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Literal, Optional, Union
 from urllib.parse import quote
 
 from ..._config import ModusConfig
 from ..._http import AsyncHttpClient, HttpClient
 from ..._pagination import normalize_page_token
 from ..._retry import async_with_retry, with_retry
-from ..._validation import validate_id
+from ..._validation import validate_id, validate_page_size
 from ..._wire.agent_runs import (
     _AutomationRunListItemWire,
     _GetAutomationRunResponseWire,
@@ -17,6 +17,15 @@ from ..._wire.agent_runs import (
 from ...types.agent_runs import AgentRun, AgentRunListItem
 from ...types.json_blob import JsonObject
 from ...types.pagination import AsyncPage, Page
+
+# Documented filter values. These are hints, not a closed set: the server may
+# accept additional values, so any string is allowed.
+RunStatus = Union[
+    Literal["running", "awaiting_human", "completed", "error", "cancelled", "all_executions"],
+    str,
+]
+RunTimeframe = Union[Literal["last_hour", "last_day", "last_week"], str]
+ApprovalScope = Union[Literal["mine", "all"], str]
 
 
 def _translate_run_item(wire: _AutomationRunListItemWire) -> AgentRunListItem:
@@ -52,24 +61,26 @@ class AgentRunsResource:
         *,
         page_size: int = 25,
         page_token: Optional[str] = None,
-        status: Optional[str] = None,
-        timeframe: Optional[str] = None,
-        approval_scope: Optional[str] = None,
+        status: Optional[RunStatus] = None,
+        timeframe: Optional[RunTimeframe] = None,
+        approval_scope: Optional[ApprovalScope] = None,
         search: Optional[str] = None,
     ) -> Page[AgentRunListItem]:
         """
-        List Modus automation runs for an agent.
+        List automation runs for an agent.
 
         Args:
-            agent_id:        Modus agent ID or slug.
+            agent_id:        Agent ID or slug.
             page_size:       Maximum number of items to return (default 25, max 100).
             page_token:      Token from a previous page's ``next_page_token``; omit for the first page.
-            status:          Filter by run status.
-            timeframe:       Filter by time window.
-            approval_scope:  Filter by approval scope.
+            status:          Filter by run status (e.g. ``"running"``, ``"awaiting_human"``,
+                             ``"completed"``, ``"error"``, ``"cancelled"``, ``"all_executions"``).
+            timeframe:       Filter by time window (e.g. ``"last_hour"``, ``"last_day"``, ``"last_week"``).
+            approval_scope:  When ``status="awaiting_human"``, scope to ``"mine"`` or ``"all"``.
             search:          Free-text search filter.
         """
         validate_id(agent_id, name="agent_id")
+        validate_page_size(page_size, max_page_size=100)
         return self._list_page(
             agent_id,
             page_size=page_size,
@@ -86,13 +97,11 @@ class AgentRunsResource:
         *,
         page_size: int,
         page_token: Optional[str],
-        status: Optional[str],
-        timeframe: Optional[str],
-        approval_scope: Optional[str],
+        status: Optional[RunStatus],
+        timeframe: Optional[RunTimeframe],
+        approval_scope: Optional[ApprovalScope],
         search: Optional[str],
     ) -> Page[AgentRunListItem]:
-        if page_size < 1 or page_size > 100:
-            raise ValueError("page_size must be between 1 and 100")
         safe_id = quote(str(agent_id), safe="")
         params: Dict[str, Any] = {"pageSize": page_size}
         if page_token:
@@ -187,24 +196,26 @@ class AsyncAgentRunsResource:
         *,
         page_size: int = 25,
         page_token: Optional[str] = None,
-        status: Optional[str] = None,
-        timeframe: Optional[str] = None,
-        approval_scope: Optional[str] = None,
+        status: Optional[RunStatus] = None,
+        timeframe: Optional[RunTimeframe] = None,
+        approval_scope: Optional[ApprovalScope] = None,
         search: Optional[str] = None,
     ) -> AsyncPage[AgentRunListItem]:
         """
-        List Modus automation runs for an agent.
+        List automation runs for an agent.
 
         Args:
-            agent_id:        Modus agent ID or slug.
+            agent_id:        Agent ID or slug.
             page_size:       Maximum number of items to return (default 25, max 100).
             page_token:      Token from a previous page's ``next_page_token``; omit for the first page.
-            status:          Filter by run status.
-            timeframe:       Filter by time window.
-            approval_scope:  Filter by approval scope.
+            status:          Filter by run status (e.g. ``"running"``, ``"awaiting_human"``,
+                             ``"completed"``, ``"error"``, ``"cancelled"``, ``"all_executions"``).
+            timeframe:       Filter by time window (e.g. ``"last_hour"``, ``"last_day"``, ``"last_week"``).
+            approval_scope:  When ``status="awaiting_human"``, scope to ``"mine"`` or ``"all"``.
             search:          Free-text search filter.
         """
         validate_id(agent_id, name="agent_id")
+        validate_page_size(page_size, max_page_size=100)
         return await self._list_page(
             agent_id,
             page_size=page_size,
@@ -221,13 +232,11 @@ class AsyncAgentRunsResource:
         *,
         page_size: int,
         page_token: Optional[str],
-        status: Optional[str],
-        timeframe: Optional[str],
-        approval_scope: Optional[str],
+        status: Optional[RunStatus],
+        timeframe: Optional[RunTimeframe],
+        approval_scope: Optional[ApprovalScope],
         search: Optional[str],
     ) -> AsyncPage[AgentRunListItem]:
-        if page_size < 1 or page_size > 100:
-            raise ValueError("page_size must be between 1 and 100")
         safe_id = quote(str(agent_id), safe="")
         params: Dict[str, Any] = {"pageSize": page_size}
         if page_token:

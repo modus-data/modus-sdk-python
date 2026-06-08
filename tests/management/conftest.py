@@ -50,7 +50,10 @@ def skill_detail_row(skill_list_row) -> dict:
             "instructions": ["You are a Snowflake data analyst.", "Use SQL for queries."],
             "model": "gpt-4o",
             "expectedOutput": "Structured JSON with data rows",
-            "toolset": {"sql": {"enabled": True}},
+            "toolset": {
+                "sql_runner": ["SELECT:conn-snowflake-001:analytics:public"],
+                "memory": {"enabled": True},
+            },
             "connectionSet": [{"connectionId": "conn-snowflake-001"}],
             "contextSelections": [],
             "interfaces": [],

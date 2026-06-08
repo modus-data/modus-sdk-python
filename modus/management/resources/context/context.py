@@ -42,11 +42,13 @@ class ContextResource:
         return self._create("/api/v1/context/notes", {"title": title, "content": content})
 
     def create_saved_query(
-        self, name: str, query: str, *, connection_id: str,
+        self, name: str, query: Optional[str] = None, *, connection_id: str,
         description: Optional[str] = None, path: Optional[List[str]] = None,
     ) -> CreatedContextItem:
         """Save a SQL query to the Modus knowledge base."""
-        payload: Dict[str, Any] = {"name": name, "query": query, "connectionId": connection_id}
+        payload: Dict[str, Any] = {"name": name, "connectionId": connection_id}
+        if query is not None:
+            payload["query"] = query
         if description is not None:
             payload["description"] = description
         if path is not None:
@@ -85,10 +87,12 @@ class AsyncContextResource:
         return await self._create("/api/v1/context/notes", {"title": title, "content": content})
 
     async def create_saved_query(
-        self, name: str, query: str, *, connection_id: str,
+        self, name: str, query: Optional[str] = None, *, connection_id: str,
         description: Optional[str] = None, path: Optional[List[str]] = None,
     ) -> CreatedContextItem:
-        payload: Dict[str, Any] = {"name": name, "query": query, "connectionId": connection_id}
+        payload: Dict[str, Any] = {"name": name, "connectionId": connection_id}
+        if query is not None:
+            payload["query"] = query
         if description is not None:
             payload["description"] = description
         if path is not None:
