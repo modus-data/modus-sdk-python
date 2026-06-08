@@ -1,5 +1,7 @@
 """Tests for mgmt.skills.list() and mgmt.skills.get()."""
 
+import json
+
 import httpx
 import pytest
 import respx
@@ -97,3 +99,52 @@ def test_skills_get_by_slug(client, skill_detail_row):
     )
     skill = client.skills.get("snowflake-analyst")
     assert skill.slug == "snowflake-analyst"
+
+
+@respx.mock
+def test_skills_request_ownership_transfer(client, skill_detail_row):
+    route = respx.post(f"{BASE}/api/v1/skills/10/transfer-ownership").mock(
+        return_value=httpx.Response(200, json=skill_detail_row)
+    )
+    skill = client.skills.request_ownership_transfer(10, new_owner_user_id="user_abc")
+    assert skill.id == 10
+    body = json.loads(route.calls[0].request.read())
+    assert body["newOwnerUserId"] == "user_abc"
+
+
+@respx.mock
+def test_skills_cancel_ownership_transfer(client, skill_detail_row):
+    respx.delete(f"{BASE}/api/v1/skills/10/transfer-ownership").mock(
+        return_value=httpx.Response(200, json=skill_detail_row)
+    )
+    skill = client.skills.cancel_ownership_transfer(10)
+    assert skill.slug == "snowflake-analyst"
+
+
+@respx.mock
+def test_skills_undelete(client, skill_detail_row):
+    respx.post(f"{BASE}/api/v1/skills/10/undelete").mock(
+        return_value=httpx.Response(200, json=skill_detail_row)
+    )
+    skill = client.skills.undelete(10)
+    assert skill.id == 10
+
+
+@respx.mock
+def test_skills_patch_mcp_config(client):
+    route = respx.patch(f"{BASE}/api/v1/skills/10/mcp-config").mock(
+        return_value=httpx.Response(200, json={"config": {"coreTools": []}})
+    )
+    client.skills.patch_mcp_config(10, mcp_config={"coreTools": []})
+    body = json.loads(route.calls[0].request.read())
+    assert body["config"] == {"coreTools": []}
+
+
+@respx.mock
+def test_skills_get_variation(client, skill_detail_row):
+    uid = "00000000-0000-4000-a000-000000000abc"
+    respx.get(f"{BASE}/api/v1/skills/10/variations/{uid}").mock(
+        return_value=httpx.Response(200, json=skill_detail_row)
+    )
+    skill = client.skills.get_variation(10, variation_uid=uid)
+    assert skill.model == "gpt-4o"

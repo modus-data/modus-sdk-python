@@ -3,7 +3,9 @@
 import json
 
 import httpx
+import pytest
 import respx
+from modus._exceptions import UnprocessableError
 from modus.management import ModusManagement
 from modus.management.types.context import ContextItem, ContextItemDeletion, CreatedContextItem
 
@@ -125,3 +127,38 @@ def test_context_items_delete(client):
     result = client.context.items.delete(uid)
     assert isinstance(result, ContextItemDeletion)
     assert result.uid == uid
+
+
+@respx.mock
+def test_context_create_dimension_posts_and_surfaces_422():
+    route = respx.post(f"{BASE}/api/v1/context/dimensions").mock(
+        return_value=httpx.Response(
+            422,
+            json={"statusCode": 422, "message": "Semantic layer writer is not wired yet"},
+        )
+    )
+    with pytest.raises(UnprocessableError, match="not wired"):
+        _client().context.create_dimension(
+            "customer_country",
+            expr="${customers.country}",
+            description="Country code",
+        )
+    body = json.loads(route.calls[0].request.read())
+    assert body["name"] == "customer_country"
+    assert body["dataType"] == "TEXT"
+
+
+@respx.mock
+def test_context_create_fact_posts_payload():
+    route = respx.post(f"{BASE}/api/v1/context/facts").mock(
+        return_value=httpx.Response(422, json={"message": "not ready"})
+    )
+    with pytest.raises(UnprocessableError):
+        _client().context.create_fact(
+            "revenue",
+            expr="sum(amount)",
+            description="Revenue fact",
+        )
+    body = json.loads(route.calls[0].request.read())
+    assert body["aggregation"] == "SUM"
+    assert body["dataType"] == "NUMBER"

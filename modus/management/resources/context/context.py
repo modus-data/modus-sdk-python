@@ -69,6 +69,72 @@ class ContextResource:
             payload["pageLimit"] = page_limit
         return self._create("/api/v1/context/links", payload)
 
+    def create_dimension(
+        self,
+        name: str,
+        *,
+        expr: str,
+        description: Optional[str] = None,
+        data_type: str = "TEXT",
+    ) -> CreatedContextItem:
+        """Add a semantic dimension to the Modus knowledge base."""
+        payload: Dict[str, Any] = {
+            "name": name,
+            "expr": expr,
+            "description": description if description is not None else "",
+            "dataType": data_type,
+        }
+        return self._create("/api/v1/context/dimensions", payload)
+
+    def create_fact(
+        self,
+        name: str,
+        *,
+        expr: str,
+        description: Optional[str] = None,
+        aggregation: str = "SUM",
+        data_type: str = "NUMBER",
+    ) -> CreatedContextItem:
+        """Add a semantic fact to the Modus knowledge base."""
+        payload: Dict[str, Any] = {
+            "name": name,
+            "expr": expr,
+            "description": description if description is not None else "",
+            "aggregation": aggregation,
+            "dataType": data_type,
+        }
+        return self._create("/api/v1/context/facts", payload)
+
+    def create_metric(
+        self,
+        name: str,
+        *,
+        expr: str,
+        description: Optional[str] = None,
+    ) -> CreatedContextItem:
+        """Add a semantic metric to the Modus knowledge base."""
+        payload: Dict[str, Any] = {
+            "name": name,
+            "expr": expr,
+            "description": description if description is not None else "",
+        }
+        return self._create("/api/v1/context/metrics", payload)
+
+    def create_filter(
+        self,
+        name: str,
+        *,
+        expr: str,
+        description: Optional[str] = None,
+    ) -> CreatedContextItem:
+        """Add a semantic filter to the Modus knowledge base."""
+        payload: Dict[str, Any] = {
+            "name": name,
+            "expr": expr,
+            "description": description if description is not None else "",
+        }
+        return self._create("/api/v1/context/filters", payload)
+
 
 class AsyncContextResource:
     def __init__(self, http: AsyncHttpClient, config: ModusConfig) -> None:
@@ -111,3 +177,69 @@ class AsyncContextResource:
         if page_limit is not None:
             payload["pageLimit"] = page_limit
         return await self._create("/api/v1/context/links", payload)
+
+    async def create_dimension(
+        self,
+        name: str,
+        *,
+        expr: str,
+        description: Optional[str] = None,
+        data_type: str = "TEXT",
+    ) -> CreatedContextItem:
+        """Add a semantic dimension to the Modus knowledge base."""
+        payload: Dict[str, Any] = {
+            "name": name,
+            "expr": expr,
+            "description": description if description is not None else "",
+            "dataType": data_type,
+        }
+        return await self._create("/api/v1/context/dimensions", payload)
+
+    async def create_fact(
+        self,
+        name: str,
+        *,
+        expr: str,
+        description: Optional[str] = None,
+        aggregation: str = "SUM",
+        data_type: str = "NUMBER",
+    ) -> CreatedContextItem:
+        """Add a semantic fact to the Modus knowledge base."""
+        payload: Dict[str, Any] = {
+            "name": name,
+            "expr": expr,
+            "description": description if description is not None else "",
+            "aggregation": aggregation,
+            "dataType": data_type,
+        }
+        return await self._create("/api/v1/context/facts", payload)
+
+    async def create_metric(
+        self,
+        name: str,
+        *,
+        expr: str,
+        description: Optional[str] = None,
+    ) -> CreatedContextItem:
+        """Add a semantic metric to the Modus knowledge base."""
+        payload: Dict[str, Any] = {
+            "name": name,
+            "expr": expr,
+            "description": description if description is not None else "",
+        }
+        return await self._create("/api/v1/context/metrics", payload)
+
+    async def create_filter(
+        self,
+        name: str,
+        *,
+        expr: str,
+        description: Optional[str] = None,
+    ) -> CreatedContextItem:
+        """Add a semantic filter to the Modus knowledge base."""
+        payload: Dict[str, Any] = {
+            "name": name,
+            "expr": expr,
+            "description": description if description is not None else "",
+        }
+        return await self._create("/api/v1/context/filters", payload)

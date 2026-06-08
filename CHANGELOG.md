@@ -6,6 +6,9 @@
 
 ### Added
 
+- HTTP implementations on `ModusManagement` for all remaining public contract operations: semantic context creators (`create_dimension`, `create_fact`, `create_metric`, `create_filter`), skill/agent ownership and undelete, skill MCP config and version history, usage metrics (`mgmt.usage.list()`), and organization deletion (`mgmt.organization.delete()`). Sync and async.
+- `sdk-python-sync` skill, `coverage-gaps.py`, and `openapi-diff-summary.py` for OpenAPI-aligned SDK maintenance; GitHub Action to spawn a Cursor cloud agent when a merged PR changes `openapi/v1.json` on `develop`, poll until finished, and Slack-DM the sync PR link to the SDK owner.
+
 - `client.connections.list()` / `find(name=...)` — discover integration connections (`id`, `name`, `type`) for saved-query and context workflows. Sync and async.
 - `view` and `manager_id` filters on `client.skills.list()` / `mgmt.skills.list()`; `view` on `get()`.
 - `view` and `include_variation` filters on `client.agents.list()` / `mgmt.agents.list()`; `view` on `get()`.
@@ -18,6 +21,8 @@
 
 ### Changed
 
+- **Breaking:** Removed `FeatureNotReadyError` and the PREVIEW tier. Every public operation now calls the API; backend errors (e.g. `UnprocessableError` on 422) pass through with the server message.
+- `operation_coverage.py` uses a single `OPERATIONS` map (no WRAPPED/PREVIEW split).
 - **Breaking:** `client.skills.get_context()` returns `SkillContextComposition.context` (composed markdown string) instead of `context_items`. `limit` applies only when the API falls back to structured JSON.
 - **Breaking:** skill conversations are now scoped per skill: use `client.skills.conversations(skill_id).list()` / `.get(thread_id)` (previously `conversations.list(skill_id)`). This matches `mgmt.skills.memories(skill_id)`.
 - `mgmt.agents.create(type=...)` now accepts `"task"` or `"workflow"` with editor autocomplete.

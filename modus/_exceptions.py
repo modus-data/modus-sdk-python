@@ -146,3 +146,4 @@ class StreamTimeoutError(ModusError):
 
     def __init__(self, message: str = "Stream timed out.") -> None:
         super().__init__(message)
+

@@ -1,5 +1,7 @@
 """Tests for mgmt.agents.list() and mgmt.agents.get()."""
 
+import json
+
 import httpx
 import pytest
 import respx
@@ -59,3 +61,23 @@ def test_agents_get_not_found(client):
     )
     with pytest.raises(NotFoundError):
         client.agents.get(999)
+
+
+@respx.mock
+def test_agents_request_ownership_transfer(client, agent_detail_row):
+    route = respx.post(f"{BASE}/api/v1/agents/5/transfer-ownership").mock(
+        return_value=httpx.Response(200, json=agent_detail_row)
+    )
+    agent = client.agents.request_ownership_transfer(5, new_owner_user_id="user_xyz")
+    assert agent.id == 5
+    body = json.loads(route.calls[0].request.read())
+    assert body["newOwnerUserId"] == "user_xyz"
+
+
+@respx.mock
+def test_agents_undelete(client, agent_detail_row):
+    respx.post(f"{BASE}/api/v1/agents/5/undelete").mock(
+        return_value=httpx.Response(200, json=agent_detail_row)
+    )
+    agent = client.agents.undelete(5)
+    assert agent.slug == "weekly-report"

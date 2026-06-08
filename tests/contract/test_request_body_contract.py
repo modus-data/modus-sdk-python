@@ -49,6 +49,17 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
         "name", "connectionId", "query", "description", "path",
     },
     "ContextCreatorsController_createLink": {"url", "title", "isCrawl", "pageLimit"},
+    "ContextCreatorsController_createDimension": {
+        "name", "description", "expr", "dataType",
+    },
+    "ContextCreatorsController_createFact": {
+        "name", "description", "expr", "aggregation", "dataType",
+    },
+    "ContextCreatorsController_createMetric": {"name", "description", "expr"},
+    "ContextCreatorsController_createFilter": {"name", "description", "expr"},
+    "SkillsController_requestOwnershipTransfer": {"newOwnerUserId"},
+    "AgentsController_requestOwnershipTransfer": {"newOwnerUserId"},
+    "SkillsController_patchMcpConfig": {"config"},
     # Deploy takes an optional body; the SDK sends none (empty body), which the
     # server accepts. Registered explicitly so the contract guard stays honest.
     "SkillsController_deploy": set(),
@@ -105,9 +116,9 @@ def test_sdk_request_body_is_subset_of_spec(openapi: dict, operation_id: str) ->
     )
 
 
-def test_every_wrapped_write_endpoint_has_a_body_contract(openapi: dict) -> None:
-    # Keep this registry honest: if we wrap a new write endpoint, force a body check.
-    from .operation_coverage import WRAPPED
+def test_every_mapped_write_endpoint_has_a_body_contract(openapi: dict) -> None:
+    # Keep this registry honest: if we map a new write endpoint, force a body check.
+    from .operation_coverage import OPERATIONS
 
     def _has_request_body(operation_id: str) -> bool:
         for path_item in openapi.get("paths", {}).values():
@@ -131,12 +142,12 @@ def test_every_wrapped_write_endpoint_has_a_body_contract(openapi: dict) -> None
     }
     missing = {
         oid
-        for oid in WRAPPED
+        for oid in OPERATIONS
         if _has_request_body(oid)
         and oid not in SDK_REQUEST_BODY_FIELDS
         and oid not in reuses_base_body
     }
     assert not missing, (
-        "Wrapped write endpoints without a body contract in SDK_REQUEST_BODY_FIELDS: "
+        "Mapped write endpoints without a body contract in SDK_REQUEST_BODY_FIELDS: "
         f"{sorted(missing)}"
     )

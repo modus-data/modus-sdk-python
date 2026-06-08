@@ -31,6 +31,11 @@ def _map_agent(raw: dict) -> Agent:
     return _translate_agent(_AgentWire.model_validate(raw))
 
 
+def _parse_agent_response(raw: object) -> Agent:
+    agent_data = raw.get("agent", raw) if isinstance(raw, dict) else raw
+    return _translate_agent(_AgentWire.model_validate(agent_data))
+
+
 def _agents_list_params(
     page_size: int,
     page_token: Optional[str],
@@ -238,6 +243,51 @@ class AgentsResource:
             self._config.max_retries,
         )
 
+    def request_ownership_transfer(
+        self, agent_id: Union[int, str], *, new_owner_user_id: str,
+    ) -> Agent:
+        """Start transferring ownership of an agent to another organisation member."""
+        validate_id(agent_id, name="agent_id")
+        safe_id = quote(str(agent_id), safe="")
+        raw = with_retry(
+            lambda: self._http.post(
+                f"/api/v1/agents/{safe_id}/transfer-ownership",
+                json={"newOwnerUserId": new_owner_user_id},
+            ),
+            self._config.max_retries,
+        )
+        return _parse_agent_response(raw)
+
+    def cancel_ownership_transfer(self, agent_id: Union[int, str]) -> Agent:
+        """Cancel a pending agent ownership transfer."""
+        validate_id(agent_id, name="agent_id")
+        safe_id = quote(str(agent_id), safe="")
+        raw = with_retry(
+            lambda: self._http.delete(f"/api/v1/agents/{safe_id}/transfer-ownership"),
+            self._config.max_retries,
+        )
+        return _parse_agent_response(raw)
+
+    def accept_ownership_transfer(self, agent_id: Union[int, str]) -> Agent:
+        """Accept a pending agent ownership transfer."""
+        validate_id(agent_id, name="agent_id")
+        safe_id = quote(str(agent_id), safe="")
+        raw = with_retry(
+            lambda: self._http.post(f"/api/v1/agents/{safe_id}/transfer-ownership/accept"),
+            self._config.max_retries,
+        )
+        return _parse_agent_response(raw)
+
+    def undelete(self, agent_id: Union[int, str]) -> Agent:
+        """Restore a soft-deleted agent."""
+        validate_id(agent_id, name="agent_id")
+        safe_id = quote(str(agent_id), safe="")
+        raw = with_retry(
+            lambda: self._http.post(f"/api/v1/agents/{safe_id}/undelete"),
+            self._config.max_retries,
+        )
+        return _parse_agent_response(raw)
+
 
 class AsyncAgentsResource:
     def __init__(self, http: AsyncHttpClient, config: ModusConfig) -> None:
@@ -403,3 +453,48 @@ class AsyncAgentsResource:
             lambda: self._http.delete(f"/api/v1/agents/{safe_id}"),
             self._config.max_retries,
         )
+
+    async def request_ownership_transfer(
+        self, agent_id: Union[int, str], *, new_owner_user_id: str,
+    ) -> Agent:
+        """Start transferring ownership of an agent to another organisation member."""
+        validate_id(agent_id, name="agent_id")
+        safe_id = quote(str(agent_id), safe="")
+        raw = await async_with_retry(
+            lambda: self._http.post(
+                f"/api/v1/agents/{safe_id}/transfer-ownership",
+                json={"newOwnerUserId": new_owner_user_id},
+            ),
+            self._config.max_retries,
+        )
+        return _parse_agent_response(raw)
+
+    async def cancel_ownership_transfer(self, agent_id: Union[int, str]) -> Agent:
+        """Cancel a pending agent ownership transfer."""
+        validate_id(agent_id, name="agent_id")
+        safe_id = quote(str(agent_id), safe="")
+        raw = await async_with_retry(
+            lambda: self._http.delete(f"/api/v1/agents/{safe_id}/transfer-ownership"),
+            self._config.max_retries,
+        )
+        return _parse_agent_response(raw)
+
+    async def accept_ownership_transfer(self, agent_id: Union[int, str]) -> Agent:
+        """Accept a pending agent ownership transfer."""
+        validate_id(agent_id, name="agent_id")
+        safe_id = quote(str(agent_id), safe="")
+        raw = await async_with_retry(
+            lambda: self._http.post(f"/api/v1/agents/{safe_id}/transfer-ownership/accept"),
+            self._config.max_retries,
+        )
+        return _parse_agent_response(raw)
+
+    async def undelete(self, agent_id: Union[int, str]) -> Agent:
+        """Restore a soft-deleted agent."""
+        validate_id(agent_id, name="agent_id")
+        safe_id = quote(str(agent_id), safe="")
+        raw = await async_with_retry(
+            lambda: self._http.post(f"/api/v1/agents/{safe_id}/undelete"),
+            self._config.max_retries,
+        )
+        return _parse_agent_response(raw)

@@ -1,19 +1,12 @@
-"""Single source of truth: which OpenAPI operations the SDK exposes vs. omits.
+"""Single source of truth: which OpenAPI operations the SDK exposes.
 
-Every operation in ``openapi/v1.json`` must appear here, classified as either
-``WRAPPED`` (a public SDK method calls it) or ``INTERNAL`` (deliberately not
-exposed, with a reason). The SDK is *not* required to mirror the API 1:1 — but
-every endpoint must be a conscious decision, not an accident. The coverage test
-fails when the spec gains an operation that isn't classified here, forcing a
-deliberate choice.
-
-Keep the reasons honest and client-facing-neutral; they explain *why* a public
-route is intentionally absent from the SDK.
+Every operation in ``openapi/v1.json`` must appear here with a note on where the
+SDK method lives. Each mapped operation makes a real HTTP call.
 """
 from __future__ import annotations
 
 # operationId -> short note on where/how the SDK exposes it.
-WRAPPED: dict[str, str] = {
+OPERATIONS: dict[str, str] = {
     # --- Skills ---
     "SkillsController_list": "client.skills.list() / mgmt.skills.list()",
     "SkillsController_create": "mgmt.skills.create()",
@@ -21,10 +14,8 @@ WRAPPED: dict[str, str] = {
     "SkillsController_update": "mgmt.skills.update()",
     "SkillsController_softDelete": "mgmt.skills.delete()",
     "SkillsController_deploy": "mgmt.skills.deploy()",
-    "SkillChatController_chat": "client.skills.chat()",
-    "SkillChatController_chatStream": "client.skills.chat_stream()",
+    "SkillChatController_chat": "client.skills.chat() / client.skills.chat_stream()",
     "SkillChatController_chatContinue": "client.skills.chat(thread_id=...)",
-    "SkillChatController_chatContinueStream": "client.skills.chat_stream(thread_id=...)",
     "SkillContextController_compose": "client.skills.get_context()",
     "ConversationsController_list": "client.skills.conversations(id).list()",
     "ConversationsController_get": "client.skills.conversations(id).get()",
@@ -32,6 +23,12 @@ WRAPPED: dict[str, str] = {
     "MemoriesController_search": "mgmt.skills.memories(id).search()",
     "MemoriesController_update": "mgmt.skills.memories(id).update()",
     "MemoriesController_delete": "mgmt.skills.memories(id).delete()",
+    "SkillsController_requestOwnershipTransfer": "mgmt.skills.request_ownership_transfer()",
+    "SkillsController_cancelOwnershipTransfer": "mgmt.skills.cancel_ownership_transfer()",
+    "SkillsController_acceptOwnershipTransfer": "mgmt.skills.accept_ownership_transfer()",
+    "SkillsController_undelete": "mgmt.skills.undelete()",
+    "SkillsController_patchMcpConfig": "mgmt.skills.patch_mcp_config()",
+    "SkillsController_getVariation": "mgmt.skills.get_variation()",
     # --- Agents ---
     "AgentsController_list": "client.agents.list() / mgmt.agents.list()",
     "AgentsController_create": "mgmt.agents.create()",
@@ -39,15 +36,17 @@ WRAPPED: dict[str, str] = {
     "AgentsController_update": "mgmt.agents.update()",
     "AgentsController_softDelete": "mgmt.agents.delete()",
     "AgentsController_deploy": "mgmt.agents.deploy()",
-    "AgentChatController_chat": "client.agents.chat()",
-    "AgentChatController_chatStream": "client.agents.chat_stream()",
+    "AgentChatController_chat": "client.agents.chat() / client.agents.chat_stream()",
     "AgentChatController_chatContinue": "client.agents.chat(thread_id=...)",
-    "AgentChatController_chatContinueStream": "client.agents.chat_stream(thread_id=...)",
     "AutomationRunsController_list": "client.agents.runs.list()",
     "AutomationRunsController_get": "client.agents.runs.get()",
+    "AgentsController_requestOwnershipTransfer": "mgmt.agents.request_ownership_transfer()",
+    "AgentsController_cancelOwnershipTransfer": "mgmt.agents.cancel_ownership_transfer()",
+    "AgentsController_acceptOwnershipTransfer": "mgmt.agents.accept_ownership_transfer()",
+    "AgentsController_undelete": "mgmt.agents.undelete()",
     # --- Context ---
-    "ContextItemsController_list": "client.context.items.list() / mgmt...",
-    "ContextItemsController_get": "client.context.items.get() / mgmt...",
+    "ContextItemsController_list": "client.context.items.list() / mgmt.context.items.list()",
+    "ContextItemsController_get": "client.context.items.get() / mgmt.context.items.get()",
     "ContextItemsController_update": "mgmt.context.items.update()",
     "ContextItemsController_delete": "mgmt.context.items.delete()",
     "ContextItemsController_lookup": "client.context.items.lookup()",
@@ -55,31 +54,14 @@ WRAPPED: dict[str, str] = {
     "ContextCreatorsController_createNote": "mgmt.context.create_note()",
     "ContextCreatorsController_createSavedQuery": "mgmt.context.create_saved_query()",
     "ContextCreatorsController_createLink": "mgmt.context.create_link()",
+    "ContextCreatorsController_createDimension": "mgmt.context.create_dimension()",
+    "ContextCreatorsController_createFact": "mgmt.context.create_fact()",
+    "ContextCreatorsController_createMetric": "mgmt.context.create_metric()",
+    "ContextCreatorsController_createFilter": "mgmt.context.create_filter()",
     # --- Connections ---
     "ConnectionsController_list": "client.connections.list()",
-}
-
-# operationId -> reason it is intentionally NOT exposed by the SDK.
-INTERNAL: dict[str, str] = {
-    # Server rejects these creator shapes (422); not usable via SDK.
-    "ContextCreatorsController_createDimension": "server returns 422 — not a usable public creator",
-    "ContextCreatorsController_createFact": "server returns 422 — not a usable public creator",
-    "ContextCreatorsController_createMetric": "server returns 422 — not a usable public creator",
-    "ContextCreatorsController_createFilter": "server returns 422 — not a usable public creator",
-    # Org ownership transfer — admin workflow, app-only for now.
-    "SkillsController_requestOwnershipTransfer": "org-admin ownership workflow; app-only",
-    "SkillsController_cancelOwnershipTransfer": "org-admin ownership workflow; app-only",
-    "SkillsController_acceptOwnershipTransfer": "org-admin ownership workflow; app-only",
-    "AgentsController_requestOwnershipTransfer": "org-admin ownership workflow; app-only",
-    "AgentsController_cancelOwnershipTransfer": "org-admin ownership workflow; app-only",
-    "AgentsController_acceptOwnershipTransfer": "org-admin ownership workflow; app-only",
-    # Soft-delete recovery — app-only recovery affordance.
-    "SkillsController_undelete": "recovery affordance; app-only",
-    "AgentsController_undelete": "recovery affordance; app-only",
-    # Advanced/internal skill surfaces.
-    "SkillsController_patchMcpConfig": "advanced MCP wiring; app-only",
-    "SkillsController_getVariation": "historic variation fetch; app-only",
-    # Reporting / destructive admin.
-    "UsageController_list": "usage reporting; app-only (spec marks SPA-only)",
-    "OrganizationController_deleteOrganization": "destructive org wipe; admin-only, not for SDK",
+    # --- Usage ---
+    "UsageController_list": "mgmt.usage.list()",
+    # --- Organization ---
+    "OrganizationController_deleteOrganization": "mgmt.organization.delete()",
 }

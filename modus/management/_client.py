@@ -17,9 +17,13 @@ from .resources import (
     AgentsResource,
     AsyncAgentsResource,
     AsyncContextResource,
+    AsyncOrganizationResource,
     AsyncSkillsResource,
+    AsyncUsageResource,
     ContextResource,
+    OrganizationResource,
     SkillsResource,
+    UsageResource,
 )
 
 
@@ -78,6 +82,8 @@ class ModusManagement:
         self.skills: SkillsResource = SkillsResource(self._http, self._config)
         self.agents: AgentsResource = AgentsResource(self._http, self._config)
         self.context: ContextResource = ContextResource(self._http, self._config)
+        self.usage: UsageResource = UsageResource(self._http, self._config)
+        self.organization: OrganizationResource = OrganizationResource(self._http, self._config)
 
     def close(self) -> None:
         """Close the underlying HTTP connection pool."""
@@ -139,6 +145,10 @@ class AsyncModusManagement:
         self.skills: AsyncSkillsResource = AsyncSkillsResource(self._http, self._config)
         self.agents: AsyncAgentsResource = AsyncAgentsResource(self._http, self._config)
         self.context: AsyncContextResource = AsyncContextResource(self._http, self._config)
+        self.usage: AsyncUsageResource = AsyncUsageResource(self._http, self._config)
+        self.organization: AsyncOrganizationResource = AsyncOrganizationResource(
+            self._http, self._config
+        )
 
     async def aclose(self) -> None:
         """Close the underlying async HTTP connection pool."""
