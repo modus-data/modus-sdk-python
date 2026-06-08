@@ -47,7 +47,7 @@ ALLOWED_CHAT_MODELS = frozenset({
     "llama-3.3-70b-instruct",
     "gemini-3.1-pro-preview",
     "gemini-3-flash-preview",
-    "grok-4",
+    "grok-4.3-fast",
     "grok-4.3",
 })
 
