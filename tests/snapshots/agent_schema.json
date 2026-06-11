@@ -426,7 +426,7 @@
       "type": "boolean"
     },
     "isEnabled": {
-      "description": "Whether the agent\u2019s schedule is currently active. Toggle via POST /api/v1/agents/{id}/toggle.",
+      "description": "Whether the agent\u2019s schedule is currently active. Toggle via the agent schedule API.",
       "examples": [
         true
       ],
@@ -459,7 +459,7 @@
         }
       ],
       "default": null,
-      "description": "Variation-detail payload (`trigger`, `workflowStructure`, `agentSelection`) for the requested view. Populated by `GET /api/v1/agents/:id`; absent on list rows."
+      "description": "Variation-detail payload (`trigger`, `workflowStructure`, `agentSelection`) for the requested view. Present on detail responses; absent on list rows."
     },
     "createdAt": {
       "anyOf": [

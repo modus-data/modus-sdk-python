@@ -1,4 +1,4 @@
-"""AUTO-GENERATED from apps/services/modus-api/openapi/v1.json — do not edit."""
+"""Auto-generated operation registry. Do not edit by hand."""
 from __future__ import annotations
 
 from typing import Literal, Optional, Tuple, TypedDict

@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Generated models and operation registry no longer embed monorepo codegen instructions; field help text in `_generated/models.py` is sanitized for the public mirror (no `AIP-158` or REST route callouts in IDE tooltips).
+
 ### Added
 
 - Context ergonomics (Tier B/C): `mgmt.context.update_note()`, `update_link()`, and `update_saved_query()` — paired with the existing `create_*` helpers; merge server-owned `content` fields for you. Read accessors on `modus`: `note_title`, `note_body`, `link_title`, `link_url`, `saved_query_name`, `saved_query_sql`, `context_item_label`, `is_verified`. Sync and async.

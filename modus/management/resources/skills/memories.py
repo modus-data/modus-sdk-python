@@ -1,4 +1,4 @@
-"""Skill memories sub-resource — /api/v1/skills/:id/memories."""
+"""Search and manage long-term memories for a skill."""
 
 from __future__ import annotations
 

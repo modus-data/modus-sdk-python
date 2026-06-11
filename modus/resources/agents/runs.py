@@ -1,4 +1,4 @@
-"""Agent runs — GET /api/v1/agents/{id}/runs."""
+"""List and retrieve automation run history for an agent."""
 from __future__ import annotations
 
 from typing import Any, Dict, Literal, Optional, Union

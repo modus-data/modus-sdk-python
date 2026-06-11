@@ -1,4 +1,4 @@
-"""Context items resource — /api/v1/context/items (read-only, consumption SDK)"""
+"""Read context items from the Modus knowledge base."""
 
 from __future__ import annotations
 
@@ -117,7 +117,7 @@ class ContextItemsResource:
         content_projection: Optional[JsonObjectInput] = None,
     ) -> Optional[ContextItemLookupRow]:
         """
-        POST /api/v1/context/items/lookup — returns None when no match (404).
+        Look up a context item by type and data path.
 
         Args:
             context_type:        The context type to search for.
@@ -293,7 +293,7 @@ class AsyncContextItemsResource:
         content_projection: Optional[JsonObjectInput] = None,
     ) -> Optional[ContextItemLookupRow]:
         """
-        POST /api/v1/context/items/lookup — returns None when no match (404).
+        Look up a context item by type and data path.
 
         Args:
             context_type:        The context type to search for.

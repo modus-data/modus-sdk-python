@@ -1,5 +1,5 @@
 """
-Helpers to build Page[T] / AsyncPage[T] from modus-api AIP-158 list responses.
+Helpers to build Page[T] / AsyncPage[T] from Modus API list responses.
 
 Public list endpoints return resource-plural arrays and ``nextPageToken``:
     { "skills": [...], "nextPageToken": "..." }
@@ -30,7 +30,7 @@ def aip_list_params(
     page_token: Optional[str] = None,
     **extra: Any,
 ) -> Dict[str, Any]:
-    """Build AIP-158 query params (pageSize, pageToken) plus optional filters."""
+    """Build cursor-pagination query params (pageSize, pageToken) plus optional filters."""
     params: Dict[str, Any] = {"pageSize": page_size, **extra}
     token = normalize_page_token(page_token)
     if token is not None:

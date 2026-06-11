@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
-# modus-api MAX_PAGE_SIZE (context list + values surfaces).
+# API max page size for context list and values surfaces.
 DEFAULT_MAX_PAGE_SIZE = 200
 
 
@@ -28,7 +28,7 @@ def validate_id(resource_id: Union[int, str], *, name: str = "id") -> None:
         raise ValueError(f"{name} must be a non-empty string or int")
 
 
-# Canonical model ids from OpenAPI SkillChatRequestDto (keep in sync with modus-api).
+# Canonical chat model ids from SkillChatRequestDto (keep in sync with the API spec).
 ALLOWED_CHAT_MODELS = frozenset({
     "claude-sonnet-4.6",
     "claude-opus-4.8",

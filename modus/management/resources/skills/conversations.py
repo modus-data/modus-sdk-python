@@ -1,4 +1,4 @@
-"""Modus skill conversations — /api/v1/skills/:id/conversations (management SDK)"""
+"""List and retrieve skill conversation threads via the management client."""
 from __future__ import annotations
 
 from typing import Optional, Union

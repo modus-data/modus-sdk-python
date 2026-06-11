@@ -1,4 +1,4 @@
-"""Skills resource — /api/v1/skills (full CRUD, management SDK)"""
+"""Create, update, and deploy skills via the management client."""
 
 from __future__ import annotations
 

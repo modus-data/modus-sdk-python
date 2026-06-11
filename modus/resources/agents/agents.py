@@ -1,4 +1,4 @@
-"""Agents resource — /api/v1/agents (read-only, consumption SDK)"""
+"""Read-only agents resource for the consumption client."""
 
 from __future__ import annotations
 

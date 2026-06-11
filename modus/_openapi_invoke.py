@@ -29,7 +29,8 @@ def get_operation(operation_id: str) -> OperationSpec:
         return OPERATIONS[operation_id]
     except KeyError as exc:
         raise KeyError(
-            f"Unknown operationId {operation_id!r}. Regenerate with pnpm nx run modus-sdk:generate."
+            f"Unknown API operation {operation_id!r}. "
+            "Upgrade modus-sdk or report a version mismatch."
         ) from exc
 
 

@@ -1,4 +1,4 @@
-"""Skill conversations resource — GET /api/v1/skills/:id/conversations"""
+"""Read skill conversation threads for a published skill."""
 
 from __future__ import annotations
 

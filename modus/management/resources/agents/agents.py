@@ -1,4 +1,4 @@
-"""Agents resource — /api/v1/agents (full CRUD, management SDK)"""
+"""Create, update, and deploy agents via the management client."""
 
 from __future__ import annotations
 

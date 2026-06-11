@@ -1,4 +1,4 @@
-"""Connections resource — GET /api/v1/connections (read-only)."""
+"""List data connections available to your organization."""
 
 from __future__ import annotations
 

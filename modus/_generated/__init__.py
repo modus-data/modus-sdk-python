@@ -1,4 +1,4 @@
-"""Machine-generated OpenAPI baseline — do not edit by hand."""
+"""Auto-generated API models. Do not edit by hand."""
 from .models import (
     AccessConfigDto,
     AgentAccessConfigDto,
@@ -27,7 +27,6 @@ from .models import (
     ConversationMessageDto,
     ConversationSearchMatchDto,
     CreateAgentDto,
-    CreatedContextItemResponseDto,
     CreateDimensionDto,
     CreateFactDto,
     CreateFilterDto,
@@ -36,6 +35,7 @@ from .models import (
     CreateNoteDto,
     CreateSavedQueryDto,
     CreateSkillDto,
+    CreatedContextItemResponseDto,
     DataAssetFilterDto,
     DefaultLevel,
     DeleteContextItemResponseDto,
@@ -55,8 +55,8 @@ from .models import (
     ListAgentsResponseDto,
     ListAutomationRunsResponseDto,
     ListConnectionsResponseDto,
-    ListContextItemsResponseDto,
     ListContextItemValuesResponseDto,
+    ListContextItemsResponseDto,
     ListConversationsResponseDto,
     ListMemoriesResponseDto,
     ListSkillsResponseDto,
@@ -74,9 +74,9 @@ from .models import (
     MemoryDto,
     Model,
     OrgMemberDto,
+    PatSummaryDto,
     PatchSkillMcpConfigDto,
     PatchSkillMcpConfigResponseDto,
-    PatSummaryDto,
     PendingOwnershipTransferDto,
     Rollup,
     SearchMemoriesRequestDto,
@@ -114,7 +114,6 @@ from .models import (
     Visibility,
     Weekday,
 )
-
 __all__ = [
     "AccessConfigDto",
     "AgentAccessConfigDto",

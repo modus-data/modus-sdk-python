@@ -528,7 +528,7 @@
         }
       ],
       "default": null,
-      "description": "Variation-detail payload (`toolset`, `instructions`, `model`, etc.) for the requested view. Populated by `GET /api/v1/skills/:id`; absent on list rows."
+      "description": "Variation-detail payload (`toolset`, `instructions`, `model`, etc.) for the requested view. Present on detail responses; absent on list rows."
     },
     "createdAt": {
       "anyOf": [

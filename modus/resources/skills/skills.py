@@ -1,4 +1,4 @@
-"""Skills resource — /api/v1/skills (read-only, consumption SDK)"""
+"""Read-only skills resource for the consumption client."""
 
 from __future__ import annotations
 
