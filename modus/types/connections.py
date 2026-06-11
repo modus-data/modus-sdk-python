@@ -1,14 +1,9 @@
-"""Public types for integration connections."""
+"""Connection read types — re-exported from OpenAPI DTOs."""
+
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Optional
+from .._generated.models import ConnectionDto
 
+Connection = ConnectionDto
 
-@dataclass(frozen=True)
-class Connection:
-    """A warehouse or SaaS integration connection in the organisation."""
-
-    id: str
-    name: Optional[str]
-    type: Optional[str]
+__all__ = ["Connection", "ConnectionDto"]

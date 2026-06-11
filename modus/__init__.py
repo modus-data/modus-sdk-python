@@ -10,7 +10,7 @@ Quick start:
         print(skill.name, skill.status)
 
     for item in client.context.items.list():
-        print(item.title)
+        print(modus.context_item_label(item))
 
 To create or configure skills, use modus.management.ModusManagement.
 """
@@ -50,6 +50,14 @@ from .types import (
     Skill,
     SkillContextComposition,
     SkillStatus,
+    context_item_label,
+    is_verified,
+    link_title,
+    link_url,
+    note_body,
+    note_title,
+    saved_query_name,
+    saved_query_sql,
 )
 from .types.runs import (
     CancelledEvent,
@@ -80,6 +88,14 @@ __all__ = [
     "Connection",
     "ContextItem",
     "ContextType",
+    "context_item_label",
+    "is_verified",
+    "link_title",
+    "link_url",
+    "note_body",
+    "note_title",
+    "saved_query_name",
+    "saved_query_sql",
     "Conversation",
     "ConversationListItem",
     "DoneEvent",

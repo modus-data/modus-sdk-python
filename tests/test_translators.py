@@ -1,17 +1,10 @@
-"""
-L2: Translator coverage test.
-Verifies that consumption Skill/Agent translators map wire payloads correctly.
-"""
-from datetime import datetime, timezone
+"""DTO parsing coverage for SkillDto and AgentDto."""
 
-from modus._wire.agents import _AgentWire
-from modus._wire.skills import _SkillWire
-from modus.resources.agents._translate import _translate_agent
-from modus.resources.skills._translate import _translate_skill
+from modus._generated.models import AgentDto, SkillDto
 from modus.types.agents import Agent
 from modus.types.skills import Skill
 
-_NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
+_PERMISSION = {"canManage": True, "canUse": True, "manageDenial": "not_owner"}
 
 _ACCESS_CONFIG = {
     "visibility": "shared",
@@ -20,95 +13,114 @@ _ACCESS_CONFIG = {
     "sharedWith": [],
 }
 
-WIRE_SKILL_DETAIL = _SkillWire(
-    id=1, slug="test-skill", name="Test Skill", status="active",
-    org_uuid="org-uuid", has_unpublished_changes=False,
-    active_variation_id="var-1", draft_variation_id=None,
-    access_config=_ACCESS_CONFIG,
-    created_at=_NOW, updated_at=_NOW, deleted_at=None,
-    variation={"instructions": ["Do stuff"]},
-)
+_AGENT_ACCESS_CONFIG = {
+    "visibility": "shared",
+    "groupPermissions": {"__everyone__": {"use": True, "manage": True}},
+    "sharedWith": [],
+}
 
-WIRE_SKILL_LIST = _SkillWire(
-    id=1, slug="test-skill", name="Test Skill", status="active",
-    org_uuid="org-uuid", has_unpublished_changes=False,
-    active_variation_id="var-1", draft_variation_id=None,
-    access_config=_ACCESS_CONFIG,
-    created_at=_NOW, updated_at=_NOW, deleted_at=None,
-    variation=None,
-)
+_SKILL_BASE = {
+    "id": 1,
+    "slug": "test-skill",
+    "name": "Test Skill",
+    "status": "active",
+    "orgUuid": "org-uuid",
+    "hasUnpublishedChanges": False,
+    "activeVariationId": "var-1",
+    "draftVariationId": None,
+    "accessConfig": _ACCESS_CONFIG,
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z",
+    "deletedAt": None,
+    **_PERMISSION,
+}
 
-WIRE_AGENT_DETAIL = _AgentWire(
-    id=2, slug="test-agent", name="Test Agent", status="active",
-    type="task", org_uuid="org-uuid", has_unpublished_changes=False,
-    active_variation_id="var-2", draft_variation_id=None,
-    is_enabled=True, access_config=_ACCESS_CONFIG,
-    created_at=_NOW, updated_at=_NOW, deleted_at=None,
-    variation={"instructions": ["Run nightly"]},
-)
+_SKILL_DETAIL = {
+    **_SKILL_BASE,
+    "variation": {
+        "instructions": ["Do stuff"],
+        "model": "gpt-4o",
+        "expectedOutput": "JSON",
+        "toolset": {},
+        "connectionSet": [],
+        "contextSelections": [],
+        "interfaces": [],
+        "evaluations": [],
+        "supervisionSubordinateIds": [],
+        "supervisionSubordinateDescriptions": {},
+    },
+}
 
-WIRE_AGENT_LIST = _AgentWire(
-    id=2, slug="test-agent", name="Test Agent", status="active",
-    type="task", org_uuid="org-uuid", has_unpublished_changes=False,
-    active_variation_id="var-2", draft_variation_id=None,
-    is_enabled=True, access_config=_ACCESS_CONFIG,
-    created_at=_NOW, updated_at=_NOW, deleted_at=None,
-    variation=None,
-)
+_SKILL_LIST = {**_SKILL_BASE, "variation": None}
+
+_AGENT_BASE = {
+    "id": 2,
+    "slug": "test-agent",
+    "name": "Test Agent",
+    "status": "active",
+    "type": "task",
+    "orgUuid": "org-uuid",
+    "hasUnpublishedChanges": False,
+    "isEnabled": True,
+    "activeVariationId": "var-2",
+    "draftVariationId": None,
+    "accessConfig": _AGENT_ACCESS_CONFIG,
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z",
+    "deletedAt": None,
+    **_PERMISSION,
+}
+
+_AGENT_DETAIL = {
+    **_AGENT_BASE,
+    "variation": {"agentSelection": {"agents": [], "model": "gpt-4o-mini"}},
+}
+
+_AGENT_LIST = {**_AGENT_BASE, "variation": None}
 
 
-def test_translate_skill_detail_populates_instructions_and_guardrails():
-    public = _translate_skill(WIRE_SKILL_DETAIL)
+def test_skill_dto_detail_exposes_variation_instructions():
+    public = SkillDto.model_validate(_SKILL_DETAIL)
     assert isinstance(public, Skill)
-    assert public.instructions == ["Do stuff"]
-    assert public.guardrails == ["no-pii"]
+    assert public.variation is not None
+    assert public.variation.instructions == ["Do stuff"]
+    assert public.access_config.guardrails == ["no-pii"]
 
 
-def test_translate_skill_list_row_has_guardrails_not_instructions():
-    public = _translate_skill(WIRE_SKILL_LIST)
-    assert public.instructions is None
-    assert public.guardrails == ["no-pii"]
+def test_skill_dto_list_row_has_no_variation():
+    public = SkillDto.model_validate(_SKILL_LIST)
+    assert public.variation is None
+    assert public.access_config.guardrails == ["no-pii"]
 
 
-def test_translate_skill_variation_not_exposed():
-    """Consumption Skill must not expose variation — both at the schema level
-    and on the translated payload."""
-    public = _translate_skill(WIRE_SKILL_DETAIL)
-    assert "variation" not in Skill.model_fields
-    assert "variation" not in public.model_dump()
-
-
-def test_translate_skill_status_preserved():
-    public = _translate_skill(WIRE_SKILL_DETAIL)
+def test_skill_dto_status_preserved():
+    public = SkillDto.model_validate(_SKILL_DETAIL)
     assert public.status == "active"
-    assert public.is_active is True
-    assert public.is_draft is False
 
 
-def test_translate_skill_has_unpublished_changes():
-    wire = WIRE_SKILL_DETAIL.model_copy(update={"has_unpublished_changes": True})
-    assert _translate_skill(wire).has_unpublished_changes is True
+def test_skill_dto_has_unpublished_changes():
+    payload = {**_SKILL_DETAIL, "hasUnpublishedChanges": True}
+    assert SkillDto.model_validate(payload).has_unpublished_changes is True
 
 
-def test_translate_agent_detail_populates_instructions_and_guardrails():
-    public = _translate_agent(WIRE_AGENT_DETAIL)
+def test_agent_dto_detail_exposes_variation():
+    public = AgentDto.model_validate(_AGENT_DETAIL)
     assert isinstance(public, Agent)
-    assert public.instructions == ["Run nightly"]
-    assert public.guardrails == ["no-pii"]
+    assert public.variation is not None
+    assert public.variation.agent_selection is not None
 
 
-def test_translate_agent_list_row_has_guardrails_not_instructions():
-    public = _translate_agent(WIRE_AGENT_LIST)
-    assert public.instructions is None
-    assert public.guardrails == ["no-pii"]
+def test_agent_dto_list_row_has_no_variation():
+    public = AgentDto.model_validate(_AGENT_LIST)
+    assert public.variation is None
 
 
-def test_translate_agent_type_preserved():
-    public = _translate_agent(WIRE_AGENT_DETAIL)
+def test_agent_dto_type_preserved():
+    public = AgentDto.model_validate(_AGENT_DETAIL)
     assert public.type == "task"
 
 
-def test_translate_agent_flags():
-    public = _translate_agent(WIRE_AGENT_DETAIL)
+def test_agent_dto_flags():
+    public = AgentDto.model_validate(_AGENT_DETAIL)
     assert public.is_enabled is True
     assert public.has_unpublished_changes is False

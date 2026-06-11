@@ -17,6 +17,7 @@ AGENT_RESP = {
     "accessConfig": {"visibility": "shared", "groupPermissions": {"__everyone__": {"use": True, "manage": True}}, "guardrails": [], "sharedWith": []},
     "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z",
     "deletedAt": None,
+    "canManage": True, "canUse": True, "manageDenial": None,
 }
 
 
@@ -145,7 +146,13 @@ def test_agents_update_clears_field_via_mask():
 @respx.mock
 def test_agents_deploy():
     respx.post(f"{BASE}/api/v1/agents/1/deploy").mock(
-        return_value=httpx.Response(200, json={"agent": {**AGENT_RESP, "status": "active"}})
+        return_value=httpx.Response(
+            200,
+            json={
+                "agent": {**AGENT_RESP, "status": "active"},
+                "deployedAt": "2026-01-02T00:00:00Z",
+            },
+        )
     )
     agent = _client().agents.deploy(1)
     assert agent.status == "active"

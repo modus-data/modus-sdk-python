@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import Optional, Union
-from urllib.parse import quote
 
 from ..._chat import (
     AsyncChatStream,
@@ -14,7 +13,9 @@ from ..._chat import (
     chat_stream_session_async,
 )
 from ..._config import ModusConfig
+from ..._generated.models import ComposeSkillContextRequestDto, SkillDto
 from ..._http import AsyncHttpClient, HttpClient
+from ..._openapi_invoke import invoke_operation, invoke_operation_async
 from ..._pagination import (
     aip_list_params,
     build_aip_page_mapped,
@@ -22,22 +23,16 @@ from ..._pagination import (
 )
 from ..._retry import async_with_retry, with_retry
 from ..._validation import validate_id, validate_page_size
-from ..._wire.context_compose import (
-    _ComposeSkillContextRequestWire,
-    _ComposeSkillContextResponseWire,
-)
-from ..._wire.skills import _SkillWire
 from ...types.chat import ChatResult
-from ...types.context_compose import SkillContextComposition, composition_from_wire
+from ...types.context_compose import SkillContextComposition
 from ...types.pagination import AsyncPage, Page
 from ...types.skills import Skill
 from ...types.views import VariationView
-from ._translate import _translate_skill
 from .conversations import AsyncConversationsResource, ConversationsResource
 
 
-def _map_skill(raw: dict) -> Skill:
-    return _translate_skill(_SkillWire.model_validate(raw))
+def _parse_skill(raw: dict) -> Skill:
+    return SkillDto.model_validate(raw)
 
 
 def _skills_list_params(
@@ -109,13 +104,15 @@ class SkillsResource:
     ) -> Page[Skill]:
         params = _skills_list_params(page_size, page_token, search, view, manager_id)
         data = with_retry(
-            lambda: self._http.get("/api/v1/skills", params=params),
+            lambda: invoke_operation(
+                self._http, "SkillsController_list", query=params
+            ),
             self._config.max_retries,
         )
         return build_aip_page_mapped(
             data,
             "skills",
-            _map_skill,
+            _parse_skill,
             lambda cur: self._list_page(page_size, cur, search, view, manager_id),
         )
 
@@ -135,13 +132,17 @@ class SkillsResource:
             NotFoundError: if no skill with this ID/slug exists.
         """
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
-        params = {} if view is None else {"view": view}
+        query = {} if view is None else {"view": view}
         data = with_retry(
-            lambda: self._http.get(f"/api/v1/skills/{safe_id}", params=params or None),
+            lambda: invoke_operation(
+                self._http,
+                "SkillsController_get",
+                path_params={"id": skill_id},
+                query=query or None,
+            ),
             self._config.max_retries,
         )
-        return _translate_skill(_SkillWire.model_validate(data))
+        return _parse_skill(data)
 
     def chat(
         self,
@@ -162,7 +163,7 @@ class SkillsResource:
             thread_id: Continue an existing conversation; omit to start a new one.
 
         Returns:
-            ChatResult with the reply ``text`` and the ``thread_id`` to continue the conversation.
+            ChatResult with the reply ``content`` and the ``thread_id`` to continue the conversation.
         """
         return chat_buffered(
             self._http,
@@ -219,17 +220,17 @@ class SkillsResource:
             limit:    Optional cap on structured fallback items when no markdown summary exists.
         """
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
-        body = _ComposeSkillContextRequestWire(message=message, limit=limit)
+        body = ComposeSkillContextRequestDto(message=message, limit=limit)
         data = with_retry(
-            lambda: self._http.post(
-                f"/api/v1/skills/{safe_id}/context",
-                json=body.model_dump(by_alias=True, exclude_none=True),
+            lambda: invoke_operation(
+                self._http,
+                "SkillContextController_compose",
+                path_params={"id": skill_id},
+                json_body=body.model_dump(by_alias=True, exclude_none=True),
             ),
             self._config.max_retries,
         )
-        wire = _ComposeSkillContextResponseWire.model_validate(data)
-        return composition_from_wire(wire)
+        return SkillContextComposition.model_validate(data)
 
 
 class AsyncSkillsResource:
@@ -283,13 +284,15 @@ class AsyncSkillsResource:
     ) -> AsyncPage[Skill]:
         params = _skills_list_params(page_size, page_token, search, view, manager_id)
         data = await async_with_retry(
-            lambda: self._http.get("/api/v1/skills", params=params),
+            lambda: invoke_operation_async(
+                self._http, "SkillsController_list", query=params
+            ),
             self._config.max_retries,
         )
         return build_async_aip_page_mapped(
             data,
             "skills",
-            _map_skill,
+            _parse_skill,
             lambda cur: self._list_page(page_size, cur, search, view, manager_id),
         )
 
@@ -300,13 +303,17 @@ class AsyncSkillsResource:
         view: Optional[VariationView] = None,
     ) -> Skill:
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
-        params = {} if view is None else {"view": view}
+        query = {} if view is None else {"view": view}
         data = await async_with_retry(
-            lambda: self._http.get(f"/api/v1/skills/{safe_id}", params=params or None),
+            lambda: invoke_operation_async(
+                self._http,
+                "SkillsController_get",
+                path_params={"id": skill_id},
+                query=query or None,
+            ),
             self._config.max_retries,
         )
-        return _translate_skill(_SkillWire.model_validate(data))
+        return _parse_skill(data)
 
     async def chat(
         self,
@@ -358,14 +365,14 @@ class AsyncSkillsResource:
             limit:    Optional cap on structured fallback items when no markdown summary exists.
         """
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
-        body = _ComposeSkillContextRequestWire(message=message, limit=limit)
+        body = ComposeSkillContextRequestDto(message=message, limit=limit)
         data = await async_with_retry(
-            lambda: self._http.post(
-                f"/api/v1/skills/{safe_id}/context",
-                json=body.model_dump(by_alias=True, exclude_none=True),
+            lambda: invoke_operation_async(
+                self._http,
+                "SkillContextController_compose",
+                path_params={"id": skill_id},
+                json_body=body.model_dump(by_alias=True, exclude_none=True),
             ),
             self._config.max_retries,
         )
-        wire = _ComposeSkillContextResponseWire.model_validate(data)
-        return composition_from_wire(wire)
+        return SkillContextComposition.model_validate(data)

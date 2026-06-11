@@ -13,8 +13,10 @@ from __future__ import annotations
 from typing import Dict, Set, Type
 
 import pytest
-from modus._wire.chat import _SkillChatRequestWire
-from modus._wire.context_compose import _ComposeSkillContextRequestWire
+from modus._generated.models import (
+    ComposeSkillContextRequestDto,
+    SkillChatRequestDto,
+)
 from modus.management.resources.agents._update_body import _AgentCreateBody, _AgentUpdateBody
 from modus.management.resources.skills._update_body import _SkillCreateBody, _SkillUpdateBody
 from modus.management.types.context import ContextItemUpdate
@@ -38,9 +40,9 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "AgentsController_create": _model_wire_fields(_AgentCreateBody),
     "AgentsController_update": _model_wire_fields(_AgentUpdateBody),
     "ContextItemsController_update": _model_wire_fields(ContextItemUpdate),
-    "SkillChatController_chat": _model_wire_fields(_SkillChatRequestWire),
-    "AgentChatController_chat": _model_wire_fields(_SkillChatRequestWire),
-    "SkillContextController_compose": _model_wire_fields(_ComposeSkillContextRequestWire),
+    "SkillChatController_chat": _model_wire_fields(SkillChatRequestDto),
+    "AgentChatController_chat": _model_wire_fields(SkillChatRequestDto),
+    "SkillContextController_compose": _model_wire_fields(ComposeSkillContextRequestDto),
     "MemoriesController_search": _model_wire_fields(MemorySearchRequest),
     "MemoriesController_update": _model_wire_fields(MemoryUpdate),
     "ContextItemsController_lookup": {"contextType", "dataPath", "contentProjection"},

@@ -32,8 +32,7 @@ def test_skills_list_row_has_none_instructions(client, skill_list_row):
         return_value=httpx.Response(200, json={"skills": [skill_list_row], "nextPageToken": None})
     )
     skill = client.skills.list().items[0]
-    assert skill.instructions is None
-    assert skill.model is None
+    assert skill.variation is None
 
 
 @respx.mock
@@ -43,7 +42,7 @@ def test_skills_list_row_has_guardrails(client, skill_list_row):
         return_value=httpx.Response(200, json={"skills": [skill_list_row], "nextPageToken": None})
     )
     skill = client.skills.list().items[0]
-    assert skill.guardrails == ["no-pii"]
+    assert skill.access_config.guardrails == ["no-pii"]
 
 
 @respx.mock
@@ -71,16 +70,18 @@ def test_skills_get_populates_variation_fields(client, skill_detail_row):
         return_value=httpx.Response(200, json=skill_detail_row)
     )
     skill = client.skills.get(10)
-    assert skill.instructions == ["You are a Snowflake data analyst.", "Use SQL for queries."]
-    assert skill.model == "gpt-4o"
-    assert skill.expected_output == "Structured JSON with data rows"
-    assert skill.toolset is not None
-    assert skill.toolset.tools() == {
+    assert skill.variation is not None
+    assert skill.variation.instructions == [
+        "You are a Snowflake data analyst.",
+        "Use SQL for queries.",
+    ]
+    assert skill.variation.model == "gpt-4o"
+    assert skill.variation.expected_output == "Structured JSON with data rows"
+    assert skill.variation.toolset == {
         "sql_runner": ["SELECT:conn-snowflake-001:analytics:public"],
         "memory": {"enabled": True},
     }
-    assert skill.connection_set is not None
-    assert skill.connection_set[0].model_dump(by_alias=True).get("connectionId") == "conn-snowflake-001"
+    assert skill.variation.connection_set[0]["connectionId"] == "conn-snowflake-001"
 
 
 @respx.mock
@@ -135,9 +136,9 @@ def test_skills_patch_mcp_config(client):
     route = respx.patch(f"{BASE}/api/v1/skills/10/mcp-config").mock(
         return_value=httpx.Response(200, json={"config": {"coreTools": []}})
     )
-    client.skills.patch_mcp_config(10, mcp_config={"coreTools": []})
+    client.skills.patch_mcp_config(10, mcp_config={"coreTools": {}})
     body = json.loads(route.calls[0].request.read())
-    assert body["config"] == {"coreTools": []}
+    assert body["config"] == {"coreTools": {}}
 
 
 @respx.mock
@@ -147,4 +148,5 @@ def test_skills_get_variation(client, skill_detail_row):
         return_value=httpx.Response(200, json=skill_detail_row)
     )
     skill = client.skills.get_variation(10, variation_uid=uid)
-    assert skill.model == "gpt-4o"
+    assert skill.variation is not None
+    assert skill.variation.model == "gpt-4o"

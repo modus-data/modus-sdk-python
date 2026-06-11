@@ -6,12 +6,9 @@ from modus import Modus
 TEST_KEY = "modus_test_key_abc123"
 BASE = "https://api.modus.com"
 
-ITEM_RESPONSE = {
-    "uid": "test-uid",
-    "contextType": "note",
-    "createdAt": "2026-01-01T00:00:00Z",
-    "updatedAt": "2026-01-01T00:00:00Z",
-}
+from tests.fixtures.api_shapes import SAMPLE_CONTEXT_ITEM
+
+ITEM_RESPONSE = {**SAMPLE_CONTEXT_ITEM, "uid": "test-uid"}
 
 
 def _client():

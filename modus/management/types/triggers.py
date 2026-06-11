@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Literal, Optional, Union
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 
-from .._wire.triggers import _TriggerWire
+from modus._generated.models import TriggerDto
 
 ScheduleFrequency = Literal["hourly", "daily", "weekly", "monthly", "custom"]
 TriggerType = Literal["schedule", "webhook", "api", "slack", "manual"]
@@ -164,25 +164,27 @@ def parse_trigger(raw: object) -> Optional[AgentTriggerValue]:
     """Parse trigger JSON from a variation or API response."""
     if raw is None:
         return None
-    wire = _TriggerWire.model_validate(raw)
-    if wire.trigger_type == "schedule":
-        if wire.schedule is None:
+    dto = TriggerDto.model_validate(raw)
+    raw_type = dto.trigger_type
+    trigger_type = raw_type.value if hasattr(raw_type, "value") else raw_type
+    if trigger_type == "schedule":
+        if dto.schedule is None:
             raise ValueError("schedule is required when trigger_type is 'schedule'")
         return ScheduleTrigger.model_construct(
             trigger_type="schedule",
             schedule=TriggerSchedule.model_construct(
-                **wire.schedule.model_dump(by_alias=False)
+                **dto.schedule.model_dump(by_alias=False)
             ),
         )
-    if wire.trigger_type == "manual":
+    if trigger_type == "manual":
         return ManualTrigger()
-    if wire.trigger_type == "webhook":
+    if trigger_type == "webhook":
         return WebhookTrigger()
-    if wire.trigger_type == "api":
+    if trigger_type == "api":
         return ApiTrigger()
-    if wire.trigger_type == "slack":
+    if trigger_type == "slack":
         return SlackTrigger()
-    raise ValueError(f"unsupported trigger_type: {wire.trigger_type!r}")
+    raise ValueError(f"unsupported trigger_type: {trigger_type!r}")
 
 
 class AgentTrigger:

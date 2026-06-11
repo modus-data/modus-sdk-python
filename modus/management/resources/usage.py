@@ -6,6 +6,7 @@ from typing import Literal, Optional
 
 from modus._config import ModusConfig
 from modus._http import AsyncHttpClient, HttpClient
+from modus._openapi_invoke import invoke_operation, invoke_operation_async
 from modus._retry import async_with_retry, with_retry
 
 from ..types.usage import UsageReport
@@ -45,7 +46,9 @@ class UsageResource:
         if model is not None:
             params["model"] = model
         data = with_retry(
-            lambda: self._http.get("/api/v1/usage", params=params),
+            lambda: invoke_operation(
+                self._http, "UsageController_list", query=params
+            ),
             self._config.max_retries,
         )
         return UsageReport.model_validate(data)
@@ -81,7 +84,9 @@ class AsyncUsageResource:
         if model is not None:
             params["model"] = model
         data = await async_with_retry(
-            lambda: self._http.get("/api/v1/usage", params=params),
+            lambda: invoke_operation_async(
+                self._http, "UsageController_list", query=params
+            ),
             self._config.max_retries,
         )
         return UsageReport.model_validate(data)

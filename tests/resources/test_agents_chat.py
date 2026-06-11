@@ -24,7 +24,7 @@ def test_agents_chat(client):
         )
     )
     result = client.agents.chat(7, "Run report", model=MODEL)
-    assert result.text == "Report started"
+    assert result.content == "Report started"
     assert result.thread_id == "agent-thread-1"
 
 

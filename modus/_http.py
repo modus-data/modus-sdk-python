@@ -211,9 +211,11 @@ class HttpClient:
             return None
         return response.json()
 
-    def patch(self, path: str, *, json: Optional[Dict[str, Any]] = None) -> Any:
+    def patch(
+        self, path: str, *, json: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None
+    ) -> Any:
         try:
-            response = self._client.patch(path, json=json)
+            response = self._client.patch(path, json=json, params=params)
         except _NETWORK_ERRORS as exc:
             raise _wrap_network_error(exc, self._config.base_url) from exc
         _raise_for_status(response)
@@ -299,9 +301,11 @@ class AsyncHttpClient:
             return None
         return response.json()
 
-    async def patch(self, path: str, *, json: Optional[Dict[str, Any]] = None) -> Any:
+    async def patch(
+        self, path: str, *, json: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None
+    ) -> Any:
         try:
-            response = await self._client.patch(path, json=json)
+            response = await self._client.patch(path, json=json, params=params)
         except _NETWORK_ERRORS as exc:
             raise _wrap_network_error(exc, self._config.base_url) from exc
         _raise_for_status(response)

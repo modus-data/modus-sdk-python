@@ -3,38 +3,38 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Union
-from urllib.parse import quote
 
 from modus._config import ModusConfig
+from modus._generated.models import (
+    DeployResponseDto,
+    PatchSkillMcpConfigDto,
+    SkillDto,
+    SkillMcpInterfaceConfigDto,
+    TransferOwnershipDto,
+)
 from modus._http import AsyncHttpClient, HttpClient
+from modus._openapi_invoke import invoke_operation, invoke_operation_async
 from modus._pagination import aip_list_params, build_aip_page_mapped, build_async_aip_page_mapped
-from modus._query import with_update_mask as _with_update_mask
+from modus._query import update_mask_query
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_id, validate_page_size
 from modus.types.pagination import AsyncPage, Page
+from modus.types.skills import Skill
 from modus.types.views import VariationView
 
-from ..._wire.skills import _SkillWire
 from ...types.json_blob import JsonObjectListInput, dump_json_object_list
-from ...types.skills import Skill
 from ...types.toolset import ToolsetInput, dump_toolset
 from .._access_config_write import (
     access_config_body_for_create,
     access_config_body_for_update,
 )
-from ._translate import _translate_skill
 from ._update_body import _SkillCreateBody, _SkillUpdateBody
 from .conversations import AsyncConversationsResource, ConversationsResource
 from .memories import AsyncMemoriesResource, MemoriesResource
 
 
-def _map_skill(raw: dict) -> Skill:
-    return _translate_skill(_SkillWire.model_validate(raw))
-
-
-def _parse_skill_response(raw: object) -> Skill:
-    skill_data = raw.get("skill", raw) if isinstance(raw, dict) else raw
-    return _translate_skill(_SkillWire.model_validate(skill_data))
+def _parse_skill(raw: dict) -> Skill:
+    return SkillDto.model_validate(raw)
 
 
 def _skills_list_params(
@@ -112,13 +112,15 @@ class SkillsResource:
     ) -> Page[Skill]:
         params = _skills_list_params(page_size, page_token, search, view, manager_id)
         data = with_retry(
-            lambda: self._http.get("/api/v1/skills", params=params),
+            lambda: invoke_operation(
+                self._http, "SkillsController_list", query=params
+            ),
             self._config.max_retries,
         )
         return build_aip_page_mapped(
             data,
             "skills",
-            _map_skill,
+            _parse_skill,
             lambda cur: self._list_page(page_size, cur, search, view, manager_id),
         )
 
@@ -130,13 +132,17 @@ class SkillsResource:
     ) -> Skill:
         """Retrieve a Modus skill with full configuration (instructions, model, and related fields)."""
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
-        params = {} if view is None else {"view": view}
+        query = {} if view is None else {"view": view}
         data = with_retry(
-            lambda: self._http.get(f"/api/v1/skills/{safe_id}", params=params or None),
+            lambda: invoke_operation(
+                self._http,
+                "SkillsController_get",
+                path_params={"id": skill_id},
+                query=query or None,
+            ),
             self._config.max_retries,
         )
-        return _translate_skill(_SkillWire.model_validate(data))
+        return _parse_skill(data)
 
     def create(
         self,
@@ -173,10 +179,12 @@ class SkillsResource:
             access_config=access_config_body_for_create(guardrails),
         ).model_dump(by_alias=True, exclude_none=True)
         raw = with_retry(
-            lambda: self._http.post("/api/v1/skills", json=body),
+            lambda: invoke_operation(
+                self._http, "SkillsController_create", json_body=body
+            ),
             self._config.max_retries,
         )
-        return _translate_skill(_SkillWire.model_validate(raw))
+        return _parse_skill(raw)
 
     def update(
         self,
@@ -211,11 +219,14 @@ class SkillsResource:
                 leave guardrails unchanged. Pass ``[]`` to clear all guardrails.
         """
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
         access_config = access_config_body_for_update(
             guardrails,
             lambda: with_retry(
-                lambda: self._http.get(f"/api/v1/skills/{safe_id}"),
+                lambda: invoke_operation(
+                    self._http,
+                    "SkillsController_get",
+                    path_params={"id": skill_id},
+                ),
                 self._config.max_retries,
             ),
         )
@@ -234,30 +245,41 @@ class SkillsResource:
             evaluations=dump_json_object_list(evaluations, field_name="evaluations"),
             supervision_subordinate_descriptions=supervision_subordinate_descriptions,
         ).model_dump(by_alias=True, exclude_none=update_mask is None)
-        path = _with_update_mask(f"/api/v1/skills/{safe_id}", update_mask)
         raw = with_retry(
-            lambda: self._http.patch(path, json=body),
+            lambda: invoke_operation(
+                self._http,
+                "SkillsController_update",
+                path_params={"id": skill_id},
+                query=update_mask_query(update_mask),
+                json_body=body,
+            ),
             self._config.max_retries,
         )
-        return _translate_skill(_SkillWire.model_validate(raw))
+        return _parse_skill(raw)
 
     def deploy(self, skill_id: Union[int, str]) -> Skill:
         """Publish the current draft of a Modus skill."""
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
         raw = with_retry(
-            lambda: self._http.post(f"/api/v1/skills/{safe_id}/deploy"),
+            lambda: invoke_operation(
+                self._http,
+                "SkillsController_deploy",
+                path_params={"id": skill_id},
+                json_body={},
+            ),
             self._config.max_retries,
         )
-        skill_data = raw.get("skill", raw) if isinstance(raw, dict) else raw
-        return _translate_skill(_SkillWire.model_validate(skill_data))
+        return DeployResponseDto.model_validate(raw).skill
 
     def delete(self, skill_id: Union[int, str]) -> None:
         """Delete a Modus skill."""
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
         with_retry(
-            lambda: self._http.delete(f"/api/v1/skills/{safe_id}"),
+            lambda: invoke_operation(
+                self._http,
+                "SkillsController_softDelete",
+                path_params={"id": skill_id},
+            ),
             self._config.max_retries,
         )
 
@@ -266,56 +288,73 @@ class SkillsResource:
     ) -> Skill:
         """Start transferring ownership of a skill to another organisation member."""
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
+        body = TransferOwnershipDto(new_owner_user_id=new_owner_user_id)
         raw = with_retry(
-            lambda: self._http.post(
-                f"/api/v1/skills/{safe_id}/transfer-ownership",
-                json={"newOwnerUserId": new_owner_user_id},
+            lambda: invoke_operation(
+                self._http,
+                "SkillsController_requestOwnershipTransfer",
+                path_params={"id": skill_id},
+                json_body=body.model_dump(by_alias=True, exclude_none=True),
             ),
             self._config.max_retries,
         )
-        return _parse_skill_response(raw)
+        return _parse_skill(raw)
 
     def cancel_ownership_transfer(self, skill_id: Union[int, str]) -> Skill:
         """Cancel a pending skill ownership transfer."""
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
         raw = with_retry(
-            lambda: self._http.delete(f"/api/v1/skills/{safe_id}/transfer-ownership"),
+            lambda: invoke_operation(
+                self._http,
+                "SkillsController_cancelOwnershipTransfer",
+                path_params={"id": skill_id},
+            ),
             self._config.max_retries,
         )
-        return _parse_skill_response(raw)
+        return _parse_skill(raw)
 
     def accept_ownership_transfer(self, skill_id: Union[int, str]) -> Skill:
         """Accept a pending skill ownership transfer."""
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
         raw = with_retry(
-            lambda: self._http.post(f"/api/v1/skills/{safe_id}/transfer-ownership/accept"),
+            lambda: invoke_operation(
+                self._http,
+                "SkillsController_acceptOwnershipTransfer",
+                path_params={"id": skill_id},
+                json_body={},
+            ),
             self._config.max_retries,
         )
-        return _parse_skill_response(raw)
+        return _parse_skill(raw)
 
     def undelete(self, skill_id: Union[int, str]) -> Skill:
         """Restore a soft-deleted skill."""
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
         raw = with_retry(
-            lambda: self._http.post(f"/api/v1/skills/{safe_id}/undelete"),
+            lambda: invoke_operation(
+                self._http,
+                "SkillsController_undelete",
+                path_params={"id": skill_id},
+                json_body={},
+            ),
             self._config.max_retries,
         )
-        return _parse_skill_response(raw)
+        return _parse_skill(raw)
 
     def patch_mcp_config(
         self, skill_id: Union[int, str], *, mcp_config: Dict[str, Any],
     ) -> None:
         """Update MCP server configuration for a skill."""
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
+        body = PatchSkillMcpConfigDto(
+            config=SkillMcpInterfaceConfigDto.model_validate(mcp_config)
+        )
         with_retry(
-            lambda: self._http.patch(
-                f"/api/v1/skills/{safe_id}/mcp-config",
-                json={"config": mcp_config},
+            lambda: invoke_operation(
+                self._http,
+                "SkillsController_patchMcpConfig",
+                path_params={"id": skill_id},
+                json_body=body.model_dump(by_alias=True, exclude_none=True),
             ),
             self._config.max_retries,
         )
@@ -326,13 +365,15 @@ class SkillsResource:
         """Retrieve a historic version snapshot of a skill."""
         validate_id(skill_id, name="skill_id")
         validate_id(variation_uid, name="variation_uid")
-        safe_id = quote(str(skill_id), safe="")
-        safe_uid = quote(variation_uid, safe="")
         raw = with_retry(
-            lambda: self._http.get(f"/api/v1/skills/{safe_id}/variations/{safe_uid}"),
+            lambda: invoke_operation(
+                self._http,
+                "SkillsController_getVariation",
+                path_params={"id": skill_id, "variationUid": variation_uid},
+            ),
             self._config.max_retries,
         )
-        return _translate_skill(_SkillWire.model_validate(raw))
+        return _parse_skill(raw)
 
 
 class AsyncSkillsResource:
@@ -379,13 +420,15 @@ class AsyncSkillsResource:
     ) -> AsyncPage[Skill]:
         params = _skills_list_params(page_size, page_token, search, view, manager_id)
         data = await async_with_retry(
-            lambda: self._http.get("/api/v1/skills", params=params),
+            lambda: invoke_operation_async(
+                self._http, "SkillsController_list", query=params
+            ),
             self._config.max_retries,
         )
         return build_async_aip_page_mapped(
             data,
             "skills",
-            _map_skill,
+            _parse_skill,
             lambda cur: self._list_page(page_size, cur, search, view, manager_id),
         )
 
@@ -397,13 +440,17 @@ class AsyncSkillsResource:
     ) -> Skill:
         """Retrieve a Modus skill with full configuration (instructions, model, and related fields)."""
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
-        params = {} if view is None else {"view": view}
+        query = {} if view is None else {"view": view}
         data = await async_with_retry(
-            lambda: self._http.get(f"/api/v1/skills/{safe_id}", params=params or None),
+            lambda: invoke_operation_async(
+                self._http,
+                "SkillsController_get",
+                path_params={"id": skill_id},
+                query=query or None,
+            ),
             self._config.max_retries,
         )
-        return _translate_skill(_SkillWire.model_validate(data))
+        return _parse_skill(data)
 
     async def create(
         self, name: str, *,
@@ -437,10 +484,12 @@ class AsyncSkillsResource:
             access_config=access_config_body_for_create(guardrails),
         ).model_dump(by_alias=True, exclude_none=True)
         raw = await async_with_retry(
-            lambda: self._http.post("/api/v1/skills", json=body),
+            lambda: invoke_operation_async(
+                self._http, "SkillsController_create", json_body=body
+            ),
             self._config.max_retries,
         )
-        return _translate_skill(_SkillWire.model_validate(raw))
+        return _parse_skill(raw)
 
     async def update(
         self, skill_id: Union[int, str], *,
@@ -471,10 +520,13 @@ class AsyncSkillsResource:
                 leave guardrails unchanged. Pass ``[]`` to clear all guardrails.
         """
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
         if guardrails is not None:
             existing = await async_with_retry(
-                lambda: self._http.get(f"/api/v1/skills/{safe_id}"),
+                lambda: invoke_operation_async(
+                    self._http,
+                    "SkillsController_get",
+                    path_params={"id": skill_id},
+                ),
                 self._config.max_retries,
             )
             access_config = access_config_body_for_update(guardrails, lambda: existing)
@@ -495,28 +547,39 @@ class AsyncSkillsResource:
             evaluations=dump_json_object_list(evaluations, field_name="evaluations"),
             supervision_subordinate_descriptions=supervision_subordinate_descriptions,
         ).model_dump(by_alias=True, exclude_none=update_mask is None)
-        path = _with_update_mask(f"/api/v1/skills/{safe_id}", update_mask)
         raw = await async_with_retry(
-            lambda: self._http.patch(path, json=body),
+            lambda: invoke_operation_async(
+                self._http,
+                "SkillsController_update",
+                path_params={"id": skill_id},
+                query=update_mask_query(update_mask),
+                json_body=body,
+            ),
             self._config.max_retries,
         )
-        return _translate_skill(_SkillWire.model_validate(raw))
+        return _parse_skill(raw)
 
     async def deploy(self, skill_id: Union[int, str]) -> Skill:
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
         raw = await async_with_retry(
-            lambda: self._http.post(f"/api/v1/skills/{safe_id}/deploy"),
+            lambda: invoke_operation_async(
+                self._http,
+                "SkillsController_deploy",
+                path_params={"id": skill_id},
+                json_body={},
+            ),
             self._config.max_retries,
         )
-        skill_data = raw.get("skill", raw) if isinstance(raw, dict) else raw
-        return _translate_skill(_SkillWire.model_validate(skill_data))
+        return DeployResponseDto.model_validate(raw).skill
 
     async def delete(self, skill_id: Union[int, str]) -> None:
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
         await async_with_retry(
-            lambda: self._http.delete(f"/api/v1/skills/{safe_id}"),
+            lambda: invoke_operation_async(
+                self._http,
+                "SkillsController_softDelete",
+                path_params={"id": skill_id},
+            ),
             self._config.max_retries,
         )
 
@@ -525,56 +588,73 @@ class AsyncSkillsResource:
     ) -> Skill:
         """Start transferring ownership of a skill to another organisation member."""
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
+        body = TransferOwnershipDto(new_owner_user_id=new_owner_user_id)
         raw = await async_with_retry(
-            lambda: self._http.post(
-                f"/api/v1/skills/{safe_id}/transfer-ownership",
-                json={"newOwnerUserId": new_owner_user_id},
+            lambda: invoke_operation_async(
+                self._http,
+                "SkillsController_requestOwnershipTransfer",
+                path_params={"id": skill_id},
+                json_body=body.model_dump(by_alias=True, exclude_none=True),
             ),
             self._config.max_retries,
         )
-        return _parse_skill_response(raw)
+        return _parse_skill(raw)
 
     async def cancel_ownership_transfer(self, skill_id: Union[int, str]) -> Skill:
         """Cancel a pending skill ownership transfer."""
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
         raw = await async_with_retry(
-            lambda: self._http.delete(f"/api/v1/skills/{safe_id}/transfer-ownership"),
+            lambda: invoke_operation_async(
+                self._http,
+                "SkillsController_cancelOwnershipTransfer",
+                path_params={"id": skill_id},
+            ),
             self._config.max_retries,
         )
-        return _parse_skill_response(raw)
+        return _parse_skill(raw)
 
     async def accept_ownership_transfer(self, skill_id: Union[int, str]) -> Skill:
         """Accept a pending skill ownership transfer."""
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
         raw = await async_with_retry(
-            lambda: self._http.post(f"/api/v1/skills/{safe_id}/transfer-ownership/accept"),
+            lambda: invoke_operation_async(
+                self._http,
+                "SkillsController_acceptOwnershipTransfer",
+                path_params={"id": skill_id},
+                json_body={},
+            ),
             self._config.max_retries,
         )
-        return _parse_skill_response(raw)
+        return _parse_skill(raw)
 
     async def undelete(self, skill_id: Union[int, str]) -> Skill:
         """Restore a soft-deleted skill."""
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
         raw = await async_with_retry(
-            lambda: self._http.post(f"/api/v1/skills/{safe_id}/undelete"),
+            lambda: invoke_operation_async(
+                self._http,
+                "SkillsController_undelete",
+                path_params={"id": skill_id},
+                json_body={},
+            ),
             self._config.max_retries,
         )
-        return _parse_skill_response(raw)
+        return _parse_skill(raw)
 
     async def patch_mcp_config(
         self, skill_id: Union[int, str], *, mcp_config: Dict[str, Any],
     ) -> None:
         """Update MCP server configuration for a skill."""
         validate_id(skill_id, name="skill_id")
-        safe_id = quote(str(skill_id), safe="")
+        body = PatchSkillMcpConfigDto(
+            config=SkillMcpInterfaceConfigDto.model_validate(mcp_config)
+        )
         await async_with_retry(
-            lambda: self._http.patch(
-                f"/api/v1/skills/{safe_id}/mcp-config",
-                json={"config": mcp_config},
+            lambda: invoke_operation_async(
+                self._http,
+                "SkillsController_patchMcpConfig",
+                path_params={"id": skill_id},
+                json_body=body.model_dump(by_alias=True, exclude_none=True),
             ),
             self._config.max_retries,
         )
@@ -585,10 +665,12 @@ class AsyncSkillsResource:
         """Retrieve a historic version snapshot of a skill."""
         validate_id(skill_id, name="skill_id")
         validate_id(variation_uid, name="variation_uid")
-        safe_id = quote(str(skill_id), safe="")
-        safe_uid = quote(variation_uid, safe="")
         raw = await async_with_retry(
-            lambda: self._http.get(f"/api/v1/skills/{safe_id}/variations/{safe_uid}"),
+            lambda: invoke_operation_async(
+                self._http,
+                "SkillsController_getVariation",
+                path_params={"id": skill_id, "variationUid": variation_uid},
+            ),
             self._config.max_retries,
         )
-        return _translate_skill(_SkillWire.model_validate(raw))
+        return _parse_skill(raw)

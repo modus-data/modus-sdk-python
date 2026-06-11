@@ -23,6 +23,7 @@ dev = [
     "respx>=0.21",
     "mypy>=1.10",
     "ruff>=0.15",
+    "datamodel-code-generator>=0.60.0,<0.61",
 ]
 
 [tool.pytest.ini_options]
@@ -58,6 +59,17 @@ src = ["modus", "tests", "../dev-examples"]
 [tool.ruff.lint]
 # F: pyflakes (unused imports, etc.); I: isort; RUF021: parenthesize mixed and/or
 select = ["F", "I", "RUF021"]
+
+[tool.ruff.lint.per-file-ignores]
+"modus/_generated/__init__.py" = ["I001"]
+
+[tool.mypy]
+python_version = "3.10"
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_typed = true
+warn_required_dynamic_aliases = false
 
 [tool.hatch.version]
 source = "vcs"

@@ -11,26 +11,25 @@ BASE = "https://api.modus.com"
 
 
 @respx.mock
-def test_context_item_title_is_optional(client):
-    """Integration-synced items (bigquery, slack, github, etc.) omit title.
-    ContextItem.title must be Optional[str] — a missing title must not raise."""
-    item_without_title = {
+def test_context_item_description_is_optional(client):
+    """Integration-synced items may omit description."""
+    item_without_description = {
         "uid": "integration-item-uid",
+        "orgId": "org-uuid-abc",
         "contextType": "bigquery_table",
-        # no "title" field at all
-        "description": "Some BigQuery table",
-        "content": None,
-        "verificationStatus": "unverified",
-        "userFeedback": None,
+        "description": None,
+        "content": {},
+        "userFeedback": "neutral",
         "topics": [],
         "connectionId": "conn-uuid",
-        "updateSource": "integration",
+        "selectionId": None,
+        "dataPath": ["bigquery", "dataset", "table"],
         "createdAt": "2026-01-01T00:00:00.000Z",
         "updatedAt": "2026-01-01T00:00:00.000Z",
     }
     respx.get(f"{BASE}/api/v1/context/items").mock(
         return_value=httpx.Response(200, json={
-            "contextItems": [item_without_title],
+            "contextItems": [item_without_description],
             "nextPageToken": None,
         })
     )
@@ -38,8 +37,7 @@ def test_context_item_title_is_optional(client):
     assert len(page) == 1
     item = page.items[0]
     assert isinstance(item, ContextItem)
-    assert item.title is None
-    assert item.description == "Some BigQuery table"
+    assert item.description is None
     assert item.context_type == "bigquery_table"
 
 
@@ -77,8 +75,8 @@ def test_context_items_get(client, sample_context_item):
         return_value=httpx.Response(200, json=sample_context_item)
     )
     item = client.context.items.get(uid)
-    assert item.title == "Fiscal Year Definition"
-    assert item.verification_status == "verified"
+    assert item.description == "Defines the company fiscal year"
+    assert item.user_feedback == "positive"
 
 
 @respx.mock

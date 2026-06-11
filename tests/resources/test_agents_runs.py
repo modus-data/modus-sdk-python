@@ -84,12 +84,12 @@ def test_agents_runs_list_page_size_over_max(client):
 @respx.mock
 def test_agents_runs_get(client):
     respx.get(f"{BASE}/api/v1/agents/7/runs/wf_1%3Atemporal-1").mock(
-        return_value=httpx.Response(200, json={**SAMPLE_RUN, "history": []})
+        return_value=httpx.Response(200, json={**SAMPLE_RUN, "source": "history"})
     )
     run = client.agents.runs.get(7, "wf_1:temporal-1")
     assert isinstance(run, AgentRun)
     assert run.agent_id == 7
-    assert run.history == []
+    assert run.source == "history"
 
 
 def test_agents_resource_has_runs(client):

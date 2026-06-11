@@ -5,10 +5,10 @@ from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Union
 from urllib.parse import quote
 
 from ._exceptions import ModusError, RunCancelledError, StreamTimeoutError
+from ._generated.models import SkillChatRequestDto, SkillChatResponseDto
 from ._http import AsyncHttpClient, HttpClient
 from ._streaming import parse_sse_stream
 from ._validation import validate_chat_model, validate_id
-from ._wire.chat import _SkillChatRequestWire, _SkillChatResponseWire
 from .types.chat import ChatResult
 from .types.runs import (
     CancelledEvent,
@@ -46,7 +46,7 @@ def _chat_path(
 
 
 def _chat_body(message: str, model: str) -> Dict[str, Any]:
-    return _SkillChatRequestWire(message=message, model=model).model_dump(
+    return SkillChatRequestDto(message=message, model=model).model_dump(  # type: ignore[arg-type]
         by_alias=True,
         exclude_none=True,
     )
@@ -97,9 +97,9 @@ class ChatStream:
                 if isinstance(event, TokenEvent):
                     self._text_parts.append(event.content)
                 if isinstance(event, DoneEvent):
-                    text = "".join(self._text_parts)
-                    self._final = ChatResult(
-                        text=text,
+                    content = "".join(self._text_parts)
+                    self._final = SkillChatResponseDto(
+                        content=content,
                         thread_id=event.thread_id,
                         run_id=event.run_id,
                     )
@@ -157,9 +157,9 @@ class AsyncChatStream:
                 if isinstance(event, TokenEvent):
                     self._text_parts.append(event.content)
                 if isinstance(event, DoneEvent):
-                    text = "".join(self._text_parts)
-                    self._final = ChatResult(
-                        text=text,
+                    content = "".join(self._text_parts)
+                    self._final = SkillChatResponseDto(
+                        content=content,
                         thread_id=event.thread_id,
                         run_id=event.run_id,
                     )
@@ -190,8 +190,7 @@ def chat_buffered(
     validate_chat_model(model)
     path = _chat_path(resource, resource_id, thread_id=thread_id, stream=False)
     data = http.post(path, json=_chat_body(message, model))
-    wire = _SkillChatResponseWire.model_validate(data)
-    return ChatResult(text=wire.content, thread_id=wire.thread_id, run_id=wire.run_id)
+    return SkillChatResponseDto.model_validate(data)
 
 
 async def chat_buffered_async(
@@ -207,8 +206,7 @@ async def chat_buffered_async(
     validate_chat_model(model)
     path = _chat_path(resource, resource_id, thread_id=thread_id, stream=False)
     data = await http.post(path, json=_chat_body(message, model))
-    wire = _SkillChatResponseWire.model_validate(data)
-    return ChatResult(text=wire.content, thread_id=wire.thread_id, run_id=wire.run_id)
+    return SkillChatResponseDto.model_validate(data)
 
 
 def chat_stream_session(

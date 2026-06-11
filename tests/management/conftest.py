@@ -21,6 +21,9 @@ async def async_client():
         yield c
 
 
+_PERMISSION_FIELDS = {"canManage": True, "canUse": True, "manageDenial": None}
+
+
 @pytest.fixture
 def skill_list_row() -> dict:
     """A skill as returned by GET /api/v1/skills (list) — no variation."""
@@ -38,6 +41,7 @@ def skill_list_row() -> dict:
         "createdAt": "2026-01-01T00:00:00.000Z",
         "updatedAt": "2026-03-01T00:00:00.000Z",
         "deletedAt": None,
+        **_PERMISSION_FIELDS,
     }
 
 
@@ -58,6 +62,8 @@ def skill_detail_row(skill_list_row) -> dict:
             "contextSelections": [],
             "interfaces": [],
             "evaluations": [],
+            "supervisionSubordinateIds": [],
+            "supervisionSubordinateDescriptions": {},
         },
     }
 
@@ -81,6 +87,7 @@ def agent_list_row() -> dict:
         "createdAt": "2026-01-01T00:00:00.000Z",
         "updatedAt": "2026-02-01T00:00:00.000Z",
         "deletedAt": None,
+        **_PERMISSION_FIELDS,
     }
 
 
@@ -90,25 +97,16 @@ def agent_detail_row(agent_list_row) -> dict:
     return {
         **agent_list_row,
         "variation": {
-            "instructions": ["Run the weekly revenue SQL and email results."],
-            "model": "gpt-4o-mini",
+            "agentSelection": {
+                "agents": [{"skillId": 10, "instructions": "Run the weekly revenue SQL and email results."}],
+                "model": "gpt-4o-mini",
+            },
         },
     }
 
 
 @pytest.fixture
 def sample_context_item() -> dict:
-    return {
-        "uid": "7a3f9d2c-1111-4000-a000-000000000abc",
-        "contextType": "note",
-        "title": "Fiscal Year Definition",
-        "description": "Defines the company fiscal year",
-        "content": {"text": "Feb 1 – Jan 31"},
-        "verificationStatus": "verified",
-        "userFeedback": None,
-        "topics": ["finance"],
-        "connectionId": None,
-        "updateSource": "manual",
-        "createdAt": "2026-01-01T00:00:00.000Z",
-        "updatedAt": "2026-01-01T00:00:00.000Z",
-    }
+    from tests.fixtures.api_shapes import SAMPLE_CONTEXT_ITEM
+
+    return dict(SAMPLE_CONTEXT_ITEM)

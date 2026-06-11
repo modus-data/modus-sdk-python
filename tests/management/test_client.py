@@ -32,6 +32,9 @@ def test_client_has_agents_resource():
 def test_client_has_context_resource():
     client = ModusManagement(api_key="modus_test_key")
     assert hasattr(client.context, "create_note")
+    assert hasattr(client.context, "update_note")
+    assert hasattr(client.context, "update_link")
+    assert hasattr(client.context, "update_saved_query")
     assert hasattr(client.context, "create_saved_query")
     assert hasattr(client.context.items, "list")
     assert hasattr(client.context.items, "update")

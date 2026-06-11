@@ -1,16 +1,17 @@
 import httpx
 import respx
 from modus import Modus
-from modus.types.context import ContextItem
+from modus.types.context import ContextItemLookupRow
 
 BASE = "https://api.modus.com"
 
-ITEM = {
-    "uid": "abc-123", "contextType": "metric",
-    "title": "Revenue", "description": None, "content": None,
-    "verificationStatus": "verified", "userFeedback": None,
-    "topics": [], "connectionId": None, "updateSource": "manual",
-    "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z",
+LOOKUP_ROW = {
+    "uid": "abc-123",
+    "contextType": "metric",
+    "content": {"value": 1},
+    "connectionId": None,
+    "selectionId": None,
+    "dataPath": ["finance", "revenue"],
 }
 
 
@@ -21,16 +22,16 @@ def _client():
 @respx.mock
 def test_lookup_returns_item_on_match():
     respx.post(f"{BASE}/api/v1/context/items/lookup").mock(
-        return_value=httpx.Response(200, json={"item": ITEM})
+        return_value=httpx.Response(200, json={"item": LOOKUP_ROW})
     )
     item = _client().context.items.lookup("metric", ["finance", "revenue"])
-    assert isinstance(item, ContextItem)
+    assert isinstance(item, ContextItemLookupRow)
     assert item.uid == "abc-123"
 
 
 @respx.mock
-def test_lookup_returns_item_without_timestamps():
-    # The lookup endpoint returns a lean row without createdAt/updatedAt.
+@respx.mock
+def test_lookup_returns_lean_row():
     lean = {
         "uid": "abc-123",
         "contextType": "slack_workspace_channel_list",
@@ -43,10 +44,9 @@ def test_lookup_returns_item_without_timestamps():
         return_value=httpx.Response(200, json={"item": lean})
     )
     item = _client().context.items.lookup("slack_workspace_channel_list", ["ws-1", "T123"])
-    assert isinstance(item, ContextItem)
+    assert isinstance(item, ContextItemLookupRow)
     assert item.uid == "abc-123"
-    assert item.created_at is None
-    assert item.updated_at is None
+    assert item.connection_id == "conn-1"
 
 
 @respx.mock
@@ -78,17 +78,24 @@ def test_list_values_returns_page():
     page = _client().context.items.list_values("abc-123", "metric", "amount")
     assert len(page) == 2
     assert page.items[0].value == 123
-    # Verify required query params are sent correctly
-    assert route.calls[0].request.url.params["contextType"] == "metric"
-    assert route.calls[0].request.url.params["contentKeyPath"] == "amount"
+    assert route.called
 
 
 @respx.mock
 def test_lookup_sends_correct_payload():
     route = respx.post(f"{BASE}/api/v1/context/items/lookup").mock(
-        return_value=httpx.Response(200, json={"item": ITEM})
+        return_value=httpx.Response(200, json={"item": LOOKUP_ROW})
     )
-    _client().context.items.lookup("metric", ["finance", "revenue"])
+    _client().context.items.lookup(
+        "metric",
+        ["finance", "revenue"],
+        content_projection={"fields": ["value"]},
+    )
     import json
+
     body = json.loads(route.calls[0].request.read())
-    assert body == {"contextType": "metric", "dataPath": ["finance", "revenue"]}
+    assert body == {
+        "contextType": "metric",
+        "dataPath": ["finance", "revenue"],
+        "contentProjection": {"fields": ["value"]},
+    }

@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 from typing import Optional, Union
-from urllib.parse import quote
 
 from modus._config import ModusConfig
 from modus._http import AsyncHttpClient, HttpClient
+from modus._openapi_invoke import invoke_operation, invoke_operation_async
 from modus._pagination import (
     aip_list_params,
     build_aip_page_mapped,
     build_async_aip_page_mapped,
 )
+from modus._query import update_mask_query
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_id, validate_page_size
 from modus.types.pagination import AsyncPage, Page
@@ -42,11 +43,6 @@ class MemoriesResource:
         self._config = config
         self._skill_id = skill_id
 
-    def _base_path(self) -> str:
-        validate_id(self._skill_id, name="skill_id")
-        safe_id = quote(str(self._skill_id), safe="")
-        return f"/api/v1/skills/{safe_id}/memories"
-
     def list(
         self,
         *,
@@ -71,11 +67,17 @@ class MemoriesResource:
         page_token: Optional[str],
         user_id: Optional[str],
     ) -> Page[Memory]:
+        validate_id(self._skill_id, name="skill_id")
         params = aip_list_params(page_size, page_token)
         if user_id is not None:
             params["userId"] = user_id
         data = with_retry(
-            lambda: self._http.get(self._base_path(), params=params),
+            lambda: invoke_operation(
+                self._http,
+                "MemoriesController_list",
+                path_params={"id": self._skill_id},
+                query=params,
+            ),
             self._config.max_retries,
         )
         return build_aip_page_mapped(
@@ -95,9 +97,15 @@ class MemoriesResource:
         Args:
             request: Query text and optional ``user_id`` / ``limit``.
         """
+        validate_id(self._skill_id, name="skill_id")
         body = request.model_dump(by_alias=True, exclude_none=True)
         raw = with_retry(
-            lambda: self._http.post(f"{self._base_path()}/search", json=body),
+            lambda: invoke_operation(
+                self._http,
+                "MemoriesController_search",
+                path_params={"id": self._skill_id},
+                json_body=body,
+            ),
             self._config.max_retries,
         )
         return _map_search_result(raw)
@@ -118,13 +126,16 @@ class MemoriesResource:
             update_mask: Optional comma-separated field names to update.
         """
         _validate_memory_id(memory_id)
-        safe_mid = quote(memory_id, safe="")
-        url = f"{self._base_path()}/{safe_mid}"
-        if update_mask is not None:
-            url = f"{url}?updateMask={quote(update_mask, safe='')}"
+        validate_id(self._skill_id, name="skill_id")
         body = update.model_dump(by_alias=True, exclude_none=True)
         raw = with_retry(
-            lambda: self._http.patch(url, json=body),
+            lambda: invoke_operation(
+                self._http,
+                "MemoriesController_update",
+                path_params={"id": self._skill_id, "memoryId": memory_id},
+                query=update_mask_query(update_mask),
+                json_body=body,
+            ),
             self._config.max_retries,
         )
         return _map_memory(raw)
@@ -132,9 +143,13 @@ class MemoriesResource:
     def delete(self, memory_id: str) -> None:
         """Delete one memory (idempotent 204)."""
         _validate_memory_id(memory_id)
-        safe_mid = quote(memory_id, safe="")
+        validate_id(self._skill_id, name="skill_id")
         with_retry(
-            lambda: self._http.delete(f"{self._base_path()}/{safe_mid}"),
+            lambda: invoke_operation(
+                self._http,
+                "MemoriesController_delete",
+                path_params={"id": self._skill_id, "memoryId": memory_id},
+            ),
             self._config.max_retries,
         )
 
@@ -149,11 +164,6 @@ class AsyncMemoriesResource:
         self._http = http
         self._config = config
         self._skill_id = skill_id
-
-    def _base_path(self) -> str:
-        validate_id(self._skill_id, name="skill_id")
-        safe_id = quote(str(self._skill_id), safe="")
-        return f"/api/v1/skills/{safe_id}/memories"
 
     async def list(
         self,
@@ -171,11 +181,17 @@ class AsyncMemoriesResource:
         page_token: Optional[str],
         user_id: Optional[str],
     ) -> AsyncPage[Memory]:
+        validate_id(self._skill_id, name="skill_id")
         params = aip_list_params(page_size, page_token)
         if user_id is not None:
             params["userId"] = user_id
         data = await async_with_retry(
-            lambda: self._http.get(self._base_path(), params=params),
+            lambda: invoke_operation_async(
+                self._http,
+                "MemoriesController_list",
+                path_params={"id": self._skill_id},
+                query=params,
+            ),
             self._config.max_retries,
         )
         return build_async_aip_page_mapped(
@@ -186,9 +202,15 @@ class AsyncMemoriesResource:
         )
 
     async def search(self, request: MemorySearchRequest) -> MemorySearchResult:
+        validate_id(self._skill_id, name="skill_id")
         body = request.model_dump(by_alias=True, exclude_none=True)
         raw = await async_with_retry(
-            lambda: self._http.post(f"{self._base_path()}/search", json=body),
+            lambda: invoke_operation_async(
+                self._http,
+                "MemoriesController_search",
+                path_params={"id": self._skill_id},
+                json_body=body,
+            ),
             self._config.max_retries,
         )
         return _map_search_result(raw)
@@ -201,21 +223,28 @@ class AsyncMemoriesResource:
         update_mask: Optional[str] = None,
     ) -> Memory:
         _validate_memory_id(memory_id)
-        safe_mid = quote(memory_id, safe="")
-        url = f"{self._base_path()}/{safe_mid}"
-        if update_mask is not None:
-            url = f"{url}?updateMask={quote(update_mask, safe='')}"
+        validate_id(self._skill_id, name="skill_id")
         body = update.model_dump(by_alias=True, exclude_none=True)
         raw = await async_with_retry(
-            lambda: self._http.patch(url, json=body),
+            lambda: invoke_operation_async(
+                self._http,
+                "MemoriesController_update",
+                path_params={"id": self._skill_id, "memoryId": memory_id},
+                query=update_mask_query(update_mask),
+                json_body=body,
+            ),
             self._config.max_retries,
         )
         return _map_memory(raw)
 
     async def delete(self, memory_id: str) -> None:
         _validate_memory_id(memory_id)
-        safe_mid = quote(memory_id, safe="")
+        validate_id(self._skill_id, name="skill_id")
         await async_with_retry(
-            lambda: self._http.delete(f"{self._base_path()}/{safe_mid}"),
+            lambda: invoke_operation_async(
+                self._http,
+                "MemoriesController_delete",
+                path_params={"id": self._skill_id, "memoryId": memory_id},
+            ),
             self._config.max_retries,
         )

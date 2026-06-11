@@ -81,7 +81,7 @@ def load_active_skills() -> list[dict[str, Any]]:
     client = get_list_client()
     skills = []
     for skill in client.skills.list().auto_paging_iter():
-        if skill.is_active:
+        if skill.status == "active":
             skills.append(
                 {
                     "id": skill.id,
@@ -136,10 +136,10 @@ def _render_buffered_result(col_buffered: Any, buffered_future: Future[Any]) -> 
                     {"role": "assistant", "content": f"**Error:** {msg}"}
                 )
             else:
-                st.markdown(result.text)
+                st.markdown(result.content)
                 st.session_state.buffered_thread_id = result.thread_id
                 st.session_state.buffered_messages.append(
-                    {"role": "assistant", "content": result.text}
+                    {"role": "assistant", "content": result.content}
                 )
     return True
 
@@ -196,7 +196,7 @@ def _handle_parallel_send(
                         final = stream.get_final_result()
                         st.session_state.stream_thread_id = final.thread_id
                         st.session_state.stream_messages.append(
-                            {"role": "assistant", "content": final.text}
+                            {"role": "assistant", "content": final.content}
                         )
                 except BaseException as exc:
                     msg = _format_error(exc)
@@ -220,10 +220,10 @@ def _handle_parallel_send(
                                 {"role": "assistant", "content": f"**Error:** {msg}"}
                             )
                         else:
-                            st.markdown(result.text)
+                            st.markdown(result.content)
                             st.session_state.buffered_thread_id = result.thread_id
                             st.session_state.buffered_messages.append(
-                                {"role": "assistant", "content": result.text}
+                                {"role": "assistant", "content": result.content}
                             )
 
 

@@ -6,7 +6,7 @@ import httpx
 import respx
 from modus.management import ModusManagement
 from modus.management.types.agents import Agent
-from modus.management.types.triggers import AgentTrigger
+from modus.management.types.triggers import AgentTrigger, parse_trigger
 
 BASE = "https://api.modus.com"
 
@@ -26,10 +26,12 @@ AGENT_WITH_TRIGGER = {
     "createdAt": "2026-01-01T00:00:00Z",
     "updatedAt": "2026-01-01T00:00:00Z",
     "deletedAt": None,
+    "canManage": True,
+    "canUse": True,
+    "manageDenial": None,
     "variation": {
         "trigger": {"triggerType": "manual"},
-        "instructions": ["Do work"],
-        "model": "gpt-4o",
+        "agentSelection": {"agents": [], "model": "gpt-4o"},
     },
 }
 
@@ -57,5 +59,7 @@ def test_agents_get_parses_trigger() -> None:
     )
     client = ModusManagement(api_key="modus_test_key", base_url=BASE)
     agent = client.agents.get(1)
-    assert agent.trigger is not None
-    assert agent.trigger.trigger_type == "manual"
+    assert agent.variation is not None
+    trigger = parse_trigger(agent.variation.trigger)
+    assert trigger is not None
+    assert trigger.trigger_type == "manual"

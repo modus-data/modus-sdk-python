@@ -18,8 +18,7 @@ def test_agents_list_row_has_none_variation_fields(client, agent_list_row):
     )
     agent = client.agents.list().items[0]
     assert isinstance(agent, Agent)
-    assert agent.instructions is None
-    assert agent.model is None
+    assert agent.variation is None
 
 
 @respx.mock
@@ -50,8 +49,11 @@ def test_agents_get_populates_variation(client, agent_detail_row):
         return_value=httpx.Response(200, json=agent_detail_row)
     )
     agent = client.agents.get(5)
-    assert agent.instructions == ["Run the weekly revenue SQL and email results."]
-    assert agent.model == "gpt-4o-mini"
+    assert agent.variation is not None
+    selection = agent.variation.agent_selection
+    assert selection is not None
+    assert selection["agents"][0]["instructions"] == "Run the weekly revenue SQL and email results."
+    assert selection["model"] == "gpt-4o-mini"
 
 
 @respx.mock

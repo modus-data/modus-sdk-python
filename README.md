@@ -55,7 +55,7 @@ skill = client.skills.get("revenue-analysis")
 print(skill.name, skill.description)
 
 for item in client.context.items.list():
-    print(item.uid, item.type, item.title)
+    print(item.uid, item.context_type, modus.context_item_label(item))
 ```
 
 ## Authentication
@@ -89,7 +89,7 @@ with client.skills.chat_stream(skill_id, "Hi", model=MODEL) as stream:
 
 ```python
 for item in client.context.items.list():
-    print(item.uid, item.title)
+    print(item.uid, modus.context_item_label(item))
 ```
 
 ### Agents

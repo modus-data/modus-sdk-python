@@ -3,37 +3,35 @@
 from __future__ import annotations
 
 from typing import List, Optional, Union
-from urllib.parse import quote
 
 from modus._config import ModusConfig
+from modus._generated.models import (
+    AgentDeployResponseDto,
+    AgentDto,
+    TransferOwnershipDto,
+)
 from modus._http import AsyncHttpClient, HttpClient
+from modus._openapi_invoke import invoke_operation, invoke_operation_async
 from modus._pagination import aip_list_params, build_aip_page_mapped, build_async_aip_page_mapped
-from modus._query import with_update_mask as _with_update_mask
+from modus._query import update_mask_query
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_id, validate_page_size
+from modus.types.agents import Agent, AgentType
 from modus.types.pagination import AsyncPage, Page
 from modus.types.views import VariationView
 
-from ..._wire.agents import _AgentWire
 from ...types.agent_selection import AgentSelectionInput, dump_agent_selection
-from ...types.agents import Agent, AgentType
 from ...types.triggers import TriggerInput, dump_trigger
 from ...types.workflow import WorkflowGraphInput, dump_workflow_structure
 from .._access_config_write import (
     access_config_body_for_create,
     access_config_body_for_update,
 )
-from ._translate import _translate_agent
 from ._update_body import _AgentCreateBody, _AgentUpdateBody
 
 
-def _map_agent(raw: dict) -> Agent:
-    return _translate_agent(_AgentWire.model_validate(raw))
-
-
-def _parse_agent_response(raw: object) -> Agent:
-    agent_data = raw.get("agent", raw) if isinstance(raw, dict) else raw
-    return _translate_agent(_AgentWire.model_validate(agent_data))
+def _parse_agent(raw: dict) -> Agent:
+    return AgentDto.model_validate(raw)
 
 
 def _agents_list_params(
@@ -111,13 +109,15 @@ class AgentsResource:
             page_size, page_token, search, type, view, include_variation
         )
         data = with_retry(
-            lambda: self._http.get("/api/v1/agents", params=params),
+            lambda: invoke_operation(
+                self._http, "AgentsController_list", query=params
+            ),
             self._config.max_retries,
         )
         return build_aip_page_mapped(
             data,
             "agents",
-            _map_agent,
+            _parse_agent,
             lambda cur: self._list_page(
                 page_size, cur, search, type, view, include_variation
             ),
@@ -131,13 +131,17 @@ class AgentsResource:
     ) -> Agent:
         """Retrieve a Modus agent with full configuration."""
         validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
-        params = {} if view is None else {"view": view}
+        query = {} if view is None else {"view": view}
         data = with_retry(
-            lambda: self._http.get(f"/api/v1/agents/{safe_id}", params=params or None),
+            lambda: invoke_operation(
+                self._http,
+                "AgentsController_get",
+                path_params={"id": agent_id},
+                query=query or None,
+            ),
             self._config.max_retries,
         )
-        return _translate_agent(_AgentWire.model_validate(data))
+        return _parse_agent(data)
 
     def create(
         self,
@@ -169,10 +173,12 @@ class AgentsResource:
             access_config=access_config_body_for_create(guardrails),
         ).model_dump(by_alias=True, exclude_none=True)
         raw = with_retry(
-            lambda: self._http.post("/api/v1/agents", json=body),
+            lambda: invoke_operation(
+                self._http, "AgentsController_create", json_body=body
+            ),
             self._config.max_retries,
         )
-        return _translate_agent(_AgentWire.model_validate(raw))
+        return _parse_agent(raw)
 
     def update(
         self,
@@ -201,11 +207,14 @@ class AgentsResource:
                 leave guardrails unchanged. Pass ``[]`` to clear all guardrails.
         """
         validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
         access_config = access_config_body_for_update(
             guardrails,
             lambda: with_retry(
-                lambda: self._http.get(f"/api/v1/agents/{safe_id}"),
+                lambda: invoke_operation(
+                    self._http,
+                    "AgentsController_get",
+                    path_params={"id": agent_id},
+                ),
                 self._config.max_retries,
             ),
         )
@@ -216,30 +225,41 @@ class AgentsResource:
             workflow_structure=dump_workflow_structure(workflow_structure),
             access_config=access_config,
         ).model_dump(by_alias=True, exclude_none=update_mask is None)
-        path = _with_update_mask(f"/api/v1/agents/{safe_id}", update_mask)
         raw = with_retry(
-            lambda: self._http.patch(path, json=body),
+            lambda: invoke_operation(
+                self._http,
+                "AgentsController_update",
+                path_params={"id": agent_id},
+                query=update_mask_query(update_mask),
+                json_body=body,
+            ),
             self._config.max_retries,
         )
-        return _translate_agent(_AgentWire.model_validate(raw))
+        return _parse_agent(raw)
 
     def deploy(self, agent_id: Union[int, str]) -> Agent:
         """Publish the current draft of a Modus agent."""
         validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
         raw = with_retry(
-            lambda: self._http.post(f"/api/v1/agents/{safe_id}/deploy"),
+            lambda: invoke_operation(
+                self._http,
+                "AgentsController_deploy",
+                path_params={"id": agent_id},
+                json_body={},
+            ),
             self._config.max_retries,
         )
-        agent_data = raw.get("agent", raw) if isinstance(raw, dict) else raw
-        return _translate_agent(_AgentWire.model_validate(agent_data))
+        return AgentDeployResponseDto.model_validate(raw).agent
 
     def delete(self, agent_id: Union[int, str]) -> None:
         """Delete a Modus agent."""
         validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
         with_retry(
-            lambda: self._http.delete(f"/api/v1/agents/{safe_id}"),
+            lambda: invoke_operation(
+                self._http,
+                "AgentsController_softDelete",
+                path_params={"id": agent_id},
+            ),
             self._config.max_retries,
         )
 
@@ -248,45 +268,58 @@ class AgentsResource:
     ) -> Agent:
         """Start transferring ownership of an agent to another organisation member."""
         validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
+        body = TransferOwnershipDto(new_owner_user_id=new_owner_user_id)
         raw = with_retry(
-            lambda: self._http.post(
-                f"/api/v1/agents/{safe_id}/transfer-ownership",
-                json={"newOwnerUserId": new_owner_user_id},
+            lambda: invoke_operation(
+                self._http,
+                "AgentsController_requestOwnershipTransfer",
+                path_params={"id": agent_id},
+                json_body=body.model_dump(by_alias=True, exclude_none=True),
             ),
             self._config.max_retries,
         )
-        return _parse_agent_response(raw)
+        return _parse_agent(raw)
 
     def cancel_ownership_transfer(self, agent_id: Union[int, str]) -> Agent:
         """Cancel a pending agent ownership transfer."""
         validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
         raw = with_retry(
-            lambda: self._http.delete(f"/api/v1/agents/{safe_id}/transfer-ownership"),
+            lambda: invoke_operation(
+                self._http,
+                "AgentsController_cancelOwnershipTransfer",
+                path_params={"id": agent_id},
+            ),
             self._config.max_retries,
         )
-        return _parse_agent_response(raw)
+        return _parse_agent(raw)
 
     def accept_ownership_transfer(self, agent_id: Union[int, str]) -> Agent:
         """Accept a pending agent ownership transfer."""
         validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
         raw = with_retry(
-            lambda: self._http.post(f"/api/v1/agents/{safe_id}/transfer-ownership/accept"),
+            lambda: invoke_operation(
+                self._http,
+                "AgentsController_acceptOwnershipTransfer",
+                path_params={"id": agent_id},
+                json_body={},
+            ),
             self._config.max_retries,
         )
-        return _parse_agent_response(raw)
+        return _parse_agent(raw)
 
     def undelete(self, agent_id: Union[int, str]) -> Agent:
         """Restore a soft-deleted agent."""
         validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
         raw = with_retry(
-            lambda: self._http.post(f"/api/v1/agents/{safe_id}/undelete"),
+            lambda: invoke_operation(
+                self._http,
+                "AgentsController_undelete",
+                path_params={"id": agent_id},
+                json_body={},
+            ),
             self._config.max_retries,
         )
-        return _parse_agent_response(raw)
+        return _parse_agent(raw)
 
 
 class AsyncAgentsResource:
@@ -333,13 +366,15 @@ class AsyncAgentsResource:
             page_size, page_token, search, type, view, include_variation
         )
         data = await async_with_retry(
-            lambda: self._http.get("/api/v1/agents", params=params),
+            lambda: invoke_operation_async(
+                self._http, "AgentsController_list", query=params
+            ),
             self._config.max_retries,
         )
         return build_async_aip_page_mapped(
             data,
             "agents",
-            _map_agent,
+            _parse_agent,
             lambda cur: self._list_page(
                 page_size, cur, search, type, view, include_variation
             ),
@@ -353,13 +388,17 @@ class AsyncAgentsResource:
     ) -> Agent:
         """Retrieve a Modus agent with full configuration."""
         validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
-        params = {} if view is None else {"view": view}
+        query = {} if view is None else {"view": view}
         data = await async_with_retry(
-            lambda: self._http.get(f"/api/v1/agents/{safe_id}", params=params or None),
+            lambda: invoke_operation_async(
+                self._http,
+                "AgentsController_get",
+                path_params={"id": agent_id},
+                query=query or None,
+            ),
             self._config.max_retries,
         )
-        return _translate_agent(_AgentWire.model_validate(data))
+        return _parse_agent(data)
 
     async def create(self, name: str, type: AgentType, *,
                      description: Optional[str] = None,
@@ -386,10 +425,12 @@ class AsyncAgentsResource:
             access_config=access_config_body_for_create(guardrails),
         ).model_dump(by_alias=True, exclude_none=True)
         raw = await async_with_retry(
-            lambda: self._http.post("/api/v1/agents", json=body),
+            lambda: invoke_operation_async(
+                self._http, "AgentsController_create", json_body=body
+            ),
             self._config.max_retries,
         )
-        return _translate_agent(_AgentWire.model_validate(raw))
+        return _parse_agent(raw)
 
     async def update(self, agent_id: Union[int, str], *,
                      name: Optional[str] = None, type: Optional[AgentType] = None,
@@ -413,10 +454,13 @@ class AsyncAgentsResource:
                 leave guardrails unchanged. Pass ``[]`` to clear all guardrails.
         """
         validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
         if guardrails is not None:
             existing = await async_with_retry(
-                lambda: self._http.get(f"/api/v1/agents/{safe_id}"),
+                lambda: invoke_operation_async(
+                    self._http,
+                    "AgentsController_get",
+                    path_params={"id": agent_id},
+                ),
                 self._config.max_retries,
             )
             access_config = access_config_body_for_update(guardrails, lambda: existing)
@@ -429,28 +473,39 @@ class AsyncAgentsResource:
             workflow_structure=dump_workflow_structure(workflow_structure),
             access_config=access_config,
         ).model_dump(by_alias=True, exclude_none=update_mask is None)
-        path = _with_update_mask(f"/api/v1/agents/{safe_id}", update_mask)
         raw = await async_with_retry(
-            lambda: self._http.patch(path, json=body),
+            lambda: invoke_operation_async(
+                self._http,
+                "AgentsController_update",
+                path_params={"id": agent_id},
+                query=update_mask_query(update_mask),
+                json_body=body,
+            ),
             self._config.max_retries,
         )
-        return _translate_agent(_AgentWire.model_validate(raw))
+        return _parse_agent(raw)
 
     async def deploy(self, agent_id: Union[int, str]) -> Agent:
         validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
         raw = await async_with_retry(
-            lambda: self._http.post(f"/api/v1/agents/{safe_id}/deploy"),
+            lambda: invoke_operation_async(
+                self._http,
+                "AgentsController_deploy",
+                path_params={"id": agent_id},
+                json_body={},
+            ),
             self._config.max_retries,
         )
-        agent_data = raw.get("agent", raw) if isinstance(raw, dict) else raw
-        return _translate_agent(_AgentWire.model_validate(agent_data))
+        return AgentDeployResponseDto.model_validate(raw).agent
 
     async def delete(self, agent_id: Union[int, str]) -> None:
         validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
         await async_with_retry(
-            lambda: self._http.delete(f"/api/v1/agents/{safe_id}"),
+            lambda: invoke_operation_async(
+                self._http,
+                "AgentsController_softDelete",
+                path_params={"id": agent_id},
+            ),
             self._config.max_retries,
         )
 
@@ -459,42 +514,55 @@ class AsyncAgentsResource:
     ) -> Agent:
         """Start transferring ownership of an agent to another organisation member."""
         validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
+        body = TransferOwnershipDto(new_owner_user_id=new_owner_user_id)
         raw = await async_with_retry(
-            lambda: self._http.post(
-                f"/api/v1/agents/{safe_id}/transfer-ownership",
-                json={"newOwnerUserId": new_owner_user_id},
+            lambda: invoke_operation_async(
+                self._http,
+                "AgentsController_requestOwnershipTransfer",
+                path_params={"id": agent_id},
+                json_body=body.model_dump(by_alias=True, exclude_none=True),
             ),
             self._config.max_retries,
         )
-        return _parse_agent_response(raw)
+        return _parse_agent(raw)
 
     async def cancel_ownership_transfer(self, agent_id: Union[int, str]) -> Agent:
         """Cancel a pending agent ownership transfer."""
         validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
         raw = await async_with_retry(
-            lambda: self._http.delete(f"/api/v1/agents/{safe_id}/transfer-ownership"),
+            lambda: invoke_operation_async(
+                self._http,
+                "AgentsController_cancelOwnershipTransfer",
+                path_params={"id": agent_id},
+            ),
             self._config.max_retries,
         )
-        return _parse_agent_response(raw)
+        return _parse_agent(raw)
 
     async def accept_ownership_transfer(self, agent_id: Union[int, str]) -> Agent:
         """Accept a pending agent ownership transfer."""
         validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
         raw = await async_with_retry(
-            lambda: self._http.post(f"/api/v1/agents/{safe_id}/transfer-ownership/accept"),
+            lambda: invoke_operation_async(
+                self._http,
+                "AgentsController_acceptOwnershipTransfer",
+                path_params={"id": agent_id},
+                json_body={},
+            ),
             self._config.max_retries,
         )
-        return _parse_agent_response(raw)
+        return _parse_agent(raw)
 
     async def undelete(self, agent_id: Union[int, str]) -> Agent:
         """Restore a soft-deleted agent."""
         validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
         raw = await async_with_retry(
-            lambda: self._http.post(f"/api/v1/agents/{safe_id}/undelete"),
+            lambda: invoke_operation_async(
+                self._http,
+                "AgentsController_undelete",
+                path_params={"id": agent_id},
+                json_body={},
+            ),
             self._config.max_retries,
         )
-        return _parse_agent_response(raw)
+        return _parse_agent(raw)

@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
-from urllib.parse import quote
 
 from ..._config import ModusConfig
 from ..._exceptions import NotFoundError
+from ..._generated.models import (
+    ContentProjectionDto,
+    LookupContextItemDto,
+    LookupContextItemResponseDto,
+)
 from ..._http import AsyncHttpClient, HttpClient
+from ..._openapi_invoke import invoke_operation, invoke_operation_async
 from ..._pagination import (
     aip_list_params,
     build_aip_page,
@@ -17,7 +22,7 @@ from ..._pagination import (
 )
 from ..._retry import async_with_retry, with_retry
 from ..._validation import DEFAULT_MAX_PAGE_SIZE, validate_page_size
-from ...types.context import ContextItem
+from ...types.context import ContextItem, ContextItemLookupRow
 from ...types.context_values import ContextValueRow
 from ...types.json_blob import JsonObjectInput, dump_json_object
 from ...types.pagination import AsyncPage, Page
@@ -38,16 +43,10 @@ def _context_list_params(
     return aip_list_params(page_size, page_token, **extra)
 
 
-def _parse_lookup_response(raw: Dict[str, Any]) -> Optional[ContextItem]:
-    """Map AIP lookup body ``{ \"item\": row | null }`` to ContextItem or None."""
-    if not isinstance(raw, dict):
-        raise ValueError("Unexpected lookup response shape")
-    if "item" in raw:
-        row = raw.get("item")
-        if row is None:
-            return None
-        return ContextItem.model_validate(row)
-    return ContextItem.model_validate(raw)
+def _parse_lookup_response(raw: Dict[str, Any]) -> Optional[ContextItemLookupRow]:
+    """Map lookup body ``{ \"item\": row | null }`` to LookupContextItemRowDto or None."""
+    parsed = LookupContextItemResponseDto.model_validate(raw)
+    return parsed.item
 
 
 class ContextItemsResource:
@@ -81,7 +80,9 @@ class ContextItemsResource:
     ) -> Page[ContextItem]:
         params = _context_list_params(page_size, page_token, context_type)
         data = with_retry(
-            lambda: self._http.get("/api/v1/context/items", params=params),
+            lambda: invoke_operation(
+                self._http, "ContextItemsController_list", query=params
+            ),
             self._config.max_retries,
         )
         return build_aip_page(
@@ -98,9 +99,12 @@ class ContextItemsResource:
         Raises:
             NotFoundError: if no item with this UID exists.
         """
-        safe_uid = quote(uid, safe="")
         data = with_retry(
-            lambda: self._http.get(f"/api/v1/context/items/{safe_uid}"),
+            lambda: invoke_operation(
+                self._http,
+                "ContextItemsController_get",
+                path_params={"uid": uid},
+            ),
             self._config.max_retries,
         )
         return ContextItem.model_validate(data)
@@ -111,7 +115,7 @@ class ContextItemsResource:
         data_path: List[str],
         *,
         content_projection: Optional[JsonObjectInput] = None,
-    ) -> Optional[ContextItem]:
+    ) -> Optional[ContextItemLookupRow]:
         """
         POST /api/v1/context/items/lookup — returns None when no match (404).
 
@@ -121,14 +125,25 @@ class ContextItemsResource:
             content_projection:  Optional projection filter for content.
 
         Returns:
-            ContextItem if found, None if not found (404).
+            ContextItemLookupRow if found, None if not found (404).
         """
-        payload: Dict[str, Any] = {"contextType": context_type, "dataPath": data_path}
+        projection: ContentProjectionDto | None = None
         if content_projection is not None:
-            payload["contentProjection"] = dump_json_object(content_projection)
+            projection = ContentProjectionDto.model_validate(
+                dump_json_object(content_projection)
+            )
+        body = LookupContextItemDto(
+            context_type=context_type,
+            data_path=data_path,
+            content_projection=projection,
+        )
         try:
             raw = with_retry(
-                lambda: self._http.post("/api/v1/context/items/lookup", json=payload),
+                lambda: invoke_operation(
+                    self._http,
+                    "ContextItemsController_lookup",
+                    json_body=body.model_dump(by_alias=True, exclude_none=True),
+                ),
                 self._config.max_retries,
             )
         except NotFoundError:
@@ -199,7 +214,6 @@ class ContextItemsResource:
         page_size: int,
         page_token: Optional[str],
     ) -> Page[ContextValueRow]:
-        safe_uid = quote(uid, safe="")
         params = aip_list_params(
             page_size,
             page_token,
@@ -207,7 +221,12 @@ class ContextItemsResource:
             contentKeyPath=content_key_path,
         )
         data = with_retry(
-            lambda: self._http.get(f"/api/v1/context/items/{safe_uid}/values", params=params),
+            lambda: invoke_operation(
+                self._http,
+                "ContextItemsController_listValues",
+                path_params={"uid": uid},
+                query=params,
+            ),
             self._config.max_retries,
         )
         return build_aip_page_mapped(
@@ -243,7 +262,9 @@ class AsyncContextItemsResource:
     ) -> AsyncPage[ContextItem]:
         params = _context_list_params(page_size, page_token, context_type)
         data = await async_with_retry(
-            lambda: self._http.get("/api/v1/context/items", params=params),
+            lambda: invoke_operation_async(
+                self._http, "ContextItemsController_list", query=params
+            ),
             self._config.max_retries,
         )
         return build_async_aip_page(
@@ -254,9 +275,12 @@ class AsyncContextItemsResource:
         )
 
     async def get(self, uid: str) -> ContextItem:
-        safe_uid = quote(uid, safe="")
         data = await async_with_retry(
-            lambda: self._http.get(f"/api/v1/context/items/{safe_uid}"),
+            lambda: invoke_operation_async(
+                self._http,
+                "ContextItemsController_get",
+                path_params={"uid": uid},
+            ),
             self._config.max_retries,
         )
         return ContextItem.model_validate(data)
@@ -267,7 +291,7 @@ class AsyncContextItemsResource:
         data_path: List[str],
         *,
         content_projection: Optional[JsonObjectInput] = None,
-    ) -> Optional[ContextItem]:
+    ) -> Optional[ContextItemLookupRow]:
         """
         POST /api/v1/context/items/lookup — returns None when no match (404).
 
@@ -277,14 +301,25 @@ class AsyncContextItemsResource:
             content_projection:  Optional projection filter for content.
 
         Returns:
-            ContextItem if found, None if not found (404).
+            ContextItemLookupRow if found, None if not found (404).
         """
-        payload: Dict[str, Any] = {"contextType": context_type, "dataPath": data_path}
+        projection: ContentProjectionDto | None = None
         if content_projection is not None:
-            payload["contentProjection"] = dump_json_object(content_projection)
+            projection = ContentProjectionDto.model_validate(
+                dump_json_object(content_projection)
+            )
+        body = LookupContextItemDto(
+            context_type=context_type,
+            data_path=data_path,
+            content_projection=projection,
+        )
         try:
             raw = await async_with_retry(
-                lambda: self._http.post("/api/v1/context/items/lookup", json=payload),
+                lambda: invoke_operation_async(
+                    self._http,
+                    "ContextItemsController_lookup",
+                    json_body=body.model_dump(by_alias=True, exclude_none=True),
+                ),
                 self._config.max_retries,
             )
         except NotFoundError:
@@ -350,7 +385,6 @@ class AsyncContextItemsResource:
         page_size: int,
         page_token: Optional[str],
     ) -> AsyncPage[ContextValueRow]:
-        safe_uid = quote(uid, safe="")
         params = aip_list_params(
             page_size,
             page_token,
@@ -358,7 +392,12 @@ class AsyncContextItemsResource:
             contentKeyPath=content_key_path,
         )
         data = await async_with_retry(
-            lambda: self._http.get(f"/api/v1/context/items/{safe_uid}/values", params=params),
+            lambda: invoke_operation_async(
+                self._http,
+                "ContextItemsController_listValues",
+                path_params={"uid": uid},
+                query=params,
+            ),
             self._config.max_retries,
         )
         return build_async_aip_page_mapped(

@@ -29,7 +29,7 @@ def test_skills_chat_new_thread(client):
     )
     result = client.skills.chat(42, "Hello", model=MODEL)
     assert route.called
-    assert result.text == "Hello back"
+    assert result.content == "Hello back"
     assert result.thread_id == "thread-abc"
     assert result.run_id == "run-xyz"
     request = route.calls.last.request
@@ -68,7 +68,7 @@ def test_skills_chat_continue(client):
         42, "And then?", model=MODEL, thread_id="thread-abc"
     )
     assert route.called
-    assert result.text == "Follow-up"
+    assert result.content == "Follow-up"
 
 
 @respx.mock
@@ -94,7 +94,7 @@ def test_skills_chat_stream(client):
             final = stream.get_final_result()
 
     assert chunks == ["Hi", " there"]
-    assert final.text == "Hi there"
+    assert final.content == "Hi there"
     assert final.thread_id == "thread-s1"
     assert final.run_id == "run-s1"
 
@@ -111,7 +111,7 @@ def test_skills_chat_stream_event_stream_populates_final_text(client):
 
     assert len(events) == 2
     assert isinstance(events[0], TokenEvent)
-    assert final.text == "A"
+    assert final.content == "A"
 
 
 def test_skills_chat_stream_error_event(client):

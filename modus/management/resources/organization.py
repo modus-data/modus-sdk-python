@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from modus._config import ModusConfig
 from modus._http import AsyncHttpClient, HttpClient
+from modus._openapi_invoke import invoke_operation, invoke_operation_async
 from modus._retry import async_with_retry, with_retry
 
 
@@ -23,7 +24,9 @@ class OrganizationResource:
             AuthenticationError: Invalid or missing API key.
         """
         with_retry(
-            lambda: self._http.delete("/api/v1/users/organization"),
+            lambda: invoke_operation(
+                self._http, "OrganizationController_deleteOrganization"
+            ),
             self._config.max_retries,
         )
 
@@ -42,6 +45,8 @@ class AsyncOrganizationResource:
             AuthenticationError: Invalid or missing API key.
         """
         await async_with_retry(
-            lambda: self._http.delete("/api/v1/users/organization"),
+            lambda: invoke_operation_async(
+                self._http, "OrganizationController_deleteOrganization"
+            ),
             self._config.max_retries,
         )

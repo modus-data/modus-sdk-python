@@ -39,7 +39,7 @@ def test_agents_get(client, sample_agent):
     agent = client.agents.get(7)
     assert agent.id == 7
     assert agent.name == "Weekly Revenue Report"
-    assert agent.is_active is True
+    assert agent.status == "active"
 
 
 @respx.mock

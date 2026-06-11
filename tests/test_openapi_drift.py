@@ -1,21 +1,19 @@
 """
 L1: OpenAPI drift test.
-Verifies that wire models contain a slot for every field the backend sends.
-Subset check: wire may have extra fields (forward-compat); missing fields are bugs.
-This test is monorepo-only — skipped gracefully outside the monorepo.
+Verifies that public read types (re-exported DTOs) contain a slot for every field
+the backend sends. Subset check: models may have extra fields (forward-compat);
+missing fields are bugs. Monorepo-only.
 """
 import json
 from pathlib import Path
 
 import pytest
 
-# Locate openapi spec relative to monorepo root. The SDK lives at
-# `sdk/python/consumption/tests/` — four parents up reaches the repo root.
 _OPENAPI_PATH = Path(__file__).parents[4] / "apps/services/modus-api/openapi/v1.json"
 
 pytestmark = pytest.mark.skipif(
     not _OPENAPI_PATH.exists(),
-    reason="openapi/v1.json not found — drift test only runs inside the monorepo"
+    reason="openapi/v1.json not found — drift test only runs inside the monorepo",
 )
 
 
@@ -39,7 +37,7 @@ def _backend_fields(openapi, schema_name: str) -> set:
     return set(schema["properties"].keys())
 
 
-def _wire_fields(model_class) -> set:
+def _model_fields(model_class) -> set:
     return set(model_class.model_fields.keys())
 
 
@@ -49,83 +47,52 @@ def _camel_to_snake(name: str) -> str:
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
-def test_skill_wire_matches_openapi(openapi):
-    from modus._wire.skills import _SkillWire
-    backend = {_camel_to_snake(f) for f in _backend_fields(openapi, "SkillDto")}
-    wire = _wire_fields(_SkillWire)
-    missing = backend - wire
+def _assert_dto_covers_schema(openapi, schema_name: str, model_class) -> None:
+    backend = {_camel_to_snake(f) for f in _backend_fields(openapi, schema_name)}
+    fields = _model_fields(model_class)
+    missing = backend - fields
     assert not missing, (
-        f"_SkillWire is missing fields backend sends: {sorted(missing)}.\n"
-        f"Update modus/_wire/skills.py and add to _translate_skill() in resources/skills/_translate.py"
+        f"{model_class.__name__} is missing fields backend sends: {sorted(missing)}.\n"
+        f"Regenerate with pnpm nx run modus-sdk:generate."
     )
 
 
-def test_agent_wire_matches_openapi(openapi):
-    from modus._wire.agents import _AgentWire
-    backend = {_camel_to_snake(f) for f in _backend_fields(openapi, "AgentDto")}
-    wire = _wire_fields(_AgentWire)
-    missing = backend - wire
-    assert not missing, (
-        f"_AgentWire is missing fields backend sends: {sorted(missing)}.\n"
-        f"Update modus/_wire/agents.py and add to _translate_agent() in resources/agents/_translate.py"
-    )
+def test_skill_dto_matches_openapi(openapi):
+    from modus.types.skills import Skill
+    _assert_dto_covers_schema(openapi, "SkillDto", Skill)
 
 
-# Fields the backend sends on ContextItemDto that the SDK deliberately omits.
-# Keep this list short and justified; the model still parses these (extra fields
-# are ignored), they are simply not surfaced as public attributes.
-#   org_id: redundant — the API key is already org-scoped, so it is the same
-#           value on every row the caller can see.
-_CONTEXT_ITEM_INTENTIONALLY_OMITTED = {"org_id"}
+def test_agent_dto_matches_openapi(openapi):
+    from modus.types.agents import Agent
+    _assert_dto_covers_schema(openapi, "AgentDto", Agent)
 
 
 def test_context_item_matches_openapi(openapi):
     from modus.types.context import ContextItem
-    backend = {_camel_to_snake(f) for f in _backend_fields(openapi, "ContextItemDto")}
-    public = _wire_fields(ContextItem)
-    missing = backend - public - _CONTEXT_ITEM_INTENTIONALLY_OMITTED
-    assert not missing, (
-        f"ContextItem is missing fields backend sends: {sorted(missing)}.\n"
-        f"Update modus/types/context.py (or add to the intentional-omission list "
-        f"with a reason if the omission is deliberate)."
+    _assert_dto_covers_schema(openapi, "ContextItemDto", ContextItem)
+
+
+def test_skill_chat_dto_matches_openapi(openapi):
+    from modus.types.chat import ChatResult, SkillChatRequestDto
+
+    _assert_dto_covers_schema(openapi, "SkillChatRequestDto", SkillChatRequestDto)
+    _assert_dto_covers_schema(openapi, "SkillChatResponseDto", ChatResult)
+
+
+def test_compose_context_dto_matches_openapi(openapi):
+    from modus.types.context_compose import (
+        ComposeSkillContextRequest,
+        SkillContextComposition,
+    )
+
+    _assert_dto_covers_schema(
+        openapi, "ComposeSkillContextRequestDto", ComposeSkillContextRequest
+    )
+    _assert_dto_covers_schema(
+        openapi, "ComposeSkillContextResponseDto", SkillContextComposition
     )
 
 
-def test_skill_chat_wire_matches_openapi(openapi):
-    from modus._wire.chat import _SkillChatRequestWire, _SkillChatResponseWire
-
-    req_backend = {_camel_to_snake(f) for f in _backend_fields(openapi, "SkillChatRequestDto")}
-    assert not (req_backend - _wire_fields(_SkillChatRequestWire))
-
-    resp_backend = {_camel_to_snake(f) for f in _backend_fields(openapi, "SkillChatResponseDto")}
-    assert not (resp_backend - _wire_fields(_SkillChatResponseWire))
-
-
-def test_compose_context_wire_matches_openapi(openapi):
-    from modus._wire.context_compose import (
-        _ComposeSkillContextRequestWire,
-        _ComposeSkillContextResponseWire,
-    )
-
-    req_backend = {
-        _camel_to_snake(f) for f in _backend_fields(openapi, "ComposeSkillContextRequestDto")
-    }
-    assert not (req_backend - _wire_fields(_ComposeSkillContextRequestWire))
-
-    resp_backend = {
-        _camel_to_snake(f) for f in _backend_fields(openapi, "ComposeSkillContextResponseDto")
-    }
-    assert not (resp_backend - _wire_fields(_ComposeSkillContextResponseWire))
-
-
-def test_automation_run_list_item_wire_matches_openapi(openapi):
-    from modus._wire.agent_runs import _AutomationRunListItemWire
-
-    backend = {
-        _camel_to_snake(f) for f in _backend_fields(openapi, "AutomationRunListItemDto")
-    }
-    wire = _wire_fields(_AutomationRunListItemWire)
-    missing = backend - wire
-    assert not missing, (
-        f"_AutomationRunListItemWire missing backend fields: {sorted(missing)}"
-    )
+def test_automation_run_list_item_matches_openapi(openapi):
+    from modus.types.agent_runs import AgentRunListItem
+    _assert_dto_covers_schema(openapi, "AutomationRunListItemDto", AgentRunListItem)

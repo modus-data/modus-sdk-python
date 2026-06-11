@@ -5,7 +5,9 @@ from __future__ import annotations
 from typing import Optional
 
 from ..._config import ModusConfig
+from ..._generated.models import ConnectionDto
 from ..._http import AsyncHttpClient, HttpClient
+from ..._openapi_invoke import invoke_operation, invoke_operation_async
 from ..._pagination import (
     aip_list_params,
     build_aip_page_mapped,
@@ -13,14 +15,12 @@ from ..._pagination import (
 )
 from ..._retry import async_with_retry, with_retry
 from ..._validation import validate_page_size
-from ..._wire.connections import _ConnectionWire
 from ...types.connections import Connection
 from ...types.pagination import AsyncPage, Page
 
 
-def _map_connection(raw: dict) -> Connection:
-    wire = _ConnectionWire.model_validate(raw)
-    return Connection(id=wire.id, name=wire.name, type=wire.type)
+def _parse_connection(raw: dict) -> Connection:
+    return ConnectionDto.model_validate(raw)
 
 
 def _connections_list_params(
@@ -72,13 +72,15 @@ class ConnectionsResource:
     ) -> Page[Connection]:
         params = _connections_list_params(page_size, page_token, type)
         data = with_retry(
-            lambda: self._http.get("/api/v1/connections", params=params),
+            lambda: invoke_operation(
+                self._http, "ConnectionsController_list", query=params
+            ),
             self._config.max_retries,
         )
         return build_aip_page_mapped(
             data,
             "connections",
-            _map_connection,
+            _parse_connection,
             lambda cur: self._list_page(page_size, cur, type),
         )
 
@@ -143,13 +145,15 @@ class AsyncConnectionsResource:
     ) -> AsyncPage[Connection]:
         params = _connections_list_params(page_size, page_token, type)
         data = await async_with_retry(
-            lambda: self._http.get("/api/v1/connections", params=params),
+            lambda: invoke_operation_async(
+                self._http, "ConnectionsController_list", query=params
+            ),
             self._config.max_retries,
         )
         return build_async_aip_page_mapped(
             data,
             "connections",
-            _map_connection,
+            _parse_connection,
             lambda cur: self._list_page(page_size, cur, type),
         )
 

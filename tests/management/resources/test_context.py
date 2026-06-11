@@ -8,8 +8,26 @@ import respx
 from modus._exceptions import UnprocessableError
 from modus.management import ModusManagement
 from modus.management.types.context import ContextItem, ContextItemDeletion, CreatedContextItem
+from tests.fixtures.context_content import LINK_CONTENT, NOTE_CONTENT, SAVED_QUERY_CONTENT
 
 BASE = "https://api.modus.com"
+
+
+def _context_item_wire(uid: str, context_type: str, content: dict) -> dict:
+    return {
+        "uid": uid,
+        "orgId": "org-uuid-abc",
+        "contextType": context_type,
+        "description": "Defines the company fiscal year",
+        "content": content,
+        "userFeedback": "neutral",
+        "topics": [],
+        "connectionId": None,
+        "selectionId": None,
+        "dataPath": [],
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-01-01T00:00:00.000Z",
+    }
 
 CREATED_RESP = {
     "contextItemId": "uid-abc-123",
@@ -127,6 +145,88 @@ def test_context_items_delete(client):
     result = client.context.items.delete(uid)
     assert isinstance(result, ContextItemDeletion)
     assert result.uid == uid
+
+
+@respx.mock
+def test_context_update_note_merges_content(client):
+    uid = "note-id-001"
+    wire = _context_item_wire(uid, "note", NOTE_CONTENT)
+    patch_route = respx.patch(f"{BASE}/api/v1/context/items/{uid}").mock(
+        return_value=httpx.Response(200, json={"uid": uid})
+    )
+    respx.get(f"{BASE}/api/v1/context/items/{uid}").mock(
+        return_value=httpx.Response(200, json=wire)
+    )
+    client.context.update_note(uid, title="Updated title", body="New body.")
+    body = json.loads(patch_route.calls[0].request.read())
+    assert body["contextType"] == "note"
+    assert body["content"]["title"] == "Updated title"
+    assert body["content"]["content"] == "New body."
+    assert body["content"]["noteId"] == NOTE_CONTENT["noteId"]
+    assert body["content"]["s3Key"] == NOTE_CONTENT["s3Key"]
+
+
+@respx.mock
+def test_context_update_note_uses_existing_to_skip_get(client):
+    uid = "note-id-001"
+    wire = _context_item_wire(uid, "note", NOTE_CONTENT)
+    existing = ContextItem.model_validate(wire)
+    patch_route = respx.patch(f"{BASE}/api/v1/context/items/{uid}").mock(
+        return_value=httpx.Response(200, json={"uid": uid})
+    )
+    respx.get(f"{BASE}/api/v1/context/items/{uid}").mock(
+        return_value=httpx.Response(200, json=wire)
+    )
+    client.context.update_note(
+        uid,
+        title="Updated title",
+        body="New body.",
+        existing=existing,
+    )
+    assert len(respx.calls) == 2  # patch + post-update get
+    body = json.loads(patch_route.calls[0].request.read())
+    assert body["content"]["noteId"] == NOTE_CONTENT["noteId"]
+
+
+@respx.mock
+def test_context_update_link_merges_metadata(client):
+    uid = "link-id-001"
+    wire = _context_item_wire(uid, "link", LINK_CONTENT)
+    patch_route = respx.patch(f"{BASE}/api/v1/context/items/{uid}").mock(
+        return_value=httpx.Response(200, json={"uid": uid})
+    )
+    respx.get(f"{BASE}/api/v1/context/items/{uid}").mock(
+        return_value=httpx.Response(200, json=wire)
+    )
+    client.context.update_link(uid, title="Renamed link")
+    body = json.loads(patch_route.calls[0].request.read())
+    assert body["contextType"] == "link"
+    assert body["content"]["title"] == "Renamed link"
+    assert body["content"]["linkId"] == LINK_CONTENT["linkId"]
+
+
+@respx.mock
+def test_context_update_saved_query_merges_content(client):
+    uid = "query-id-001"
+    wire = _context_item_wire(uid, "saved_query", SAVED_QUERY_CONTENT)
+    patch_route = respx.patch(f"{BASE}/api/v1/context/items/{uid}").mock(
+        return_value=httpx.Response(200, json={"uid": uid})
+    )
+    respx.get(f"{BASE}/api/v1/context/items/{uid}").mock(
+        return_value=httpx.Response(200, json=wire)
+    )
+    client.context.update_saved_query(
+        uid,
+        name="Renamed query",
+        query="SELECT 1",
+        connection_id="conn-002",
+    )
+    body = json.loads(patch_route.calls[0].request.read())
+    assert body["contextType"] == "saved_query"
+    assert body["content"]["name"] == "Renamed query"
+    assert body["content"]["query"] == "SELECT 1"
+    assert body["content"]["connectionId"] == "conn-002"
+    assert body["content"]["queryId"] == SAVED_QUERY_CONTENT["queryId"]
 
 
 @respx.mock

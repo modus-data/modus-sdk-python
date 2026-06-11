@@ -77,6 +77,24 @@
         "cwd": "{workspaceRoot}/sdk/python"
       },
       "cache": false
+    },
+    "generate": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        { "projects": ["modus-api"], "target": "openapi:generate" },
+        "install"
+      ],
+      "options": {
+        "command": "bash ../../../scripts/sdk-python/ensure-uv.sh run python ../scripts/generate-sdk-from-openapi.py",
+        "cwd": "{projectRoot}"
+      },
+      "cache": false,
+      "inputs": [
+        "{workspaceRoot}/apps/services/modus-api/openapi/v1.json",
+        "{workspaceRoot}/sdk/python/scripts/generate-sdk-from-openapi.py",
+        "{workspaceRoot}/sdk/python/scripts/emit-openapi-operations.py"
+      ],
+      "outputs": ["{projectRoot}/modus/_generated/**"]
     }
   }
 }

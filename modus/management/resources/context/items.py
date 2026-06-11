@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
-from urllib.parse import quote
 
 from modus._config import ModusConfig
 from modus._http import AsyncHttpClient, HttpClient
+from modus._openapi_invoke import invoke_operation, invoke_operation_async
 from modus._pagination import (
     aip_list_params,
     build_aip_page,
     build_async_aip_page,
 )
-from modus._query import with_update_mask as _with_update_mask
+from modus._query import update_mask_query
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_page_size
 from modus.types.pagination import AsyncPage, Page
@@ -59,7 +59,9 @@ class ContextItemsResource:
     ) -> Page[ContextItem]:
         params = _context_list_params(page_size, page_token, context_type)
         data = with_retry(
-            lambda: self._http.get("/api/v1/context/items", params=params),
+            lambda: invoke_operation(
+                self._http, "ContextItemsController_list", query=params
+            ),
             self._config.max_retries,
         )
         return build_aip_page(
@@ -70,9 +72,12 @@ class ContextItemsResource:
         )
 
     def get(self, uid: str) -> ContextItem:
-        safe_uid = quote(uid, safe="")
         data = with_retry(
-            lambda: self._http.get(f"/api/v1/context/items/{safe_uid}"),
+            lambda: invoke_operation(
+                self._http,
+                "ContextItemsController_get",
+                path_params={"uid": uid},
+            ),
             self._config.max_retries,
         )
         return ContextItem.model_validate(data)
@@ -84,7 +89,7 @@ class ContextItemsResource:
         content: Optional[Any] = None,
         context_type: Optional[str] = None,
         description: Optional[str] = None,
-        user_feedback: Optional[UserFeedback] = None,
+        user_feedback: UserFeedback | str | None = None,
         topics: Optional[List[str]] = None,
         update_mask: Optional[str] = None,
     ) -> ContextItem:
@@ -103,25 +108,35 @@ class ContextItemsResource:
 
         Only the fields you pass are changed; omitted fields are left as-is.
         """
+        feedback: UserFeedback | None = (
+            UserFeedback(user_feedback) if user_feedback is not None else None
+        )
         payload = ContextItemUpdate(
             content=content,
             context_type=context_type,
             description=description,
-            user_feedback=user_feedback,
+            user_feedback=feedback,
             topics=topics,
         ).model_dump(by_alias=True, exclude_none=update_mask is None)
-        safe_uid = quote(uid, safe="")
-        path = _with_update_mask(f"/api/v1/context/items/{safe_uid}", update_mask)
         with_retry(
-            lambda: self._http.patch(path, json=payload),
+            lambda: invoke_operation(
+                self._http,
+                "ContextItemsController_update",
+                path_params={"uid": uid},
+                query=update_mask_query(update_mask),
+                json_body=payload,
+            ),
             self._config.max_retries,
         )
         return self.get(uid)
 
     def delete(self, uid: str) -> ContextItemDeletion:
-        safe_uid = quote(uid, safe="")
         raw = with_retry(
-            lambda: self._http.delete(f"/api/v1/context/items/{safe_uid}"),
+            lambda: invoke_operation(
+                self._http,
+                "ContextItemsController_delete",
+                path_params={"uid": uid},
+            ),
             self._config.max_retries,
         )
         return ContextItemDeletion.model_validate(raw)
@@ -150,7 +165,9 @@ class AsyncContextItemsResource:
     ) -> AsyncPage[ContextItem]:
         params = _context_list_params(page_size, page_token, context_type)
         data = await async_with_retry(
-            lambda: self._http.get("/api/v1/context/items", params=params),
+            lambda: invoke_operation_async(
+                self._http, "ContextItemsController_list", query=params
+            ),
             self._config.max_retries,
         )
         return build_async_aip_page(
@@ -161,9 +178,12 @@ class AsyncContextItemsResource:
         )
 
     async def get(self, uid: str) -> ContextItem:
-        safe_uid = quote(uid, safe="")
         data = await async_with_retry(
-            lambda: self._http.get(f"/api/v1/context/items/{safe_uid}"),
+            lambda: invoke_operation_async(
+                self._http,
+                "ContextItemsController_get",
+                path_params={"uid": uid},
+            ),
             self._config.max_retries,
         )
         return ContextItem.model_validate(data)
@@ -175,30 +195,40 @@ class AsyncContextItemsResource:
         content: Optional[Any] = None,
         context_type: Optional[str] = None,
         description: Optional[str] = None,
-        user_feedback: Optional[UserFeedback] = None,
+        user_feedback: UserFeedback | str | None = None,
         topics: Optional[List[str]] = None,
         update_mask: Optional[str] = None,
     ) -> ContextItem:
         """Update a context item. See the sync ``update`` for argument details."""
+        feedback: UserFeedback | None = (
+            UserFeedback(user_feedback) if user_feedback is not None else None
+        )
         payload = ContextItemUpdate(
             content=content,
             context_type=context_type,
             description=description,
-            user_feedback=user_feedback,
+            user_feedback=feedback,
             topics=topics,
         ).model_dump(by_alias=True, exclude_none=update_mask is None)
-        safe_uid = quote(uid, safe="")
-        path = _with_update_mask(f"/api/v1/context/items/{safe_uid}", update_mask)
         await async_with_retry(
-            lambda: self._http.patch(path, json=payload),
+            lambda: invoke_operation_async(
+                self._http,
+                "ContextItemsController_update",
+                path_params={"uid": uid},
+                query=update_mask_query(update_mask),
+                json_body=payload,
+            ),
             self._config.max_retries,
         )
         return await self.get(uid)
 
     async def delete(self, uid: str) -> ContextItemDeletion:
-        safe_uid = quote(uid, safe="")
         raw = await async_with_retry(
-            lambda: self._http.delete(f"/api/v1/context/items/{safe_uid}"),
+            lambda: invoke_operation_async(
+                self._http,
+                "ContextItemsController_delete",
+                path_params={"uid": uid},
+            ),
             self._config.max_retries,
         )
         return ContextItemDeletion.model_validate(raw)

@@ -6,6 +6,7 @@
 
 ### Added
 
+- Context ergonomics (Tier B/C): `mgmt.context.update_note()`, `update_link()`, and `update_saved_query()` — paired with the existing `create_*` helpers; merge server-owned `content` fields for you. Read accessors on `modus`: `note_title`, `note_body`, `link_title`, `link_url`, `saved_query_name`, `saved_query_sql`, `context_item_label`, `is_verified`. Sync and async.
 - HTTP implementations on `ModusManagement` for all remaining public contract operations: semantic context creators (`create_dimension`, `create_fact`, `create_metric`, `create_filter`), skill/agent ownership and undelete, skill MCP config and version history, usage metrics (`mgmt.usage.list()`), and organization deletion (`mgmt.organization.delete()`). Sync and async.
 - `sdk-python-sync` skill, `coverage-gaps.py`, and `openapi-diff-summary.py` for OpenAPI-aligned SDK maintenance; GitHub Action to spawn a Cursor cloud agent when a merged PR changes `openapi/v1.json` on `develop`, poll until finished, and Slack-DM the sync PR link to the SDK owner.
 
@@ -17,10 +18,14 @@
 - `search` filter on `client.skills.list()` / `mgmt.skills.list()` and `client.agents.list()` / `mgmt.agents.list()` — case-insensitive substring match on the name.
 - `type` filter on `client.agents.list()` / `mgmt.agents.list()` — return only `"task"` or `"workflow"` agents, with editor autocomplete.
 - `guardrails=` on `mgmt.skills.create` / `update` and `mgmt.agents.create` / `update` — set runtime guardrail labels without exposing ACL configuration.
-- `client.skills` / `client.agents` read types expose `instructions` (on `.get()`) and `guardrails` (list and get) for inspection before invoke; configuration writes remain on `ModusManagement`.
 
 ### Changed
 
+- **Breaking:** Read types (`Skill`, `Agent`, `ContextItem`, …) are now re-exported OpenAPI DTOs from `modus._generated.models` — full API shape on every GET, including `variation`, `access_config`, `org_uuid`, and permission fields (`can_manage`, `can_use`, `manage_denial`). Consumption and management share the same read types; use `skill.variation.instructions` instead of top-level `skill.instructions`. `ChatResult.content` replaces `.text`. Status helpers (`is_active`, `is_draft`) are removed — compare `status == "active"` or `status == "draft"`.
+- **Breaking (`Skill`):** `Skill` is `SkillDto` (full GET shape: `access_config`, `variation`, `pending_ownership_transfer`, permission fields). `SkillStatus` is now the generated `Status1` enum (not `Literal["draft", "active", "deleted"]`). `SkillVariation` aliases `SkillVariationDto`; `AccessConfigDto` is newly exported. Migrate string comparisons / pattern matching on status accordingly.
+- **Breaking (`ContextItem`):** `ContextItem` is `ContextItemDto` (full GET shape: `user_feedback`, `topics`, `connection_id`, `selection_id`, `data_path`, `last_update_metadata`, …). `ContextType` is now `str` (was a `Literal[...]` union). New exports: `ContextItemLookupRow` (`LookupContextItemRowDto`) and `ContextItemDeletion` (`DeleteContextItemResponseDto`). `context.items.lookup()` returns `Optional[ContextItemLookupRow]` (uid, context_type, data_path, content, connection_id, selection_id) — not full `ContextItem`.
+- **Breaking (`AgentRun`):** `client.agents.runs.get()` / `AgentRun` expose `source` (`"live-query"` or `"history"`) instead of the old handwritten `history` field. Update callers that read `AgentRun.history` to `AgentRun.source`.
+- **Breaking:** Removed hand `modus/_wire/` and read `_translate.py` modules; HTTP uses `invoke_operation` for all non-streaming routes.
 - **Breaking:** Removed `FeatureNotReadyError` and the PREVIEW tier. Every public operation now calls the API; backend errors (e.g. `UnprocessableError` on 422) pass through with the server message.
 - `operation_coverage.py` uses a single `OPERATIONS` map (no WRAPPED/PREVIEW split).
 - **Breaking:** `client.skills.get_context()` returns `SkillContextComposition.context` (composed markdown string) instead of `context_items`. `limit` applies only when the API falls back to structured JSON.

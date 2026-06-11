@@ -2,20 +2,18 @@
 from __future__ import annotations
 
 from typing import Any, Dict, Literal, Optional, Union
-from urllib.parse import quote
 
 from ..._config import ModusConfig
+from ..._generated.models import (
+    GetAutomationRunResponseDto,
+    ListAutomationRunsResponseDto,
+)
 from ..._http import AsyncHttpClient, HttpClient
+from ..._openapi_invoke import invoke_operation, invoke_operation_async
 from ..._pagination import normalize_page_token
 from ..._retry import async_with_retry, with_retry
 from ..._validation import validate_id, validate_page_size
-from ..._wire.agent_runs import (
-    _AutomationRunListItemWire,
-    _GetAutomationRunResponseWire,
-    _ListAutomationRunsResponseWire,
-)
 from ...types.agent_runs import AgentRun, AgentRunListItem
-from ...types.json_blob import JsonObject
 from ...types.pagination import AsyncPage, Page
 
 # Documented filter values. These are hints, not a closed set: the server may
@@ -28,26 +26,31 @@ RunTimeframe = Union[Literal["last_hour", "last_day", "last_week"], str]
 ApprovalScope = Union[Literal["mine", "all"], str]
 
 
-def _translate_run_item(wire: _AutomationRunListItemWire) -> AgentRunListItem:
-    return AgentRunListItem(
-        id=wire.id,
-        workflow_id=wire.workflow_id,
-        temporal_run_id=wire.temporal_run_id,
-        agent_id=wire.agent_id,
-        agent_name=wire.agent_name,
-        agent_type=wire.agent_type,
-        status=wire.status,
-        trigger_type=wire.trigger_type,
-        started_at=wire.started_at,
-        ended_at=wire.ended_at,
-        duration_ms=wire.duration_ms,
-        summary=wire.summary,
-        pending_approval=(
-            JsonObject.model_validate(wire.pending_approval)
-            if wire.pending_approval is not None
-            else None
-        ),
-    )
+
+def _parse_run(raw: dict) -> AgentRun:
+    return GetAutomationRunResponseDto.model_validate(raw)
+
+
+def _runs_list_params(
+    page_size: int,
+    page_token: Optional[str],
+    status: Optional[RunStatus],
+    timeframe: Optional[RunTimeframe],
+    approval_scope: Optional[ApprovalScope],
+    search: Optional[str],
+) -> Dict[str, Any]:
+    params: Dict[str, Any] = {"pageSize": page_size}
+    if page_token:
+        params["pageToken"] = page_token
+    if status is not None:
+        params["status"] = status
+    if timeframe is not None:
+        params["timeframe"] = timeframe
+    if approval_scope is not None:
+        params["approvalScope"] = approval_scope
+    if search is not None:
+        params["search"] = search
+    return params
 
 
 class AgentRunsResource:
@@ -102,25 +105,20 @@ class AgentRunsResource:
         approval_scope: Optional[ApprovalScope],
         search: Optional[str],
     ) -> Page[AgentRunListItem]:
-        safe_id = quote(str(agent_id), safe="")
-        params: Dict[str, Any] = {"pageSize": page_size}
-        if page_token:
-            params["pageToken"] = page_token
-        if status is not None:
-            params["status"] = status
-        if timeframe is not None:
-            params["timeframe"] = timeframe
-        if approval_scope is not None:
-            params["approvalScope"] = approval_scope
-        if search is not None:
-            params["search"] = search
-
+        params = _runs_list_params(
+            page_size, page_token, status, timeframe, approval_scope, search
+        )
         data = with_retry(
-            lambda: self._http.get(f"/api/v1/agents/{safe_id}/runs", params=params),
+            lambda: invoke_operation(
+                self._http,
+                "AutomationRunsController_list",
+                path_params={"id": agent_id},
+                query=params,
+            ),
             self._config.max_retries,
         )
-        wire = _ListAutomationRunsResponseWire.model_validate(data)
-        items = [_translate_run_item(r) for r in wire.runs]
+        wire = ListAutomationRunsResponseDto.model_validate(data)
+        items = list(wire.runs)
         next_page_token = normalize_page_token(wire.next_page_token)
         return Page(
             items=items,
@@ -154,35 +152,19 @@ class AgentRunsResource:
         validate_id(agent_id, name="agent_id")
         if not run_id or not str(run_id).strip():
             raise ValueError("run_id must be a non-empty string")
-        safe_id = quote(str(agent_id), safe="")
-        safe_run = quote(str(run_id), safe="")
-        params: Dict[str, Any] = {}
+        query: Dict[str, Any] = {}
         if temporal_run_id is not None:
-            params["temporalRunId"] = temporal_run_id
+            query["temporalRunId"] = temporal_run_id
         data = with_retry(
-            lambda: self._http.get(
-                f"/api/v1/agents/{safe_id}/runs/{safe_run}",
-                params=params or None,
+            lambda: invoke_operation(
+                self._http,
+                "AutomationRunsController_get",
+                path_params={"id": agent_id, "runId": run_id},
+                query=query or None,
             ),
             self._config.max_retries,
         )
-        wire = _GetAutomationRunResponseWire.model_validate(data)
-        return AgentRun(
-            id=wire.id,
-            workflow_id=wire.workflow_id,
-            temporal_run_id=wire.temporal_run_id,
-            agent_id=wire.agent_id,
-            agent_name=wire.agent_name,
-            agent_type=wire.agent_type,
-            status=wire.status,
-            started_at=wire.started_at,
-            ended_at=wire.ended_at,
-            history=(
-                [JsonObject.model_validate(item) for item in wire.history]
-                if wire.history is not None
-                else None
-            ),
-        )
+        return _parse_run(data)
 
 
 class AsyncAgentRunsResource:
@@ -237,25 +219,20 @@ class AsyncAgentRunsResource:
         approval_scope: Optional[ApprovalScope],
         search: Optional[str],
     ) -> AsyncPage[AgentRunListItem]:
-        safe_id = quote(str(agent_id), safe="")
-        params: Dict[str, Any] = {"pageSize": page_size}
-        if page_token:
-            params["pageToken"] = page_token
-        if status is not None:
-            params["status"] = status
-        if timeframe is not None:
-            params["timeframe"] = timeframe
-        if approval_scope is not None:
-            params["approvalScope"] = approval_scope
-        if search is not None:
-            params["search"] = search
-
+        params = _runs_list_params(
+            page_size, page_token, status, timeframe, approval_scope, search
+        )
         data = await async_with_retry(
-            lambda: self._http.get(f"/api/v1/agents/{safe_id}/runs", params=params),
+            lambda: invoke_operation_async(
+                self._http,
+                "AutomationRunsController_list",
+                path_params={"id": agent_id},
+                query=params,
+            ),
             self._config.max_retries,
         )
-        wire = _ListAutomationRunsResponseWire.model_validate(data)
-        items = [_translate_run_item(r) for r in wire.runs]
+        wire = ListAutomationRunsResponseDto.model_validate(data)
+        items = list(wire.runs)
         next_page_token = normalize_page_token(wire.next_page_token)
         return AsyncPage(
             items=items,
@@ -289,32 +266,16 @@ class AsyncAgentRunsResource:
         validate_id(agent_id, name="agent_id")
         if not run_id or not str(run_id).strip():
             raise ValueError("run_id must be a non-empty string")
-        safe_id = quote(str(agent_id), safe="")
-        safe_run = quote(str(run_id), safe="")
-        params: Dict[str, Any] = {}
+        query: Dict[str, Any] = {}
         if temporal_run_id is not None:
-            params["temporalRunId"] = temporal_run_id
+            query["temporalRunId"] = temporal_run_id
         data = await async_with_retry(
-            lambda: self._http.get(
-                f"/api/v1/agents/{safe_id}/runs/{safe_run}",
-                params=params or None,
+            lambda: invoke_operation_async(
+                self._http,
+                "AutomationRunsController_get",
+                path_params={"id": agent_id, "runId": run_id},
+                query=query or None,
             ),
             self._config.max_retries,
         )
-        wire = _GetAutomationRunResponseWire.model_validate(data)
-        return AgentRun(
-            id=wire.id,
-            workflow_id=wire.workflow_id,
-            temporal_run_id=wire.temporal_run_id,
-            agent_id=wire.agent_id,
-            agent_name=wire.agent_name,
-            agent_type=wire.agent_type,
-            status=wire.status,
-            started_at=wire.started_at,
-            ended_at=wire.ended_at,
-            history=(
-                [JsonObject.model_validate(item) for item in wire.history]
-                if wire.history is not None
-                else None
-            ),
-        )
+        return _parse_run(data)

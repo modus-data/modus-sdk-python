@@ -10,6 +10,12 @@ from typing import Any, Callable, Dict, List, Literal, Optional, Union
 
 from modus import Modus
 from modus.management import ModusManagement
+from tests.fixtures.api_shapes import (
+    SAMPLE_AGENT,
+    SAMPLE_CONTEXT_ITEM,
+    SAMPLE_RUN,
+    SAMPLE_SKILL,
+)
 
 ClientKind = Literal["modus", "management"]
 Client = Union[Modus, ModusManagement]
@@ -28,65 +34,7 @@ SDK_LIST_OPS_EXCLUDED: frozenset[str] = frozenset()
 
 FORBIDDEN_RESPONSE_KEYS = frozenset({"items", "data", "results"})
 
-SAMPLE_SKILL: Dict[str, Any] = {
-    "id": 42,
-    "slug": "revenue-analysis",
-    "name": "Revenue Analysis",
-    "status": "active",
-    "orgUuid": "org-uuid-abc",
-    "hasUnpublishedChanges": False,
-    "activeVariationId": "var-uuid-001",
-    "draftVariationId": None,
-    "isEnabled": True,
-    "createdAt": "2026-01-01T00:00:00.000Z",
-    "updatedAt": "2026-01-15T00:00:00.000Z",
-    "deletedAt": None,
-}
-
-SAMPLE_AGENT: Dict[str, Any] = {
-    "id": 7,
-    "slug": "weekly-report",
-    "name": "Weekly Revenue Report",
-    "status": "active",
-    "type": "task",
-    "orgUuid": "org-uuid-abc",
-    "hasUnpublishedChanges": False,
-    "activeVariationId": "var-uuid-002",
-    "draftVariationId": None,
-    "isEnabled": True,
-    "createdAt": "2026-01-01T00:00:00.000Z",
-    "updatedAt": "2026-01-15T00:00:00.000Z",
-    "deletedAt": None,
-}
-
-SAMPLE_CONTEXT_ITEM: Dict[str, Any] = {
-    "uid": "7a3f9d2c-1111-4000-a000-000000000abc",
-    "contextType": "note",
-    "title": "Fiscal Year Definition",
-    "description": "Defines the company fiscal year",
-    "content": {"text": "Feb 1 – Jan 31"},
-    "verificationStatus": "verified",
-    "userFeedback": None,
-    "topics": ["finance"],
-    "connectionId": None,
-    "updateSource": "manual",
-    "createdAt": "2026-01-01T00:00:00.000Z",
-    "updatedAt": "2026-01-01T00:00:00.000Z",
-}
-
 SAMPLE_VALUE_ENTRY: Dict[str, Any] = {"value": 123}
-
-SAMPLE_RUN: Dict[str, Any] = {
-    "id": "wf_1:temporal-1",
-    "workflowId": "wf_1",
-    "temporalRunId": "temporal-1",
-    "agentId": 7,
-    "agentName": "Weekly Revenue Report",
-    "agentType": "task",
-    "status": "completed",
-    "startedAt": "2026-01-01T00:00:00.000Z",
-    "endedAt": "2026-01-01T01:00:00.000Z",
-}
 
 SAMPLE_MEMORY: Dict[str, Any] = {
     "id": "mem_01",

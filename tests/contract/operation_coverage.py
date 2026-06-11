@@ -47,7 +47,9 @@ OPERATIONS: dict[str, str] = {
     # --- Context ---
     "ContextItemsController_list": "client.context.items.list() / mgmt.context.items.list()",
     "ContextItemsController_get": "client.context.items.get() / mgmt.context.items.get()",
-    "ContextItemsController_update": "mgmt.context.items.update()",
+    "ContextItemsController_update": (
+        "mgmt.context.items.update(); convenience: update_note, update_link, update_saved_query"
+    ),
     "ContextItemsController_delete": "mgmt.context.items.delete()",
     "ContextItemsController_lookup": "client.context.items.lookup()",
     "ContextItemsController_listValues": "client.context.items.list_values()",

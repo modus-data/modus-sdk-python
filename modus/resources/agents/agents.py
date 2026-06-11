@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import Optional, Union
-from urllib.parse import quote
 
 from ..._chat import (
     AsyncChatStream,
@@ -14,7 +13,9 @@ from ..._chat import (
     chat_stream_session_async,
 )
 from ..._config import ModusConfig
+from ..._generated.models import AgentDto
 from ..._http import AsyncHttpClient, HttpClient
+from ..._openapi_invoke import invoke_operation, invoke_operation_async
 from ..._pagination import (
     aip_list_params,
     build_aip_page_mapped,
@@ -22,17 +23,15 @@ from ..._pagination import (
 )
 from ..._retry import async_with_retry, with_retry
 from ..._validation import validate_id, validate_page_size
-from ..._wire.agents import _AgentWire
 from ...types.agents import Agent, AgentType
 from ...types.chat import ChatResult
 from ...types.pagination import AsyncPage, Page
 from ...types.views import VariationView
-from ._translate import _translate_agent
 from .runs import AgentRunsResource, AsyncAgentRunsResource
 
 
-def _map_agent(raw: dict) -> Agent:
-    return _translate_agent(_AgentWire.model_validate(raw))
+def _parse_agent(raw: dict) -> Agent:
+    return AgentDto.model_validate(raw)
 
 
 def _agents_list_params(
@@ -163,13 +162,15 @@ class AgentsResource:
             page_size, page_token, search, type, view, include_variation
         )
         data = with_retry(
-            lambda: self._http.get("/api/v1/agents", params=params),
+            lambda: invoke_operation(
+                self._http, "AgentsController_list", query=params
+            ),
             self._config.max_retries,
         )
         return build_aip_page_mapped(
             data,
             "agents",
-            _map_agent,
+            _parse_agent,
             lambda cur: self._list_page(
                 page_size, cur, search, type, view, include_variation
             ),
@@ -191,13 +192,17 @@ class AgentsResource:
             NotFoundError: if no agent with this ID/slug exists.
         """
         validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
-        params = {} if view is None else {"view": view}
+        query = {} if view is None else {"view": view}
         data = with_retry(
-            lambda: self._http.get(f"/api/v1/agents/{safe_id}", params=params or None),
+            lambda: invoke_operation(
+                self._http,
+                "AgentsController_get",
+                path_params={"id": agent_id},
+                query=query or None,
+            ),
             self._config.max_retries,
         )
-        return _translate_agent(_AgentWire.model_validate(data))
+        return _parse_agent(data)
 
 
 class AsyncAgentsResource:
@@ -288,13 +293,15 @@ class AsyncAgentsResource:
             page_size, page_token, search, type, view, include_variation
         )
         data = await async_with_retry(
-            lambda: self._http.get("/api/v1/agents", params=params),
+            lambda: invoke_operation_async(
+                self._http, "AgentsController_list", query=params
+            ),
             self._config.max_retries,
         )
         return build_async_aip_page_mapped(
             data,
             "agents",
-            _map_agent,
+            _parse_agent,
             lambda cur: self._list_page(
                 page_size, cur, search, type, view, include_variation
             ),
@@ -307,10 +314,14 @@ class AsyncAgentsResource:
         view: Optional[VariationView] = None,
     ) -> Agent:
         validate_id(agent_id, name="agent_id")
-        safe_id = quote(str(agent_id), safe="")
-        params = {} if view is None else {"view": view}
+        query = {} if view is None else {"view": view}
         data = await async_with_retry(
-            lambda: self._http.get(f"/api/v1/agents/{safe_id}", params=params or None),
+            lambda: invoke_operation_async(
+                self._http,
+                "AgentsController_get",
+                path_params={"id": agent_id},
+                query=query or None,
+            ),
             self._config.max_retries,
         )
-        return _translate_agent(_AgentWire.model_validate(data))
+        return _parse_agent(data)

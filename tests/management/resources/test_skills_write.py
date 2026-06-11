@@ -18,6 +18,7 @@ SKILL_RESP = {
     "accessConfig": {"visibility": "shared", "groupPermissions": {"__everyone__": {"use": True, "manage": True}}, "guardrails": [], "sharedWith": []},
     "createdAt": "2026-01-01T00:00:00Z", "updatedAt": "2026-01-01T00:00:00Z",
     "deletedAt": None,
+    "canManage": True, "canUse": True, "manageDenial": None,
 }
 
 DEPLOY_RESP = {"skill": {**SKILL_RESP, "status": "active"}, "deployedAt": "2026-01-02T00:00:00Z"}

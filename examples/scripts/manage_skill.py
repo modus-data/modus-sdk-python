@@ -41,7 +41,7 @@ def main(write: bool, delete: bool) -> None:
     print("=== Skills ===")
     skills = list(read.skills.list().auto_paging_iter())
     for skill in skills:
-        status = "active" if skill.is_active else "draft"
+        status = "active" if skill.status == "active" else "draft"
         marker = "  <- example" if skill.name.startswith(EXAMPLE_PREFIX) else ""
         print(f"  [{status}] {skill.name}  id={skill.id}{marker}")
 

@@ -1,13 +1,9 @@
-"""Public types for skill/agent chat."""
+"""Chat types — re-exported from OpenAPI DTOs."""
+
 from __future__ import annotations
 
-from dataclasses import dataclass
+from .._generated.models import SkillChatRequestDto, SkillChatResponseDto
 
+ChatResult = SkillChatResponseDto
 
-@dataclass
-class ChatResult:
-    """Buffered chat response."""
-
-    text: str
-    thread_id: str
-    run_id: str
+__all__ = ["ChatResult", "SkillChatRequestDto", "SkillChatResponseDto"]

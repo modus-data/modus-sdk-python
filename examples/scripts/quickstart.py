@@ -34,8 +34,7 @@ def main() -> None:
         print("  No context items yet.")
         return
     for item in page:
-        label = item.title or item.description or item.uid[:8]
-        print(f"  [{item.context_type}] {label}")
+        print(f"  [{item.context_type}] {modus.context_item_label(item)}")
 
 
 if __name__ == "__main__":

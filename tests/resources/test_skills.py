@@ -110,8 +110,7 @@ def test_skill_properties(client, sample_skill):
         return_value=httpx.Response(200, json=sample_skill)
     )
     skill = client.skills.get(42)
-    assert skill.is_active is True
-    assert skill.is_draft is False
+    assert skill.status == "active"
 
 
 @respx.mock

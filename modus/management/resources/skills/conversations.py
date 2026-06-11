@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 from typing import Optional, Union
-from urllib.parse import quote
 
 from modus._config import ModusConfig
 from modus._http import AsyncHttpClient, HttpClient
+from modus._openapi_invoke import invoke_operation, invoke_operation_async
 from modus._pagination import (
     aip_list_params,
     build_aip_page,
@@ -29,11 +29,6 @@ class ConversationsResource:
         self._config = config
         self._skill_id = skill_id
 
-    def _base_path(self) -> str:
-        validate_id(self._skill_id, name="skill_id")
-        safe_id = quote(str(self._skill_id), safe="")
-        return f"/api/v1/skills/{safe_id}/conversations"
-
     def list(
         self,
         *,
@@ -55,9 +50,15 @@ class ConversationsResource:
         page_size: int,
         page_token: Optional[str],
     ) -> Page[ConversationListItem]:
+        validate_id(self._skill_id, name="skill_id")
         params = aip_list_params(page_size, page_token)
         data = with_retry(
-            lambda: self._http.get(self._base_path(), params=params),
+            lambda: invoke_operation(
+                self._http,
+                "ConversationsController_list",
+                path_params={"id": self._skill_id},
+                query=params,
+            ),
             self._config.max_retries,
         )
         return build_aip_page(
@@ -74,10 +75,14 @@ class ConversationsResource:
         Args:
             thread_id: Conversation thread ID.
         """
+        validate_id(self._skill_id, name="skill_id")
         validate_id(thread_id, name="thread_id")
-        safe_tid = quote(str(thread_id), safe="")
         data = with_retry(
-            lambda: self._http.get(f"{self._base_path()}/{safe_tid}"),
+            lambda: invoke_operation(
+                self._http,
+                "ConversationsController_get",
+                path_params={"id": self._skill_id, "threadId": thread_id},
+            ),
             self._config.max_retries,
         )
         return Conversation.model_validate(data)
@@ -93,11 +98,6 @@ class AsyncConversationsResource:
         self._http = http
         self._config = config
         self._skill_id = skill_id
-
-    def _base_path(self) -> str:
-        validate_id(self._skill_id, name="skill_id")
-        safe_id = quote(str(self._skill_id), safe="")
-        return f"/api/v1/skills/{safe_id}/conversations"
 
     async def list(
         self,
@@ -120,9 +120,15 @@ class AsyncConversationsResource:
         page_size: int,
         page_token: Optional[str],
     ) -> AsyncPage[ConversationListItem]:
+        validate_id(self._skill_id, name="skill_id")
         params = aip_list_params(page_size, page_token)
         data = await async_with_retry(
-            lambda: self._http.get(self._base_path(), params=params),
+            lambda: invoke_operation_async(
+                self._http,
+                "ConversationsController_list",
+                path_params={"id": self._skill_id},
+                query=params,
+            ),
             self._config.max_retries,
         )
         return build_async_aip_page(
@@ -139,10 +145,14 @@ class AsyncConversationsResource:
         Args:
             thread_id: Conversation thread ID.
         """
+        validate_id(self._skill_id, name="skill_id")
         validate_id(thread_id, name="thread_id")
-        safe_tid = quote(str(thread_id), safe="")
         data = await async_with_retry(
-            lambda: self._http.get(f"{self._base_path()}/{safe_tid}"),
+            lambda: invoke_operation_async(
+                self._http,
+                "ConversationsController_get",
+                path_params={"id": self._skill_id, "threadId": thread_id},
+            ),
             self._config.max_retries,
         )
         return Conversation.model_validate(data)
