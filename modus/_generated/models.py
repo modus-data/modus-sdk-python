@@ -1448,6 +1448,11 @@ class AgentSelectionDto(BaseModel):
     )
 
 
+class Type3(str, Enum):
+    workflow = 'workflow'
+    task = 'task'
+
+
 class CreateAgentDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     name: str | None = Field(
@@ -1457,10 +1462,10 @@ class CreateAgentDto(BaseModel):
         max_length=200,
         min_length=1,
     )
-    type: Type2 | None = Field(
+    type: Type3 | None = Field(
         ...,
-        description='Agent type. `task` = single-step skill orchestration; `workflow` = multi-step graph.',
-        examples=['task'],
+        description='Agent type. Only `workflow` is supported; `task` is accepted as a deprecated alias and silently upgraded to `workflow`.',
+        examples=['workflow'],
     )
     description: str | None = Field(
         None,
@@ -1489,6 +1494,11 @@ class CreateAgentDto(BaseModel):
     )
 
 
+class Type4(str, Enum):
+    task = 'task'
+    workflow = 'workflow'
+
+
 class UpdateAgentDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     name: str | None = Field(
@@ -1498,7 +1508,7 @@ class UpdateAgentDto(BaseModel):
         max_length=200,
         min_length=1,
     )
-    type: Type2 | None = Field(
+    type: Type4 | None = Field(
         None, description='Updated agent type. Rarely changed after creation.', examples=['task']
     )
     description: str | None = Field(
@@ -2294,11 +2304,15 @@ class UsageBucketDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     bucket: str = Field(..., description='ISO8601 timestamp at the start of the bucket.')
     model: str | None = Field(..., description='LLM model name (canonicalised).')
+    group_value: str = Field(
+        ..., description='The grouped dimension value (skill/agent id, interface, or model).'
+    )
     call_count: float = Field(
         ..., description='Number of LLM_CALL events in this bucket for this model.'
     )
     input_tokens: float = Field(..., description='Sum of input (prompt) tokens.')
     output_tokens: float = Field(..., description='Sum of output (response) tokens.')
+    credits: float = Field(..., description='Credits consumed in this bucket.')
 
 
 class UsageTotalsDto(BaseModel):
@@ -2306,11 +2320,22 @@ class UsageTotalsDto(BaseModel):
     call_count: float
     input_tokens: float
     output_tokens: float
+    credits: float = Field(
+        ..., description='Total credits consumed across all buckets in the window.'
+    )
 
 
 class Rollup(str, Enum):
     hour = 'hour'
     day = 'day'
+
+
+class GroupBy(str, Enum):
+    all = 'all'
+    skill = 'skill'
+    agent = 'agent'
+    interface = 'interface'
+    model = 'model'
 
 
 class ListUsageResponseDto(BaseModel):
@@ -2322,6 +2347,7 @@ class ListUsageResponseDto(BaseModel):
     since: str
     until: str
     rollup: Rollup
+    group_by: GroupBy = Field(..., description='Dimension that was grouped by in this response.')
     buckets: list[UsageBucketDto]
     totals: UsageTotalsDto
 

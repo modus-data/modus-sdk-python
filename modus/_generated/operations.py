@@ -420,7 +420,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "method": "GET",
         "path": '/api/v1/usage',
         "path_params": (),
-        "query_params": ('since', 'until', 'rollup', 'model'),
+        "query_params": ('since', 'until', 'rollup', 'model', 'group_by', 'skill_id', 'agent_id', 'user_id', 'interface'),
         "request_schema": None,
         "response_schema": 'ListUsageResponseDto',
     },
