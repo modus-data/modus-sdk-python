@@ -1,6 +1,7 @@
 """Auto-generated API models. Do not edit by hand."""
 from .models import (
     AccessConfigDto,
+    AccessPolicyDto,
     AgentAccessConfigDto,
     AgentDeployResponseDto,
     AgentDto,
@@ -80,6 +81,7 @@ from .models import (
     PatchSkillMcpConfigResponseDto,
     PendingOwnershipTransferDto,
     Rollup,
+    Scope,
     SearchMemoriesRequestDto,
     SensitivityOverrideDto,
     SharedUserDto,
@@ -119,6 +121,7 @@ from .models import (
 )
 __all__ = [
     "AccessConfigDto",
+    "AccessPolicyDto",
     "AgentAccessConfigDto",
     "AgentDeployResponseDto",
     "AgentDto",
@@ -198,6 +201,7 @@ __all__ = [
     "PatchSkillMcpConfigResponseDto",
     "PendingOwnershipTransferDto",
     "Rollup",
+    "Scope",
     "SearchMemoriesRequestDto",
     "SensitivityOverrideDto",
     "SharedUserDto",

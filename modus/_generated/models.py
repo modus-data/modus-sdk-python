@@ -2005,6 +2005,29 @@ class TimeBucketDto(BaseModel):
     pass
 
 
+class Scope(str, Enum):
+    all = 'all'
+    groups = 'groups'
+    users = 'users'
+
+
+class AccessPolicyDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    scope: Scope | None = Field(
+        Scope.all, description='Visibility mode. Defaults to org-wide ("all") when omitted.'
+    )
+    group_ids: list[str] | None = Field(
+        None,
+        alias='groupIds',
+        description='Member group uuids granted access. Required when scope is "groups".',
+    )
+    user_ids: list[str] | None = Field(
+        None,
+        alias='userIds',
+        description='Clerk user ids granted access. Required when scope is "users".',
+    )
+
+
 class CreateNoteDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     title: str | None = Field(
@@ -2013,6 +2036,7 @@ class CreateNoteDto(BaseModel):
         examples=['Q3 churn analysis'],
     )
     content: str = Field(..., description='Note body — markdown text. Stored in tenant S3 + context_items.', examples=['## Findings\n\nChurn rate increased 2.3% MoM.'])
+    access: AccessPolicyDto | None = None
 
 
 class Kind(str, Enum):
@@ -2073,6 +2097,7 @@ class CreateSavedQueryDto(BaseModel):
         description='Optional hierarchical path identifying the data scope (e.g. `["database", "schema"]` for Snowflake; `["dataset"]` for BigQuery).',
         examples=[['my_dataset']],
     )
+    access: AccessPolicyDto | None = None
 
 
 class CreateLinkDto(BaseModel):
@@ -2101,6 +2126,7 @@ class CreateLinkDto(BaseModel):
         ge=1.0,
         le=200.0,
     )
+    access: AccessPolicyDto | None = None
 
 
 class CreateDimensionDto(BaseModel):
