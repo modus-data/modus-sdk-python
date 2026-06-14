@@ -95,6 +95,15 @@
         "{workspaceRoot}/sdk/python/scripts/emit-openapi-operations.py"
       ],
       "outputs": ["{projectRoot}/modus/_generated/**"]
+    },
+    "openapi-impact": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install"],
+      "options": {
+        "command": "bash ../scripts/ci-openapi-sdk-impact.sh",
+        "cwd": "{projectRoot}"
+      },
+      "cache": false
     }
   }
 }
