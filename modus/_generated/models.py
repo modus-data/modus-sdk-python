@@ -2329,7 +2329,10 @@ class MemberGroupDto(BaseModel):
 class UsageBucketDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     bucket: str = Field(..., description='ISO8601 timestamp at the start of the bucket.')
-    model: str | None = Field(..., description='LLM model name (canonicalised).')
+    model: str | None = Field(
+        None,
+        description='Canonicalised LLM model name. Present only when grouping by model (where it equals `group_value`); omitted on skill/agent/interface breakdowns, where the grouped value lives in `group_value`.',
+    )
     group_value: str = Field(
         ..., description='The grouped dimension value (skill/agent id, interface, or model).'
     )

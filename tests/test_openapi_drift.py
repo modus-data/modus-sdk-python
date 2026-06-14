@@ -96,3 +96,13 @@ def test_compose_context_dto_matches_openapi(openapi):
 def test_automation_run_list_item_matches_openapi(openapi):
     from modus.types.agent_runs import AgentRunListItem
     _assert_dto_covers_schema(openapi, "AutomationRunListItemDto", AgentRunListItem)
+
+
+def test_usage_bucket_dto_matches_openapi(openapi):
+    from modus._generated.models import UsageBucketDto
+    _assert_dto_covers_schema(openapi, "UsageBucketDto", UsageBucketDto)
+
+
+def test_usage_report_matches_openapi(openapi):
+    from modus.management.types.usage import UsageReport
+    _assert_dto_covers_schema(openapi, "ListUsageResponseDto", UsageReport)
