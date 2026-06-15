@@ -1,8 +1,10 @@
 # Changelog
 
-**Current TestPyPI release:** [`0.1.5`](https://test.pypi.org/project/modus-sdk/) (2026-06-04). Production PyPI not yet published.
+**Current TestPyPI release:** [`0.1.6`](https://test.pypi.org/project/modus-sdk/) (2026-06-15). Production PyPI not yet published.
 
 ## [Unreleased]
+
+## [0.1.6] — 2026-06-15
 
 ### Added
 
