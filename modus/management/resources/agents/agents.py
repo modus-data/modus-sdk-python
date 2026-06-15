@@ -257,7 +257,7 @@ class AgentsResource:
         with_retry(
             lambda: invoke_operation(
                 self._http,
-                "AgentsController_softDelete",
+                "AgentsController_delete",
                 path_params={"id": agent_id},
             ),
             self._config.max_retries,
@@ -307,13 +307,13 @@ class AgentsResource:
         )
         return _parse_agent(raw)
 
-    def undelete(self, agent_id: Union[int, str]) -> Agent:
-        """Restore a soft-deleted agent."""
+    def restore(self, agent_id: Union[int, str]) -> Agent:
+        """Restore a deleted agent."""
         validate_id(agent_id, name="agent_id")
         raw = with_retry(
             lambda: invoke_operation(
                 self._http,
-                "AgentsController_undelete",
+                "AgentsController_restore",
                 path_params={"id": agent_id},
                 json_body={},
             ),
@@ -503,7 +503,7 @@ class AsyncAgentsResource:
         await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,
-                "AgentsController_softDelete",
+                "AgentsController_delete",
                 path_params={"id": agent_id},
             ),
             self._config.max_retries,
@@ -553,13 +553,13 @@ class AsyncAgentsResource:
         )
         return _parse_agent(raw)
 
-    async def undelete(self, agent_id: Union[int, str]) -> Agent:
-        """Restore a soft-deleted agent."""
+    async def restore(self, agent_id: Union[int, str]) -> Agent:
+        """Restore a deleted agent."""
         validate_id(agent_id, name="agent_id")
         raw = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,
-                "AgentsController_undelete",
+                "AgentsController_restore",
                 path_params={"id": agent_id},
                 json_body={},
             ),

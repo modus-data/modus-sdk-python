@@ -372,7 +372,7 @@
           "type": "null"
         }
       ],
-      "description": "Type of automation. `task` = single-step skill orchestration; `workflow` = multi-step graph.",
+      "description": "Type of agent. `task` = single-step skill orchestration; `workflow` = multi-step graph.",
       "examples": [
         "task"
       ]

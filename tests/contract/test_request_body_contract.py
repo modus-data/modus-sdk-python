@@ -41,7 +41,6 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "AgentsController_update": _model_wire_fields(_AgentUpdateBody),
     "ContextItemsController_update": _model_wire_fields(ContextItemUpdate),
     "SkillChatController_chat": _model_wire_fields(SkillChatRequestDto),
-    "AgentChatController_chat": _model_wire_fields(SkillChatRequestDto),
     "SkillContextController_compose": _model_wire_fields(ComposeSkillContextRequestDto),
     "MemoriesController_search": _model_wire_fields(MemorySearchRequest),
     "MemoriesController_update": _model_wire_fields(MemoryUpdate),
@@ -138,9 +137,6 @@ def test_every_mapped_write_endpoint_has_a_body_contract(openapi: dict) -> None:
         "SkillChatController_chatStream",
         "SkillChatController_chatContinue",
         "SkillChatController_chatContinueStream",
-        "AgentChatController_chatStream",
-        "AgentChatController_chatContinue",
-        "AgentChatController_chatContinueStream",
     }
     missing = {
         oid

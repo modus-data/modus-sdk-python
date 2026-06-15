@@ -14,6 +14,7 @@
 - Read types match API responses (`Skill`, `Agent`, `ContextItem`, …); early TestPyPI callers may need small updates (e.g. `skill.variation.instructions`, scoped `conversations(skill_id)`, `get_context().context`).
 - Typed builders required for toolset, trigger, and agent selection.
 - Usage metrics: `model` optional when grouped by skill, agent, or interface (use `group_value`). **Compatibility:** corrects 0.1.5 where `model` was incorrectly required on all breakdowns.
+- **Renamed** `skills.undelete()` → `skills.restore()` and `agents.undelete()` → `agents.restore()` (sync + async).
 
 ### Fixed
 
@@ -22,6 +23,7 @@
 ### Removed
 
 - Preview/stub operations; `access_config=` on writes (use `guardrails=`); legacy `Toolset(tools=[...])`.
+- **`agents.chat()` and `agents.chat_stream()`** — buffered agent chat is no longer part of the public API; skill chat (`skills.chat()` / `skills.chat_stream()`) is unaffected.
 
 ## [0.1.5] — 2026-06-04
 

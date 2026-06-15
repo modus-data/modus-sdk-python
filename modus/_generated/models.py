@@ -90,7 +90,7 @@ class Status(str, Enum):
 class ErrorEnvelopeDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     code: Code = Field(..., description='Modus-specific machine code.')
-    status: Status = Field(..., description='AIP-193 canonical status string.')
+    status: Status = Field(..., description='Canonical status string for the error.')
     message: str = Field(..., examples=['Skill was not found or you lack permission.'])
     request_id: str = Field(..., alias='requestId', examples=['req_01HQ7K8ABCDEFGHIJKLMNOPQRS'])
     info: dict[str, Any] | None = Field(
@@ -948,20 +948,16 @@ class McpConnectionDto(BaseModel):
 
 class MemoryDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    id: str = Field(
-        ..., description='Opaque memory id (mem0 surrogate key).', examples=['mem_01HRQX...ABC']
-    )
+    id: str = Field(..., description='Opaque memory id.', examples=['mem_01HRQX...ABC'])
     memory: str = Field(
         ...,
-        description='The memory text as stored in mem0.',
+        description='The memory text.',
         examples=['User prefers concise summaries with bullet points.'],
     )
-    hash: str | None = Field(
-        None, description='Content hash (mem0-supplied) — useful for de-duplication.'
-    )
+    hash: str | None = Field(None, description='Content hash, useful for de-duplication.')
     metadata: dict[str, Any] | None = Field(
         None,
-        description='Opaque metadata bag — caller-supplied tags forwarded verbatim to mem0.',
+        description='Opaque metadata bag — caller-supplied tags stored with the memory.',
         examples=[{'source': 'agent_run_42', 'topic': 'preferences'}],
     )
     created_at: str | None = Field(
@@ -998,7 +994,7 @@ class UpdateMemoryRequestDto(BaseModel):
     )
     metadata: dict[str, Any] | None = Field(
         None,
-        description='Replacement metadata bag — forwarded verbatim to mem0. Optional.',
+        description='Replacement metadata bag. Optional.',
         examples=[{'topic': 'preferences', 'confidence': 'high'}],
     )
 
@@ -1013,7 +1009,7 @@ class SearchMemoriesRequestDto(BaseModel):
     user_id: str | None = Field(
         None,
         alias='userId',
-        description='Narrow results to memories tagged with this end-user id (mem0 per-user scope).',
+        description='Narrow results to memories tagged with this end-user id.',
         examples=['user_clerk_X'],
     )
     limit: float | None = Field(
@@ -1250,7 +1246,7 @@ class AgentDto(BaseModel):
     )
     type: Type2 | None = Field(
         ...,
-        description='Type of automation. `task` = single-step skill orchestration; `workflow` = multi-step graph.',
+        description='Type of agent. `task` = single-step skill orchestration; `workflow` = multi-step graph.',
         examples=['task'],
     )
     org_uuid: str = Field(
@@ -1479,7 +1475,7 @@ class CreateAgentDto(BaseModel):
     agent_selection: AgentSelectionDto | None = Field(
         None,
         alias='agentSelection',
-        description='Agent selection (for task automations): ordered skills plus per-skill instructions.',
+        description='Agent selection (for task agents): ordered skills plus per-skill instructions.',
     )
     workflow_structure: dict[str, Any] | None = Field(
         None,
@@ -1572,12 +1568,12 @@ class AutomationRunListItemDto(BaseModel):
         examples=['wf_42_run_1:11111111-2222-3333-4444-555555555555'],
     )
     workflow_id: str = Field(
-        ..., alias='workflowId', description='Temporal workflow id.', examples=['wf_42_run_1']
+        ..., alias='workflowId', description='Workflow run identifier.', examples=['wf_42_run_1']
     )
     temporal_run_id: str | None = Field(
         None,
         alias='temporalRunId',
-        description='Temporal run id (one workflow may have multiple runs after retry).',
+        description='Run identifier; a workflow may have multiple runs after a retry.',
     )
     agent_id: float = Field(..., alias='agentId', description='Parent agent id.', examples=[42])
     agent_name: str = Field(
@@ -1621,7 +1617,7 @@ class AutomationRunListItemDto(BaseModel):
 class ListAutomationRunsResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     runs: list[AutomationRunListItemDto] = Field(
-        ..., description='Page of run summaries (Temporal-ordered, descending start time).'
+        ..., description='Page of run summaries, most recent first.'
     )
     next_page_token: str | None = Field(
         None,
@@ -1652,12 +1648,12 @@ class GetAutomationRunResponseDto(BaseModel):
         examples=['wf_42_run_1:11111111-2222-3333-4444-555555555555'],
     )
     workflow_id: str = Field(
-        ..., alias='workflowId', description='Temporal workflow id.', examples=['wf_42_run_1']
+        ..., alias='workflowId', description='Workflow run identifier.', examples=['wf_42_run_1']
     )
     temporal_run_id: str | None = Field(
         None,
         alias='temporalRunId',
-        description='Temporal run id (one workflow may have multiple runs after retry).',
+        description='Run identifier; a workflow may have multiple runs after a retry.',
     )
     agent_id: float = Field(..., alias='agentId', description='Parent agent id.', examples=[42])
     agent_name: str = Field(
@@ -1703,7 +1699,7 @@ class GetAutomationRunResponseDto(BaseModel):
     )
     source: Source = Field(
         ...,
-        description='Where the payload was read from. `live-query` = Temporal workflow is still in progress; `history` = closed run reconstructed from event history.',
+        description='Where the payload was read from. `live-query` = the run is still in progress; `history` = a completed run.',
     )
     task_result: dict[str, Any] | None = Field(
         None,
@@ -1826,7 +1822,7 @@ class ContextItemDto(BaseModel):
     data_path: list[str] = Field(
         ...,
         alias='dataPath',
-        description='Hierarchical Postgres `text[]` path that places the item inside the datamap (used for filtering by data asset).',
+        description='Hierarchical path that places the item inside the data map (used for filtering by data asset).',
         examples=[['salesforce', '00000000-0000-4000-a000-000000000111', 'Account', 'Name']],
     )
     created_at: str | None = Field(
@@ -2369,10 +2365,7 @@ class GroupBy(str, Enum):
 
 class ListUsageResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    org_id: str = Field(
-        ...,
-        description='Clerk org id (`org_xxx`) the result is scoped to. Matches `metering.usage_events.org_id`. NOT the Postgres tenant UUID.',
-    )
+    org_id: str = Field(..., description='Organization id (`org_xxx`) the result is scoped to.')
     since: str
     until: str
     rollup: Rollup

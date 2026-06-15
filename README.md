@@ -95,10 +95,12 @@ for item in client.context.items.list():
 ### Agents
 
 ```python
-client.agents.chat(agent_id, "Run report", model=MODEL)
+agent = client.agents.get(agent_id)
 for run in client.agents.runs.list(agent_id, page_size=20):
     print(run.id, run.status)
 ```
+
+Agent chat is not on the public PAT surface; use skill chat above or the Modus app for conversational agents.
 
 ## Managing your org
 

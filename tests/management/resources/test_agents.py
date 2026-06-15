@@ -77,9 +77,9 @@ def test_agents_request_ownership_transfer(client, agent_detail_row):
 
 
 @respx.mock
-def test_agents_undelete(client, agent_detail_row):
-    respx.post(f"{BASE}/api/v1/agents/5/undelete").mock(
+def test_agents_restore(client, agent_detail_row):
+    respx.post(f"{BASE}/api/v1/agents/5/restore").mock(
         return_value=httpx.Response(200, json=agent_detail_row)
     )
-    agent = client.agents.undelete(5)
+    agent = client.agents.restore(5)
     assert agent.slug == "weekly-report"

@@ -123,11 +123,11 @@ def test_skills_cancel_ownership_transfer(client, skill_detail_row):
 
 
 @respx.mock
-def test_skills_undelete(client, skill_detail_row):
-    respx.post(f"{BASE}/api/v1/skills/10/undelete").mock(
+def test_skills_restore(client, skill_detail_row):
+    respx.post(f"{BASE}/api/v1/skills/10/restore").mock(
         return_value=httpx.Response(200, json=skill_detail_row)
     )
-    skill = client.skills.undelete(10)
+    skill = client.skills.restore(10)
     assert skill.id == 10
 
 

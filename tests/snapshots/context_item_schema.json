@@ -111,7 +111,7 @@
       "title": "Selectionid"
     },
     "dataPath": {
-      "description": "Hierarchical Postgres `text[]` path that places the item inside the datamap (used for filtering by data asset).",
+      "description": "Hierarchical path that places the item inside the data map (used for filtering by data asset).",
       "examples": [
         [
           "salesforce",

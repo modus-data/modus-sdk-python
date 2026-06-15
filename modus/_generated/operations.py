@@ -16,22 +16,6 @@ class OperationSpec(TypedDict):
 
 
 OPERATIONS: dict[str, OperationSpec] = {
-    "AgentChatController_chat": {
-        "method": "POST",
-        "path": '/api/v1/agents/{id}/chat',
-        "path_params": ('id',),
-        "query_params": (),
-        "request_schema": 'SkillChatRequestDto',
-        "response_schema": 'SkillChatResponseDto',
-    },
-    "AgentChatController_chatContinue": {
-        "method": "POST",
-        "path": '/api/v1/agents/{id}/conversations/{threadId}/chat',
-        "path_params": ('id', 'threadId'),
-        "query_params": (),
-        "request_schema": 'SkillChatRequestDto',
-        "response_schema": 'SkillChatResponseDto',
-    },
     "AgentsController_acceptOwnershipTransfer": {
         "method": "POST",
         "path": '/api/v1/agents/{id}/transfer-ownership/accept',
@@ -55,6 +39,14 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'CreateAgentDto',
         "response_schema": 'AgentDto',
+    },
+    "AgentsController_delete": {
+        "method": "DELETE",
+        "path": '/api/v1/agents/{id}',
+        "path_params": ('id',),
+        "query_params": (),
+        "request_schema": None,
+        "response_schema": None,
     },
     "AgentsController_deploy": {
         "method": "POST",
@@ -88,17 +80,9 @@ OPERATIONS: dict[str, OperationSpec] = {
         "request_schema": 'TransferOwnershipDto',
         "response_schema": 'AgentDto',
     },
-    "AgentsController_softDelete": {
-        "method": "DELETE",
-        "path": '/api/v1/agents/{id}',
-        "path_params": ('id',),
-        "query_params": (),
-        "request_schema": None,
-        "response_schema": None,
-    },
-    "AgentsController_undelete": {
+    "AgentsController_restore": {
         "method": "POST",
-        "path": '/api/v1/agents/{id}/undelete',
+        "path": '/api/v1/agents/{id}/restore',
         "path_params": ('id',),
         "query_params": (),
         "request_schema": None,
@@ -344,6 +328,14 @@ OPERATIONS: dict[str, OperationSpec] = {
         "request_schema": 'CreateSkillDto',
         "response_schema": 'SkillDto',
     },
+    "SkillsController_delete": {
+        "method": "DELETE",
+        "path": '/api/v1/skills/{id}',
+        "path_params": ('id',),
+        "query_params": (),
+        "request_schema": None,
+        "response_schema": None,
+    },
     "SkillsController_deploy": {
         "method": "POST",
         "path": '/api/v1/skills/{id}/deploy',
@@ -392,17 +384,9 @@ OPERATIONS: dict[str, OperationSpec] = {
         "request_schema": 'TransferOwnershipDto',
         "response_schema": 'SkillDto',
     },
-    "SkillsController_softDelete": {
-        "method": "DELETE",
-        "path": '/api/v1/skills/{id}',
-        "path_params": ('id',),
-        "query_params": (),
-        "request_schema": None,
-        "response_schema": None,
-    },
-    "SkillsController_undelete": {
+    "SkillsController_restore": {
         "method": "POST",
-        "path": '/api/v1/skills/{id}/undelete',
+        "path": '/api/v1/skills/{id}/restore',
         "path_params": ('id',),
         "query_params": (),
         "request_schema": None,

@@ -277,7 +277,7 @@ class SkillsResource:
         with_retry(
             lambda: invoke_operation(
                 self._http,
-                "SkillsController_softDelete",
+                "SkillsController_delete",
                 path_params={"id": skill_id},
             ),
             self._config.max_retries,
@@ -327,13 +327,13 @@ class SkillsResource:
         )
         return _parse_skill(raw)
 
-    def undelete(self, skill_id: Union[int, str]) -> Skill:
-        """Restore a soft-deleted skill."""
+    def restore(self, skill_id: Union[int, str]) -> Skill:
+        """Restore a deleted skill."""
         validate_id(skill_id, name="skill_id")
         raw = with_retry(
             lambda: invoke_operation(
                 self._http,
-                "SkillsController_undelete",
+                "SkillsController_restore",
                 path_params={"id": skill_id},
                 json_body={},
             ),
@@ -577,7 +577,7 @@ class AsyncSkillsResource:
         await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,
-                "SkillsController_softDelete",
+                "SkillsController_delete",
                 path_params={"id": skill_id},
             ),
             self._config.max_retries,
@@ -627,13 +627,13 @@ class AsyncSkillsResource:
         )
         return _parse_skill(raw)
 
-    async def undelete(self, skill_id: Union[int, str]) -> Skill:
-        """Restore a soft-deleted skill."""
+    async def restore(self, skill_id: Union[int, str]) -> Skill:
+        """Restore a deleted skill."""
         validate_id(skill_id, name="skill_id")
         raw = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,
-                "SkillsController_undelete",
+                "SkillsController_restore",
                 path_params={"id": skill_id},
                 json_body={},
             ),

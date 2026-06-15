@@ -53,8 +53,6 @@ def test_sync_client_exposes_chat_and_runs():
     assert hasattr(client.skills, "chat")
     assert hasattr(client.skills, "chat_stream")
     assert hasattr(client.skills, "get_context")
-    assert hasattr(client.agents, "chat")
-    assert hasattr(client.agents, "chat_stream")
     assert hasattr(client.agents, "runs")
 
 

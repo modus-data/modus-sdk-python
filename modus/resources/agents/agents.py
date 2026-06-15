@@ -4,14 +4,6 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
-from ..._chat import (
-    AsyncChatStream,
-    ChatStream,
-    chat_buffered,
-    chat_buffered_async,
-    chat_stream_session,
-    chat_stream_session_async,
-)
 from ..._config import ModusConfig
 from ..._generated.models import AgentDto
 from ..._http import AsyncHttpClient, HttpClient
@@ -24,7 +16,6 @@ from ..._pagination import (
 from ..._retry import async_with_retry, with_retry
 from ..._validation import validate_id, validate_page_size
 from ...types.agents import Agent, AgentType
-from ...types.chat import ChatResult
 from ...types.pagination import AsyncPage, Page
 from ...types.views import VariationView
 from .runs import AgentRunsResource, AsyncAgentRunsResource
@@ -68,60 +59,6 @@ class AgentsResource:
         self._http = http
         self._config = config
         self.runs = AgentRunsResource(http, config)
-
-    def chat(
-        self,
-        agent_id: Union[int, str],
-        message: str,
-        *,
-        model: str,
-        thread_id: Optional[str] = None,
-    ) -> ChatResult:
-        """
-        Send a message to an agent and get the complete reply.
-
-        Args:
-            agent_id:  Agent ID or slug.
-            message:   The message to send.
-            model:     Model to run this message with (required). One of the
-                       supported model IDs, e.g. ``"claude-sonnet-4.6"`` or ``"gpt-5.5"``.
-            thread_id: Continue an existing conversation; omit to start a new one.
-        """
-        return chat_buffered(
-            self._http,
-            "agents",
-            agent_id,
-            message,
-            model=model,
-            thread_id=thread_id,
-        )
-
-    def chat_stream(
-        self,
-        agent_id: Union[int, str],
-        message: str,
-        *,
-        model: str,
-        thread_id: Optional[str] = None,
-    ) -> ChatStream:
-        """
-        Send a message to an agent and stream the reply token by token.
-
-        Args:
-            agent_id:  Agent ID or slug.
-            message:   The message to send.
-            model:     Model to run this message with (required). One of the
-                       supported model IDs, e.g. ``"claude-sonnet-4.6"`` or ``"gpt-5.5"``.
-            thread_id: Continue an existing conversation; omit to start a new one.
-        """
-        return chat_stream_session(
-            self._http,
-            "agents",
-            agent_id,
-            message,
-            model=model,
-            thread_id=thread_id,
-        )
 
     def list(
         self,
@@ -219,40 +156,6 @@ class AsyncAgentsResource:
         self._http = http
         self._config = config
         self.runs = AsyncAgentRunsResource(http, config)
-
-    async def chat(
-        self,
-        agent_id: Union[int, str],
-        message: str,
-        *,
-        model: str,
-        thread_id: Optional[str] = None,
-    ) -> ChatResult:
-        return await chat_buffered_async(
-            self._http,
-            "agents",
-            agent_id,
-            message,
-            model=model,
-            thread_id=thread_id,
-        )
-
-    def chat_stream(
-        self,
-        agent_id: Union[int, str],
-        message: str,
-        *,
-        model: str,
-        thread_id: Optional[str] = None,
-    ) -> AsyncChatStream:
-        return chat_stream_session_async(
-            self._http,
-            "agents",
-            agent_id,
-            message,
-            model=model,
-            thread_id=thread_id,
-        )
 
     async def list(
         self,
