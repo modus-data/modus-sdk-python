@@ -2277,6 +2277,7 @@ class BootstrapUserDto(BaseModel):
 class BootstrapOrganizationDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     clerk_org_id: str
+    uuid: str = Field(..., description='Organization UUID.')
     name: str
     slug: str
     image_url: str
