@@ -15,6 +15,8 @@ from typing import Dict, Set, Type
 import pytest
 from modus._generated.models import (
     ComposeSkillContextRequestDto,
+    ModusChatRequestDto,
+    ModusContextRequestDto,
     SkillChatRequestDto,
 )
 from modus.management.resources.agents._update_body import _AgentCreateBody, _AgentUpdateBody
@@ -41,7 +43,9 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "AgentsController_update": _model_wire_fields(_AgentUpdateBody),
     "ContextItemsController_update": _model_wire_fields(ContextItemUpdate),
     "SkillChatController_chat": _model_wire_fields(SkillChatRequestDto),
+    "ModusChatController_chat": _model_wire_fields(ModusChatRequestDto),
     "SkillContextController_compose": _model_wire_fields(ComposeSkillContextRequestDto),
+    "ModusContextController_compose": _model_wire_fields(ModusContextRequestDto),
     "MemoriesController_search": _model_wire_fields(MemorySearchRequest),
     "MemoriesController_update": _model_wire_fields(MemoryUpdate),
     "ContextItemsController_lookup": {"contextType", "dataPath", "contentProjection"},
@@ -137,6 +141,9 @@ def test_every_mapped_write_endpoint_has_a_body_contract(openapi: dict) -> None:
         "SkillChatController_chatStream",
         "SkillChatController_chatContinue",
         "SkillChatController_chatContinueStream",
+        "ModusChatController_chatStream",
+        "ModusChatController_chatContinue",
+        "ModusChatController_chatContinueStream",
     }
     missing = {
         oid

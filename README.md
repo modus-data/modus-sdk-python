@@ -72,6 +72,19 @@ client = modus.Modus(api_key="modus_xxx")
 
 ## Using Modus
 
+### Org-wide Modus assistant
+
+```python
+MODEL = "claude-sonnet-4.6"
+
+result = client.modus.chat("What were our top revenue drivers last quarter?", model=MODEL)
+print(result.text, result.thread_id)
+
+with client.modus.chat_stream("Summarize this week", model=MODEL) as stream:
+    for chunk in stream.text_stream:
+        print(chunk, end="")
+```
+
 ### Skills
 
 ```python

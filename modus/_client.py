@@ -19,9 +19,11 @@ from .resources import (
     AsyncAgentsResource,
     AsyncConnectionsResource,
     AsyncContextResource,
+    AsyncModusResource,
     AsyncSkillsResource,
     ConnectionsResource,
     ContextResource,
+    ModusResource,
     SkillsResource,
 )
 
@@ -84,6 +86,7 @@ class Modus:
         self._http = HttpClient(self._config)
 
         self.skills: SkillsResource = SkillsResource(self._http, self._config)
+        self.modus: ModusResource = ModusResource(self._http, self._config)
         self.agents: AgentsResource = AgentsResource(self._http, self._config)
         self.context: ContextResource = ContextResource(self._http, self._config)
         self.connections: ConnectionsResource = ConnectionsResource(self._http, self._config)
@@ -150,6 +153,7 @@ class AsyncModus:
         self._http = AsyncHttpClient(self._config)
 
         self.skills: AsyncSkillsResource = AsyncSkillsResource(self._http, self._config)
+        self.modus: AsyncModusResource = AsyncModusResource(self._http, self._config)
         self.agents: AsyncAgentsResource = AsyncAgentsResource(self._http, self._config)
         self.context: AsyncContextResource = AsyncContextResource(self._http, self._config)
         self.connections: AsyncConnectionsResource = AsyncConnectionsResource(

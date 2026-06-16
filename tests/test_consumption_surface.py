@@ -79,6 +79,15 @@ def test_skills_resource_has_chat_and_context():
     assert hasattr(client.skills, "get_context")
 
 
+def test_modus_resource_has_chat_context_and_conversations():
+    client = Modus(api_key="modus_test_key")
+    assert hasattr(client.modus, "chat")
+    assert hasattr(client.modus, "chat_stream")
+    assert hasattr(client.modus, "get_context")
+    assert hasattr(client.modus.conversations, "list")
+    assert hasattr(client.modus.conversations, "get")
+
+
 def test_agents_resource_has_runs():
     client = Modus(api_key="modus_test_key")
     assert hasattr(client.agents.runs, "list")

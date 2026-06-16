@@ -2412,3 +2412,89 @@ class GroupAccessEntryDto(BaseModel):
     group_id: str
     level: Level
     updated_at: str
+
+
+class ApprovalDecision(str, Enum):
+    approve = 'approve'
+    deny = 'deny'
+
+
+class ModusChatRequestDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    message: str = Field(
+        ...,
+        description='User message sent to Modus.',
+        examples=['What were our top revenue drivers last quarter?'],
+        min_length=1,
+    )
+    model: Model | None = Field(
+        ...,
+        description='Canonical model id for this run (required). Allowed values: claude-sonnet-4.6, claude-opus-4.8, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3.',
+        examples=['claude-sonnet-4.6'],
+    )
+    approval_continuation: bool | None = Field(
+        None,
+        alias='approvalContinuation',
+        description='Continue a pending write-approval interrupt from a prior turn. When true, `message` is ignored.',
+    )
+    approval_decision: ApprovalDecision | None = Field(
+        None, alias='approvalDecision', description='Required when `approvalContinuation` is true.'
+    )
+
+
+class ModusChatResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    content: str = Field(
+        ...,
+        description='Final assistant text for the run.',
+        examples=['Revenue grew 12% quarter over quarter…'],
+    )
+    thread_id: str = Field(
+        ...,
+        alias='threadId',
+        description='Conversation thread id. For follow-up use POST …/conversations/{threadId}/chat.',
+        examples=['agent_0_550e8400-e29b-41d4-a716-446655440000'],
+    )
+    run_id: str = Field(
+        ...,
+        alias='runId',
+        description='Opaque run id for this chat invocation.',
+        examples=['550e8400-e29b-41d4-a716-446655440001'],
+    )
+
+
+class ModusContextRequestDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    message: str = Field(
+        ...,
+        description='User message or intent used to compose relevant context.',
+        examples=['What tables describe customer churn?'],
+        min_length=1,
+    )
+    limit: float | None = Field(
+        None,
+        description='Optional cap on context items in structured JSON fallback.',
+        examples=[25],
+        ge=1.0,
+        le=200.0,
+    )
+
+
+class ModusContextResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    context: str = Field(
+        ..., description='Composed context for the intent (markdown or JSON fallback).'
+    )
+    context_items: list[dict[str, Any]] = Field(
+        ...,
+        alias='contextItems',
+        deprecated=True,
+        description='Deprecated. Always an empty array.',
+        examples=[[]],
+    )
+    original_count: float = Field(
+        ..., alias='originalCount', description='Total context items considered before filtering.'
+    )
+    session_id: str = Field(
+        ..., alias='sessionId', description='Session id used for this composition.'
+    )

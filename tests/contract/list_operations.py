@@ -129,6 +129,12 @@ def _conversations_invoke(client: Client) -> Any:
     return client.skills.conversations(42).list(page_size=25, page_token="tok_abc")
 
 
+def _modus_conversations_invoke(client: Client) -> Any:
+    return client.modus.conversations.list(
+        page_size=25, page_token="tok_abc", kind="modus"
+    )
+
+
 def _conversations_management_invoke(client: Client) -> Any:
     return client.skills.conversations(42).list(page_size=25, page_token="tok_abc")
 
@@ -203,6 +209,15 @@ SDK_AIP_LIST_OPERATIONS: List[ListOperationSpec] = [
         sample_item=SAMPLE_CONVERSATION_LIST_ITEM,
         client_kind="modus",
         invoke=_conversations_invoke,
+    ),
+    ListOperationSpec(
+        operation_id="ModusConversationsController_list",
+        mock_url_suffix="/api/v1/modus/conversations",
+        items_key="conversations",
+        wrong_items_key="skills",
+        sample_item=SAMPLE_CONVERSATION_LIST_ITEM,
+        client_kind="modus",
+        invoke=_modus_conversations_invoke,
     ),
     ListOperationSpec(
         operation_id="SkillsController_list",

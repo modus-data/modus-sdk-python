@@ -45,6 +45,17 @@ def _chat_path(
     return f"/api/v1/{resource}/{safe_id}/chat{suffix}"
 
 
+def _modus_chat_path(*, thread_id: Optional[str], stream: bool) -> str:
+    suffix = "/stream" if stream else ""
+    if thread_id is not None:
+        validate_id(thread_id, name="thread_id")
+    tid = _effective_thread_id(thread_id)
+    if tid is not None:
+        safe_tid = quote(str(tid), safe="")
+        return f"/api/v1/modus/conversations/{safe_tid}/chat{suffix}"
+    return f"/api/v1/modus/chat{suffix}"
+
+
 def _chat_body(message: str, model: str) -> Dict[str, Any]:
     return SkillChatRequestDto(message=message, model=model).model_dump(  # type: ignore[arg-type]
         by_alias=True,
@@ -236,6 +247,56 @@ def chat_stream_session_async(
     validate_id(resource_id, name=f"{resource}_id")
     validate_chat_model(model)
     path = _chat_path(resource, resource_id, thread_id=thread_id, stream=True)
+    return AsyncChatStream(http, path, _chat_body(message, model))
+
+
+def modus_chat_buffered(
+    http: HttpClient,
+    message: str,
+    *,
+    model: str,
+    thread_id: Optional[str] = None,
+) -> ChatResult:
+    validate_chat_model(model)
+    path = _modus_chat_path(thread_id=thread_id, stream=False)
+    data = http.post(path, json=_chat_body(message, model))
+    return SkillChatResponseDto.model_validate(data)
+
+
+async def modus_chat_buffered_async(
+    http: AsyncHttpClient,
+    message: str,
+    *,
+    model: str,
+    thread_id: Optional[str] = None,
+) -> ChatResult:
+    validate_chat_model(model)
+    path = _modus_chat_path(thread_id=thread_id, stream=False)
+    data = await http.post(path, json=_chat_body(message, model))
+    return SkillChatResponseDto.model_validate(data)
+
+
+def modus_chat_stream_session(
+    http: HttpClient,
+    message: str,
+    *,
+    model: str,
+    thread_id: Optional[str] = None,
+) -> ChatStream:
+    validate_chat_model(model)
+    path = _modus_chat_path(thread_id=thread_id, stream=True)
+    return ChatStream(http, path, _chat_body(message, model))
+
+
+def modus_chat_stream_session_async(
+    http: AsyncHttpClient,
+    message: str,
+    *,
+    model: str,
+    thread_id: Optional[str] = None,
+) -> AsyncChatStream:
+    validate_chat_model(model)
+    path = _modus_chat_path(thread_id=thread_id, stream=True)
     return AsyncChatStream(http, path, _chat_body(message, model))
 
 

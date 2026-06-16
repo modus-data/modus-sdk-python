@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **`client.modus`** — native Modus assistant (`chat`, `chat_stream`, `get_context`, `conversations` with `kind` filter). Org-wide full-environment access; not `skills.chat(0)`.
+
 ## [0.1.6] — 2026-06-15
 
 ### Added
