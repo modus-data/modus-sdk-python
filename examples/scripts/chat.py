@@ -1,8 +1,9 @@
 """
 Skill chat: buffered reply then follow-up on the same thread.
 
-Uses API credits. Public modus-api chat is buffered JSON today; for SSE
-streaming against agent-service directly, see examples/apps/modus_skill_chat/.
+For org-wide Modus chat (home-page assistant), see modus_chat.py.
+
+Uses API credits. Requires a token with skills:invoke.
 
 Setup:
     export MODUS_API_KEY=modus_xxx

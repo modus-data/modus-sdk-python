@@ -18,13 +18,14 @@ Official Python client for Modus — your organization's context layer for AI.
 
 Modus is your organization's context layer: it connects assistants to curated knowledge about your data, systems, and workflows so answers use org-specific context instead of generic guesses.
 
-- **Skills** — interactive assistants you chat with
+- **Modus** — your org-wide assistant (same capability as the Modus home page)
+- **Skills** — published assistants you chat with, each with its own context and tools
 - **Agents** — automations that run on a schedule or trigger
-- **Context items** — curated knowledge Modus composes at runtime when a skill or agent answers
+- **Context items** — curated knowledge Modus composes at runtime when answering
 
 ## Two clients in one package
 
-**`modus.Modus()`** is what most people need. Use it to run skills, chat, browse context, and trigger agents — the same things you do in the Modus app day to day.
+**`modus.Modus()`** is what most people need. Use it to chat with Modus, run skills, browse context, and inspect agent runs — the same things you do in the Modus app day to day.
 
 **`modus.management.ModusManagement()`** is for org setup: create, update, and deploy skills, agents, and context — the CRUD operations you would use in the Modus UI as an admin.
 
@@ -72,17 +73,39 @@ client = modus.Modus(api_key="modus_xxx")
 
 ## Using Modus
 
+### Modus vs skills
+
+| Surface | SDK | Use when |
+|---------|-----|----------|
+| **Modus** (org-wide) | `client.modus.*` | Full-environment assistant — same as the Modus home page |
+| **Skill** | `client.skills.*` | A specific published skill and its configured context/tools |
+
+Use `client.modus.chat()` for native Modus — not `skills.chat(0)` or any other skill id shortcut.
+
 ### Org-wide Modus assistant
 
 ```python
 MODEL = "claude-sonnet-4.6"
 
 result = client.modus.chat("What were our top revenue drivers last quarter?", model=MODEL)
-print(result.text, result.thread_id)
+print(result.content, result.thread_id)
+
+follow_up = client.modus.chat(
+    "Break that down by region.",
+    model=MODEL,
+    thread_id=result.thread_id,
+)
+print(follow_up.content)
 
 with client.modus.chat_stream("Summarize this week", model=MODEL) as stream:
     for chunk in stream.text_stream:
         print(chunk, end="")
+
+ctx = client.modus.get_context("What tables describe customer churn?", limit=10)
+print(ctx.original_count, ctx.session_id)
+
+for row in client.modus.conversations.list(kind="modus", page_size=10):
+    print(row.thread_id, row.first_message)
 ```
 
 ### Skills
@@ -91,7 +114,7 @@ with client.modus.chat_stream("Summarize this week", model=MODEL) as stream:
 MODEL = "claude-sonnet-4.6"
 
 result = client.skills.chat(skill_id, "Hello", model=MODEL)
-print(result.text, result.thread_id)
+print(result.content, result.thread_id)
 
 with client.skills.chat_stream(skill_id, "Hi", model=MODEL) as stream:
     for chunk in stream.text_stream:
@@ -113,7 +136,7 @@ for run in client.agents.runs.list(agent_id, page_size=20):
     print(run.id, run.status)
 ```
 
-Agent chat is not on the public PAT surface; use skill chat above or the Modus app for conversational agents.
+Agent chat is not on the public PAT surface. Use `client.modus.chat()` for org-wide conversation or `client.skills.chat()` for a published skill.
 
 ## Managing your org
 
@@ -136,6 +159,8 @@ for skill in client.skills.list().auto_paging_iter():
     print(skill.name)
 ```
 
+`client.modus.conversations.list()` accepts `kind="modus"`, `"skills"`, or `"all"` (default).
+
 ## Async
 
 ```python
@@ -144,6 +169,9 @@ import modus
 
 async def main():
     async with modus.AsyncModus() as client:
+        result = await client.modus.chat("Hello", model="claude-sonnet-4.6")
+        print(result.content)
+
         async for skill in client.skills.list().auto_paging_iter():
             print(skill.name)
 
@@ -170,7 +198,8 @@ except modus.ModusError as e:
 Runnable scripts ship with the package:
 
 - `examples/scripts/quickstart.py` — list skills and context (`Modus`)
-- `examples/scripts/chat.py` — buffered and streaming skill chat
+- `examples/scripts/modus_chat.py` — buffered and streaming Modus chat, context compose, conversations
+- `examples/scripts/chat.py` — buffered skill chat with thread follow-up
 - `examples/scripts/manage_skill.py` — create and deploy a skill (`ModusManagement`, `--write` optional)
 
-Optional Streamlit demo: `examples/apps/modus_skill_chat/` (streaming vs buffered side by side).
+Optional Streamlit demo: `examples/apps/modus_skill_chat/` (streaming vs buffered skill chat side by side).

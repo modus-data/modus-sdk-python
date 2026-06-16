@@ -4,9 +4,17 @@
 
 ## [Unreleased]
 
+## [0.1.7] — 2026-06-16
+
 ### Added
 
 - **`client.modus`** — native Modus assistant (`chat`, `chat_stream`, `get_context`, `conversations` with `kind` filter). Org-wide full-environment access; not `skills.chat(0)`.
+- Shipped example `examples/scripts/modus_chat.py`.
+
+### Changed
+
+- README: Modus vs skills guide, `client.modus` usage (follow-up threads, streaming, context compose, conversations), and `result.content` fixes.
+- Dev examples: `modus_chat_demo.py`, `async_modus_chat.py`; skill chat example docstrings updated for public streaming.
 
 ## [0.1.6] — 2026-06-15
 
