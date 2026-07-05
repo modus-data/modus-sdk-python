@@ -1,0 +1,83 @@
+[build-system]
+requires = ["hatchling","hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "modus-sdk"
+dynamic = ["version"]
+description = "Official Python client for Modus — your organization's context layer for AI"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = ["modus", "ai", "data", "sdk"]
+dependencies = [
+    "httpx>=0.27.0,<1.0.0",
+    "pydantic>=2.0.0,<3.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.3",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "respx>=0.21",
+    "mypy>=1.10",
+    "ruff>=0.15",
+    "datamodel-code-generator>=0.60.0,<0.61",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+    "integration: live modus-api smoke (requires MODUS_API_KEY and reachable API)",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["modus"]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/tests",
+  "/reports",
+  "/.pytest_cache",
+  "/.mypy_cache",
+  "/.venv",
+  "/dist",
+]
+
+[tool.coverage.run]
+source = ["modus"]
+omit = ["tests/*"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+# Library, tests, and sibling examples under distribution/clients/python/
+src = ["modus", "tests", "../dev-examples"]
+
+[tool.ruff.lint]
+# F: pyflakes (unused imports, etc.); I: isort; RUF021: parenthesize mixed and/or
+select = ["F", "I", "RUF021"]
+
+[tool.ruff.lint.per-file-ignores]
+"modus/_generated/__init__.py" = ["I001"]
+
+[tool.mypy]
+python_version = "3.10"
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_typed = true
+warn_required_dynamic_aliases = false
+
+[tool.hatch.version]
+source = "vcs"
+tag-pattern = "sdk-python/v(?P<version>[^/]+)"   # sdk-python/v0.1.0 → 0.1.0
+# sdk lives in monorepo subdir → search up for .git
+# no-local-version strips +g<hash> which PyPI/TestPyPI reject
+# fallback_version is used when no matching tag exists (pre-first-release / PR builds)
+raw-options = { search_parent_directories = true, local_scheme = "no-local-version", fallback_version = "0.0.0.dev0", git_describe_command = "git describe --dirty --tags --long --match sdk-python/v*" }
+
+[tool.hatch.build.hooks.vcs]
+version-file = "modus/_version.py"       # auto-generated at build time, gitignored

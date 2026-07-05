@@ -1,0 +1,179 @@
+{
+  "$defs": {
+    "UserFeedback": {
+      "enum": [
+        "negative",
+        "neutral",
+        "positive"
+      ],
+      "title": "UserFeedback",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "uid": {
+      "description": "Stable UUID for the context item. Use this on PATCH / DELETE / values endpoints.",
+      "examples": [
+        "7a3f9d2c-1111-4000-a000-000000000abc"
+      ],
+      "title": "Uid",
+      "type": "string"
+    },
+    "orgId": {
+      "description": "Org UUID this item belongs to. Matches the caller\u2019s principal.",
+      "examples": [
+        "00000000-0000-0000-0000-000000000001"
+      ],
+      "title": "Orgid",
+      "type": "string"
+    },
+    "contextType": {
+      "description": "Per-row context type identifier \u2014 one of `note`, `link`, `saved_query`, plus the dozens of integration-driven types (e.g. `looker_dashboard_metadata`, `salesforce_object_field`).",
+      "examples": [
+        "note"
+      ],
+      "title": "Contexttype",
+      "type": "string"
+    },
+    "content": {
+      "additionalProperties": true,
+      "description": "Type-specific JSON content. Shape varies by `contextType`; treat as opaque unless you know the kind.",
+      "title": "Content",
+      "type": "object"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Human-readable description (separate from the type-specific `content` blob).",
+      "examples": [
+        "Q3 churn analysis notes"
+      ],
+      "title": "Description"
+    },
+    "userFeedback": {
+      "$ref": "#/$defs/UserFeedback",
+      "description": "User-supplied verification verdict. `positive` \u2248 approved/verified; `negative` \u2248 rejected/dismissed; `neutral` is the default.",
+      "examples": [
+        "neutral"
+      ]
+    },
+    "topics": {
+      "description": "Free-form topic tags. Used for sidebar filtering on the SPA.",
+      "examples": [
+        [
+          "analytics",
+          "q3"
+        ]
+      ],
+      "items": {
+        "type": "string"
+      },
+      "title": "Topics",
+      "type": "array"
+    },
+    "connectionId": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Originating integration connection id for integration-derived items. Null for user-created items.",
+      "examples": [
+        "00000000-0000-4000-a000-000000000111"
+      ],
+      "title": "Connectionid"
+    },
+    "selectionId": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Originating selection id (datamap-scoped) for integration-derived items.",
+      "examples": [
+        "00000000-0000-4000-a000-000000000222"
+      ],
+      "title": "Selectionid"
+    },
+    "dataPath": {
+      "description": "Hierarchical path that places the item inside the data map (used for filtering by data asset).",
+      "examples": [
+        [
+          "salesforce",
+          "00000000-0000-4000-a000-000000000111",
+          "Account",
+          "Name"
+        ]
+      ],
+      "items": {
+        "type": "string"
+      },
+      "title": "Datapath",
+      "type": "array"
+    },
+    "createdAt": {
+      "description": "Creation timestamp.",
+      "examples": [
+        "2026-05-01T10:00:00.000Z"
+      ],
+      "title": "Createdat",
+      "type": "string"
+    },
+    "updatedAt": {
+      "description": "Most recent update timestamp.",
+      "examples": [
+        "2026-05-11T10:00:00.000Z"
+      ],
+      "title": "Updatedat",
+      "type": "string"
+    },
+    "lastUpdateMetadata": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Audit blob recording who/what last edited the item (`action`, `user_id`/`editedByName`/`editedByEmail`, `timestamp`). Used by the SPA to render the \"Last Update\" column.",
+      "examples": [
+        {
+          "action": "auto_analysis",
+          "timestamp": "2026-05-11T10:00:00.000Z"
+        }
+      ],
+      "title": "Lastupdatemetadata"
+    }
+  },
+  "required": [
+    "uid",
+    "orgId",
+    "contextType",
+    "content",
+    "userFeedback",
+    "topics",
+    "dataPath",
+    "createdAt",
+    "updatedAt"
+  ],
+  "title": "ContextItemDto",
+  "type": "object"
+}

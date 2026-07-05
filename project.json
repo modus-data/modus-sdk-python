@@ -1,0 +1,115 @@
+{
+  "name": "modus-sdk-python",
+  "sourceRoot": "distribution/clients/python/modus-sdk",
+  "projectType": "library",
+  "tags": ["scope:sdk", "type:lib", "lang:python"],
+  "implicitDependencies": ["modus-api", "agent-service", "openapi-portal"],
+  "targets": {
+    "install": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bash scripts/sdk-python/ensure-uv.sh sync --extra dev",
+        "cwd": "{workspaceRoot}"
+      },
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/pyproject.toml",
+        "{projectRoot}/uv.lock",
+        "{workspaceRoot}/scripts/sdk-python/ensure-uv.sh"
+      ]
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install"],
+      "options": {
+        "command": "bash -c 'mkdir -p reports && bash ../../../../scripts/sdk-python/ensure-uv.sh run pytest tests/ -v -m \"not integration\" --junit-xml=reports/pytest-junit.xml --tb=short'",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true,
+      "inputs": [
+        "default",
+        "{workspaceRoot}/apps/services/*/openapi/v1.json",
+        "{workspaceRoot}/packages/openapi-portal/src/**/*.ts"
+      ],
+      "outputs": ["{projectRoot}/reports"]
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install"],
+      "options": {
+        "command": "bash -c 'set -o pipefail; mkdir -p reports && bash ../../../../scripts/sdk-python/ensure-uv.sh run ruff check modus/ tests/ ../dev-examples/ 2>&1 | tee reports/ruff.log && bash ../../../../scripts/sdk-python/ensure-uv.sh run mypy modus/ 2>&1 | tee reports/mypy.log'",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true,
+      "inputs": [
+        "default",
+        "{workspaceRoot}/apps/services/*/openapi/v1.json",
+        "{workspaceRoot}/packages/openapi-portal/src/**/*.ts"
+      ],
+      "outputs": ["{projectRoot}/reports"]
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install"],
+      "options": {
+        "command": "bash ../../../../scripts/sdk-python/ensure-uv.sh build",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true,
+      "inputs": ["{projectRoot}/pyproject.toml", "{projectRoot}/uv.lock", "default"],
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "check-docstrings": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bash -c 'bash ../scripts/check-sdk-public-docstrings.sh && python3 ../scripts/check-generated-model-names.py'",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/modus/**/*.py",
+        "{projectRoot}/modus/_generated/models.py",
+        "{workspaceRoot}/distribution/clients/python/scripts/check-sdk-public-docstrings.sh",
+        "{workspaceRoot}/distribution/clients/python/scripts/check-generated-model-names.py"
+      ]
+    },
+    "requirements-drift": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install"],
+      "options": {
+        "command": "bash scripts/check-snyk-requirements-drift.sh",
+        "cwd": "{workspaceRoot}/distribution/clients/python"
+      },
+      "cache": false
+    },
+    "generate": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        { "projects": ["modus-api", "agent-service"], "target": "openapi:generate" },
+        { "projects": ["openapi-portal"], "target": "build" },
+        "install"
+      ],
+      "options": {
+        "command": "bash ../../../../scripts/sdk-python/ensure-uv.sh run python ../scripts/generate-sdk-from-openapi.py",
+        "cwd": "{projectRoot}"
+      },
+      "cache": false,
+      "inputs": [
+        "{workspaceRoot}/apps/services/*/openapi/v1.json",
+        "{workspaceRoot}/packages/openapi-portal/src/**/*.ts",
+        "{workspaceRoot}/distribution/clients/python/scripts/generate-sdk-from-openapi.py",
+        "{workspaceRoot}/distribution/clients/python/scripts/emit-openapi-operations.py"
+      ],
+      "outputs": ["{projectRoot}/modus/_generated/**"]
+    },
+    "openapi-impact": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install"],
+      "options": {
+        "command": "bash ../scripts/ci-openapi-sdk-impact.sh",
+        "cwd": "{projectRoot}"
+      },
+      "cache": false
+    }
+  }
+}

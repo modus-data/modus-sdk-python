@@ -1,0 +1,68 @@
+{
+  "$defs": {
+    "ContextItemKind": {
+      "enum": [
+        "note",
+        "saved_query",
+        "link"
+      ],
+      "title": "ContextItemKind",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "contextItemId": {
+      "description": "UUID of the newly-created context item. Use it on subsequent GET / PATCH / DELETE calls.",
+      "examples": [
+        "7a3f9d2c-1111-4000-a000-000000000abc"
+      ],
+      "title": "Contextitemid",
+      "type": "string"
+    },
+    "kind": {
+      "$ref": "#/$defs/ContextItemKind",
+      "description": "Kind of context item created.",
+      "examples": [
+        "note"
+      ]
+    },
+    "s3Key": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Tenant S3 key for the raw content blob (notes, saved queries, links). Null for kinds without S3 backing.",
+      "examples": [
+        "context_notes/7a3f9d2c.../Q3_churn_analysis.md"
+      ],
+      "title": "S3Key"
+    },
+    "title": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Resolved title for the created item. Null for kinds without a title field.",
+      "examples": [
+        "Q3 churn analysis"
+      ],
+      "title": "Title"
+    }
+  },
+  "required": [
+    "contextItemId",
+    "kind"
+  ],
+  "title": "CreatedContextItemResponseDto",
+  "type": "object"
+}

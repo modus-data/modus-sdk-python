@@ -1,0 +1,9 @@
+[project]
+name = "modus-skill-chat"
+version = "0.1.0"
+description = "Streamlit demo: streaming vs buffered Modus skill chat"
+requires-python = ">=3.11"
+dependencies = [
+    "modus-sdk>=0.1.3",
+    "streamlit>=1.40.0",
+]
