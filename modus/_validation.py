@@ -31,6 +31,7 @@ def validate_id(resource_id: Union[int, str], *, name: str = "id") -> None:
 # Canonical chat model ids from SkillChatRequestDto (keep in sync with the API spec).
 ALLOWED_CHAT_MODELS = frozenset({
     "claude-sonnet-5",
+    "claude-sonnet-4.6",
     "claude-opus-4.8",
     "gpt-5.2",
     "gpt-5.5",
