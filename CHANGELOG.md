@@ -1,6 +1,6 @@
 # Changelog
 
-**Current TestPyPI release:** [`0.1.6`](https://test.pypi.org/project/modus-sdk/) (2026-06-15). Production PyPI not yet published.
+**Current TestPyPI release:** [`0.1.7`](https://test.pypi.org/project/modus-sdk/) (2026-06-16). Production PyPI not yet published.
 
 ## [Unreleased]
 
@@ -16,6 +16,8 @@
 
 - **`selectedCount`** on scope and Modus context compose responses (REST + MCP `get_context`).
 - `conversations(scope_id).get()` (sync + async) accepts optional `message_limit` / `before_message_index` kwargs to request a bounded message window; the response gains an optional `message_window` field describing the returned slice. Omit both for the full conversation (unchanged default behavior).
+- **`client.suggestions`** (sync + async) — `list()` returns approved suggested questions (optional `skill_id(s)` filter), `record_event()` records an impression/click/dismiss event against a suggestion.
+- **`client.workflows.runs.active()` / `active_by_session(session_ids)`** (sync + async) — list active (queued/pending/running) conversation runs for the current user, or look up active runs for specific conversation thread ids.
 
 ### Removed
 
