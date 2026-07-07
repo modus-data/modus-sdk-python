@@ -9,7 +9,8 @@
 - **BREAKING: `client.scopes` / `client.workflows` and `mgmt.scopes` / `mgmt.workflows` are now canonical** (sync + async). They call the canonical `ScopesController_*` / `WorkflowsController_*` / `ScopeRunsController_*` / `WorkflowRunsController_*` operationIds against the `/api/v1/scopes` and `/api/v1/workflows` routes. Read types are unchanged (`Skill`, `Agent`). The subordinate scope-run helper is now `client.workflows.runs.create_scope(scope_id, body)` (was `create_skill`).
 - Generated `ModusChatRequestDto.message` is optional (omit when `approvalContinuation` is true), matching the public OpenAPI spec synced in #2907.
 - Generated models now mirror the pruned public OpenAPI schema set, removing internal-only orphan DTOs and reflecting non-nullable `slug` / `createdAt` fields as required strings.
-- **MCP `get_context_item`** — preview and full modes only; removed grep/range. Large files (>96KB) default to preview; follow up with `mode: "full"` on the same `sessionId` and path.
+- **MCP `fetch_item` (BREAKING)** — Renamed from `get_context_item`. Pass `{ sessionId, itemId, field? }` instead of `{ sessionId, path }`. `contextFiles[]` now exposes `itemId` + optional `field` (no internal storage paths). New error codes: `ITEM_NOT_ALLOWED`, `AMBIGUOUS_ITEM` (replaces `PATH_NOT_ALLOWED`).
+- **MCP `get_context_item` (removed)** — superseded by `fetch_item` above; preview/full modes unchanged (≤96KB full by default, `mode: "full"` follow-up on same `sessionId`, `itemId`, and `field`).
 - Public model **descriptions/docstrings** now use the canonical **Scope** / **Workflow** vocabulary (were Skill / Agent). Text-only — no field, type, method, or `Skill`/`Agent` type-name changes; regenerated from the updated OpenAPI descriptions.
 
 ### Added
