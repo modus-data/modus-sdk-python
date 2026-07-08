@@ -123,6 +123,38 @@
       "title": "ManageDenial",
       "type": "string"
     },
+    "ModelSettingsDto": {
+      "properties": {
+        "reasoningEffort": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReasoningEffort"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional reasoning effort for models that support it."
+        },
+        "contextWindow": {
+          "anyOf": [
+            {
+              "minimum": 1.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Selected model context window in tokens.",
+          "title": "Contextwindow"
+        }
+      },
+      "title": "ModelSettingsDto",
+      "type": "object"
+    },
     "PendingOwnershipTransferDto": {
       "properties": {
         "pendingOwnerUserId": {
@@ -173,6 +205,19 @@
       ],
       "title": "PendingOwnershipTransferDto",
       "type": "object"
+    },
+    "ReasoningEffort": {
+      "enum": [
+        "none",
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "title": "ReasoningEffort",
+      "type": "string"
     },
     "ResourceLifecycleStatus": {
       "enum": [
@@ -309,6 +354,18 @@
             "anthropic/claude-sonnet-5"
           ],
           "title": "Model"
+        },
+        "modelSettings": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModelSettingsDto"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Model-specific runtime controls such as reasoning effort and context window."
         },
         "toolset": {
           "additionalProperties": true,
