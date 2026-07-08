@@ -240,6 +240,21 @@
             "user_2xyz"
           ],
           "title": "Userid"
+        },
+        "permission": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SharedUserPermission"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Per-invitee access level for private scopes. `manage` grants edit / deploy / delete (implies use); `use` (default) grants run-only.",
+          "examples": [
+            "use"
+          ]
         }
       },
       "required": [
@@ -247,6 +262,14 @@
       ],
       "title": "SharedUserDto",
       "type": "object"
+    },
+    "SharedUserPermission": {
+      "enum": [
+        "use",
+        "manage"
+      ],
+      "title": "SharedUserPermission",
+      "type": "string"
     },
     "SkillVariationDto": {
       "properties": {

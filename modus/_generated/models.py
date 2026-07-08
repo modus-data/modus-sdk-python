@@ -1068,31 +1068,9 @@ class SearchMemoriesRequestDto(BaseModel):
     )
 
 
-class SharedUserDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    email: str = Field(
-        ...,
-        description='Lowercased email of a user explicitly granted access to a private scope.',
-        examples=['alice@example.com'],
-    )
-    added_at: str | None = Field(
-        None,
-        alias='addedAt',
-        description='ISO-8601 timestamp at which this user was added to the share list.',
-        examples=['2026-05-01T10:00:00Z'],
-    )
-    added_by: str | None = Field(
-        None,
-        alias='addedBy',
-        description='Clerk user id of the principal that added this share entry.',
-        examples=['user_2abc'],
-    )
-    user_id: str | None = Field(
-        None,
-        alias='userId',
-        description='Clerk user id of the invited user. Stored for display; access checks use email.',
-        examples=['user_2xyz'],
-    )
+class SharedUserPermission(str, Enum):
+    use = 'use'
+    manage = 'manage'
 
 
 class SkillChatRequestDto(BaseModel):
@@ -1528,44 +1506,6 @@ class WorkflowActionSource(str, Enum):
     other = 'other'
 
 
-class AccessConfigDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    visibility: Visibility = Field(
-        ...,
-        description='Visibility tier. `shared` applies the group-permission map; `private` ignores groups and uses owner + sharedWith for access.',
-        examples=['shared'],
-    )
-    group_permissions: dict[str, GroupPermissionDto] = Field(
-        ...,
-        alias='groupPermissions',
-        description='Map of group UUID -> { use, manage } booleans. Empty object when visibility is `private`.',
-        examples=[{'group_eng_uuid': {'use': True, 'manage': False}}],
-    )
-    guardrails: list[str] = Field(
-        ...,
-        description='Free-form guardrail labels enforced at run time (e.g. PII redaction profile names).',
-        examples=[[]],
-    )
-    shared_with: list[SharedUserDto] = Field(
-        ...,
-        alias='sharedWith',
-        description='Per-user share entries used for private-visibility scopes.',
-        examples=[[]],
-    )
-    owner_user_id: str | None = Field(
-        None,
-        alias='ownerUserId',
-        description='Clerk user id of the scope owner. Set on first write; cannot be changed by clients.',
-        examples=['user_2abc'],
-    )
-    owner_email: str | None = Field(
-        None,
-        alias='ownerEmail',
-        description='Lowercased email of the scope owner. Used by private-scope ACL when owner email matches.',
-        examples=['alice@example.com'],
-    )
-
-
 class AgentAccessConfigDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     visibility: Visibility = Field(
@@ -1835,106 +1775,35 @@ class RecordSuggestionEventDto(BaseModel):
     metadata: dict[str, Any] | None = Field(None, description='Event metadata.')
 
 
-class SkillDto(BaseModel):
+class SharedUserDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    id: float = Field(
+    email: str = Field(
         ...,
-        description='Numeric scope id (stable per-org; not reused after delete).',
-        examples=[42],
+        description='Lowercased email of a user explicitly granted access to a private scope.',
+        examples=['alice@example.com'],
     )
-    slug: str = Field(
-        ...,
-        description='URL-safe slug used in human-readable links. Unique per org.',
-        examples=['customer-churn-analyzer-a3f'],
-    )
-    name: str | None = Field(
-        ...,
-        description='Display name of the scope. Shown in the builder and in run logs.',
-        examples=['Customer Churn Analyzer'],
-    )
-    description: str | None = Field(
+    added_at: str | None = Field(
         None,
-        description='Optional one-paragraph description of what this scope does.',
-        examples=['Predicts churn risk for a customer given a 90-day usage window.'],
+        alias='addedAt',
+        description='ISO-8601 timestamp at which this user was added to the share list.',
+        examples=['2026-05-01T10:00:00Z'],
     )
-    status: ResourceLifecycleStatus = Field(
-        ...,
-        description='Lifecycle status. `draft` = never deployed. `active` = deployed. `deleted` = soft-deleted.',
-        examples=['active'],
-    )
-    org_uuid: str = Field(
-        ...,
-        alias='orgUuid',
-        description='Org UUID this scope belongs to. Matches the caller’s principal.',
-        examples=['00000000-0000-0000-0000-000000000001'],
-    )
-    active_variation_id: str | None = Field(
+    added_by: str | None = Field(
         None,
-        alias='activeVariationId',
-        description='Active (deployed) variation id. Null until the scope is first deployed.',
-        examples=['00000000-0000-4000-a000-000000000100'],
+        alias='addedBy',
+        description='Clerk user id of the principal that added this share entry.',
+        examples=['user_2abc'],
     )
-    draft_variation_id: str | None = Field(
+    user_id: str | None = Field(
         None,
-        alias='draftVariationId',
-        description='Most recent draft variation id. Null when there is no draft pending.',
-        examples=['00000000-0000-4000-a000-000000000101'],
+        alias='userId',
+        description='Clerk user id of the invited user. Stored for display; access checks use email.',
+        examples=['user_2xyz'],
     )
-    has_unpublished_changes: bool = Field(
-        ...,
-        alias='hasUnpublishedChanges',
-        description='True when the draft variation differs from the active variation (deploy would publish changes).',
-        examples=[False],
-    )
-    access_config: AccessConfigDto = Field(
-        ...,
-        alias='accessConfig',
-        description='Access configuration — who in the org can use / manage this scope.',
-    )
-    pending_ownership_transfer: (
-        PendingOwnershipTransferDto | None
-    ) = (
-        Field(None, alias='pendingOwnershipTransfer', description='Pending ownership transfer awaiting recipient acceptance. Absent when no request is in flight.')
-    )
-    variation: SkillVariationDto | None = Field(
+    permission: SharedUserPermission | None = Field(
         None,
-        description='Variation-detail payload (`toolset`, `instructions`, `model`, etc.) for the requested view. Present on detail responses; absent on list rows.',
-    )
-    created_at: str = Field(
-        ...,
-        alias='createdAt',
-        description='Creation timestamp.',
-        examples=['2026-05-01T10:00:00.000Z'],
-    )
-    updated_at: str = Field(
-        ...,
-        alias='updatedAt',
-        description='Most recent update timestamp.',
-        examples=['2026-05-11T10:00:00.000Z'],
-    )
-    deleted_at: str | None = Field(
-        None,
-        alias='deletedAt',
-        description='Soft-delete timestamp. Null for active scopes.',
-        examples=[None],
-    )
-    can_manage: bool = Field(
-        ...,
-        alias='canManage',
-        description='Whether the requesting principal can manage (edit/delete/deploy) this scope. Derived server-side from the principal + accessConfig. Present on every Scope response.',
-        examples=[True],
-    )
-    can_use: bool = Field(
-        ...,
-        alias='canUse',
-        description='Whether the requesting principal can use (run, view history of) this scope. Derived server-side from the principal + accessConfig.',
-        examples=[True],
-    )
-    manage_denial: ManageDenial | None = Field(
-        ...,
-        alias='manageDenial',
-        description='Why `canManage` is false, for client-facing guidance: `needs_group_manage` (shared, but no group you belong to grants Manage) or `not_owner` (private, and you are not the owner). `null` when `canManage` is true.',
-        examples=['needs_group_manage'],
+        description='Per-invitee access level for private scopes. `manage` grants edit / deploy / delete (implies use); `use` (default) grants run-only.',
+        examples=['use'],
     )
 
 
@@ -1993,76 +1862,6 @@ class UpdateAgentDto(BaseModel):
         None,
         alias='accessConfig',
         description='Updated access configuration. The service rejects changes that would lock the caller out of use + manage.',
-    )
-
-
-class UpdateSkillDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    name: str | None = Field(
-        None,
-        description='New display name for the scope.',
-        examples=['Customer Churn Analyzer v2'],
-        max_length=200,
-        min_length=1,
-    )
-    description: str | None = Field(
-        None,
-        description='Updated description.',
-        examples=['Predicts churn risk over a 180-day window.'],
-    )
-    expected_output: str | None = Field(
-        None,
-        alias='expectedOutput',
-        description='Updated expected-output summary, used when this scope is supervised.',
-        examples=['JSON: { churn_probability: number }'],
-    )
-    instructions: list[str] | None = Field(
-        None,
-        description='Updated instruction fragments. Replaces the prior list when present.',
-        examples=[['You are a senior data analyst.']],
-    )
-    toolset: ToolsetDto | None = Field(None, description='Updated toolset configuration.')
-    model: str | None = Field(
-        None,
-        description='Updated model id. Pass `null` (explicit) to clear and use the org default.',
-        examples=['claude-sonnet-4-5'],
-    )
-    connection_set: list[dict[str, Any]] | None = Field(
-        None,
-        alias='connectionSet',
-        description='Updated connection set. Shape is integration-specific.',
-        examples=[[]],
-    )
-    context_selections: list[dict[str, Any]] | None = Field(
-        None,
-        alias='contextSelections',
-        description='Updated context selections (sources / docs the scope may read).',
-        examples=[[]],
-    )
-    interfaces: list[dict[str, Any]] | None = Field(
-        None, description='Updated interface configuration.', examples=[[]]
-    )
-    evaluations: list[dict[str, Any]] | None = Field(
-        None,
-        description='Updated evaluation entries (task + expected-output pairs) saved for the draft variation. Replaces the prior list when present.',
-        examples=[[]],
-    )
-    supervision_subordinate_descriptions: dict[str, str] | None = Field(
-        None,
-        alias='supervisionSubordinateDescriptions',
-        description='Map of subordinate scope id (stringified) to the manager-provided description blurb. Replaces the prior map when present.',
-        examples=[{'12': 'Reads warehouse facts', '17': 'Drafts the report'}],
-    )
-    access_config: AccessConfigDto | None = Field(
-        None,
-        alias='accessConfig',
-        description='Updated access configuration. The service rejects changes that would lock the caller out of use + manage.',
-    )
-    manager_id: float | None = Field(
-        None,
-        alias='managerId',
-        description='Re-parent the scope under a new manager (or remove its current manager when null). When this field is present, all other fields are ignored.',
-        examples=[17],
     )
 
 
@@ -2148,6 +1947,44 @@ class WorkflowActionDto(BaseModel):
     )
     source: WorkflowActionSource | None = Field(
         None, description='UI surface that triggered this action.'
+    )
+
+
+class AccessConfigDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    visibility: Visibility = Field(
+        ...,
+        description='Visibility tier. `shared` applies the group-permission map; `private` ignores groups and uses owner + sharedWith for access.',
+        examples=['shared'],
+    )
+    group_permissions: dict[str, GroupPermissionDto] = Field(
+        ...,
+        alias='groupPermissions',
+        description='Map of group UUID -> { use, manage } booleans. Empty object when visibility is `private`.',
+        examples=[{'group_eng_uuid': {'use': True, 'manage': False}}],
+    )
+    guardrails: list[str] = Field(
+        ...,
+        description='Free-form guardrail labels enforced at run time (e.g. PII redaction profile names).',
+        examples=[[]],
+    )
+    shared_with: list[SharedUserDto] = Field(
+        ...,
+        alias='sharedWith',
+        description='Per-user share entries used for private-visibility scopes.',
+        examples=[[]],
+    )
+    owner_user_id: str | None = Field(
+        None,
+        alias='ownerUserId',
+        description='Clerk user id of the scope owner. Set on first write; cannot be changed by clients.',
+        examples=['user_2abc'],
+    )
+    owner_email: str | None = Field(
+        None,
+        alias='ownerEmail',
+        description='Lowercased email of the scope owner. Used by private-scope ACL when owner email matches.',
+        examples=['alice@example.com'],
     )
 
 
@@ -2300,31 +2137,176 @@ class CreateSkillDto(BaseModel):
     )
 
 
-class DeployResponseDto(BaseModel):
+class SkillDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    skill: SkillDto = Field(
+    id: float = Field(
         ...,
-        description='The scope after the deploy. `hasUnpublishedChanges` is false and `activeVariationId` matches the newly-published variation.',
+        description='Numeric scope id (stable per-org; not reused after delete).',
+        examples=[42],
     )
-    deployed_at: str = Field(
+    slug: str = Field(
         ...,
-        alias='deployedAt',
-        description='Server-side timestamp at which the deploy completed.',
+        description='URL-safe slug used in human-readable links. Unique per org.',
+        examples=['customer-churn-analyzer-a3f'],
+    )
+    name: str | None = Field(
+        ...,
+        description='Display name of the scope. Shown in the builder and in run logs.',
+        examples=['Customer Churn Analyzer'],
+    )
+    description: str | None = Field(
+        None,
+        description='Optional one-paragraph description of what this scope does.',
+        examples=['Predicts churn risk for a customer given a 90-day usage window.'],
+    )
+    status: ResourceLifecycleStatus = Field(
+        ...,
+        description='Lifecycle status. `draft` = never deployed. `active` = deployed. `deleted` = soft-deleted.',
+        examples=['active'],
+    )
+    org_uuid: str = Field(
+        ...,
+        alias='orgUuid',
+        description='Org UUID this scope belongs to. Matches the caller’s principal.',
+        examples=['00000000-0000-0000-0000-000000000001'],
+    )
+    active_variation_id: str | None = Field(
+        None,
+        alias='activeVariationId',
+        description='Active (deployed) variation id. Null until the scope is first deployed.',
+        examples=['00000000-0000-4000-a000-000000000100'],
+    )
+    draft_variation_id: str | None = Field(
+        None,
+        alias='draftVariationId',
+        description='Most recent draft variation id. Null when there is no draft pending.',
+        examples=['00000000-0000-4000-a000-000000000101'],
+    )
+    has_unpublished_changes: bool = Field(
+        ...,
+        alias='hasUnpublishedChanges',
+        description='True when the draft variation differs from the active variation (deploy would publish changes).',
+        examples=[False],
+    )
+    access_config: AccessConfigDto = Field(
+        ...,
+        alias='accessConfig',
+        description='Access configuration — who in the org can use / manage this scope.',
+    )
+    pending_ownership_transfer: (
+        PendingOwnershipTransferDto | None
+    ) = (
+        Field(None, alias='pendingOwnershipTransfer', description='Pending ownership transfer awaiting recipient acceptance. Absent when no request is in flight.')
+    )
+    variation: SkillVariationDto | None = Field(
+        None,
+        description='Variation-detail payload (`toolset`, `instructions`, `model`, etc.) for the requested view. Present on detail responses; absent on list rows.',
+    )
+    created_at: str = Field(
+        ...,
+        alias='createdAt',
+        description='Creation timestamp.',
+        examples=['2026-05-01T10:00:00.000Z'],
+    )
+    updated_at: str = Field(
+        ...,
+        alias='updatedAt',
+        description='Most recent update timestamp.',
         examples=['2026-05-11T10:00:00.000Z'],
     )
-
-
-class ListSkillsResponseDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    skills: list[SkillDto] = Field(
-        ...,
-        description='Page of scopes the caller can at least `use`. Scopes the caller cannot see are filtered out (not enumerated).',
+    deleted_at: str | None = Field(
+        None,
+        alias='deletedAt',
+        description='Soft-delete timestamp. Null for active scopes.',
+        examples=[None],
     )
-    next_page_token: str | None = Field(
+    can_manage: bool = Field(
         ...,
-        alias='nextPageToken',
-        description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
-        examples=['eyJsYXN0SWQiOjQyfQ'],
+        alias='canManage',
+        description='Whether the requesting principal can manage (edit/delete/deploy) this scope. Derived server-side from the principal + accessConfig. Present on every Scope response.',
+        examples=[True],
+    )
+    can_use: bool = Field(
+        ...,
+        alias='canUse',
+        description='Whether the requesting principal can use (run, view history of) this scope. Derived server-side from the principal + accessConfig.',
+        examples=[True],
+    )
+    manage_denial: ManageDenial | None = Field(
+        ...,
+        alias='manageDenial',
+        description='Why `canManage` is false, for client-facing guidance: `needs_group_manage` (shared, but no group you belong to grants Manage) or `not_owner` (private, and you are not the owner). `null` when `canManage` is true.',
+        examples=['needs_group_manage'],
+    )
+
+
+class UpdateSkillDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    name: str | None = Field(
+        None,
+        description='New display name for the scope.',
+        examples=['Customer Churn Analyzer v2'],
+        max_length=200,
+        min_length=1,
+    )
+    description: str | None = Field(
+        None,
+        description='Updated description.',
+        examples=['Predicts churn risk over a 180-day window.'],
+    )
+    expected_output: str | None = Field(
+        None,
+        alias='expectedOutput',
+        description='Updated expected-output summary, used when this scope is supervised.',
+        examples=['JSON: { churn_probability: number }'],
+    )
+    instructions: list[str] | None = Field(
+        None,
+        description='Updated instruction fragments. Replaces the prior list when present.',
+        examples=[['You are a senior data analyst.']],
+    )
+    toolset: ToolsetDto | None = Field(None, description='Updated toolset configuration.')
+    model: str | None = Field(
+        None,
+        description='Updated model id. Pass `null` (explicit) to clear and use the org default.',
+        examples=['claude-sonnet-4-5'],
+    )
+    connection_set: list[dict[str, Any]] | None = Field(
+        None,
+        alias='connectionSet',
+        description='Updated connection set. Shape is integration-specific.',
+        examples=[[]],
+    )
+    context_selections: list[dict[str, Any]] | None = Field(
+        None,
+        alias='contextSelections',
+        description='Updated context selections (sources / docs the scope may read).',
+        examples=[[]],
+    )
+    interfaces: list[dict[str, Any]] | None = Field(
+        None, description='Updated interface configuration.', examples=[[]]
+    )
+    evaluations: list[dict[str, Any]] | None = Field(
+        None,
+        description='Updated evaluation entries (task + expected-output pairs) saved for the draft variation. Replaces the prior list when present.',
+        examples=[[]],
+    )
+    supervision_subordinate_descriptions: dict[str, str] | None = Field(
+        None,
+        alias='supervisionSubordinateDescriptions',
+        description='Map of subordinate scope id (stringified) to the manager-provided description blurb. Replaces the prior map when present.',
+        examples=[{'12': 'Reads warehouse facts', '17': 'Drafts the report'}],
+    )
+    access_config: AccessConfigDto | None = Field(
+        None,
+        alias='accessConfig',
+        description='Updated access configuration. The service rejects changes that would lock the caller out of use + manage.',
+    )
+    manager_id: float | None = Field(
+        None,
+        alias='managerId',
+        description='Re-parent the scope under a new manager (or remove its current manager when null). When this field is present, all other fields are ignored.',
+        examples=[17],
     )
 
 
@@ -2458,4 +2440,32 @@ class SkillRunDto(BaseModel):
         None,
         alias='subordinateSkillIds',
         description='Subordinate scope ids for an unsaved supervisor-scope draft test.',
+    )
+
+
+class DeployResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    skill: SkillDto = Field(
+        ...,
+        description='The scope after the deploy. `hasUnpublishedChanges` is false and `activeVariationId` matches the newly-published variation.',
+    )
+    deployed_at: str = Field(
+        ...,
+        alias='deployedAt',
+        description='Server-side timestamp at which the deploy completed.',
+        examples=['2026-05-11T10:00:00.000Z'],
+    )
+
+
+class ListSkillsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    skills: list[SkillDto] = Field(
+        ...,
+        description='Page of scopes the caller can at least `use`. Scopes the caller cannot see are filtered out (not enumerated).',
+    )
+    next_page_token: str | None = Field(
+        ...,
+        alias='nextPageToken',
+        description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
+        examples=['eyJsYXN0SWQiOjQyfQ'],
     )
