@@ -937,7 +937,7 @@ class ModusChatRequestDto(BaseModel):
     model: Model | None = Field(
         ...,
         description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-4.6, claude-opus-4.8, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3.',
-        examples=['claude-sonnet-5'],
+        examples=['claude-sonnet-4.6'],
     )
     approval_continuation: bool | None = Field(
         None,
@@ -1094,7 +1094,7 @@ class SkillChatRequestDto(BaseModel):
     model: Model | None = Field(
         ...,
         description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-4.6, claude-opus-4.8, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3.',
-        examples=['claude-sonnet-5'],
+        examples=['claude-sonnet-4.6'],
     )
 
 
@@ -1767,7 +1767,7 @@ class SkillVariationDto(BaseModel):
     model: str | None = Field(
         ...,
         description='Provider-prefixed model id. The orchestrator routes by prefix.',
-        examples=['anthropic/claude-sonnet-5'],
+        examples=['anthropic/claude-sonnet-4.6'],
     )
     model_settings: ModelSettingsDto | None = Field(
         None,
@@ -2347,7 +2347,7 @@ class UpdateSkillDto(BaseModel):
 
 class RunConfigDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    model: str | None = Field(None, description='Model id, e.g. anthropic/claude-sonnet-5.')
+    model: str | None = Field(None, description='Model id, e.g. anthropic/claude-sonnet-4.6.')
     model_settings: RunModelSettingsDto | None = Field(
         None, alias='modelSettings', description='Model-specific runtime controls.'
     )
