@@ -29,6 +29,11 @@ OPERATIONS: dict[str, str] = {
     "ScopeMemoriesController_search": "mgmt.scopes.memories(id).search()",
     "ScopeMemoriesController_update": "mgmt.scopes.memories(id).update()",
     "ScopeMemoriesController_delete": "mgmt.scopes.memories(id).delete()",
+    "EvaluationsController_getConfig": "mgmt.scopes.evaluations(id).get_config()",
+    "EvaluationsController_updateConfig": "mgmt.scopes.evaluations(id).update_config()",
+    "EvaluationsController_triggerRun": "mgmt.scopes.evaluations(id).trigger_run()",
+    "EvaluationsController_listRuns": "mgmt.scopes.evaluations(id).list_runs()",
+    "EvaluationsController_getRun": "mgmt.scopes.evaluations(id).get_run(run_id)",
     "ScopeRunsController_create": "client.workflows.runs.create_scope(scope_id, body)",
     # --- Workflows (/api/v1/workflows) ---
     "WorkflowsController_list": "client.workflows.list() / mgmt.workflows.list()",

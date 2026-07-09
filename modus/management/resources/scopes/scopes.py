@@ -36,6 +36,11 @@ from .conversations import (
     ScopeConversationsOperations,
     ScopeConversationsResource,
 )
+from .evaluations import (
+    SCOPE_EVALUATION_OPERATIONS,
+    ScopeEvaluationsOperations,
+    ScopeEvaluationsResource,
+)
 from .memories import (
     SCOPE_MEMORY_OPERATIONS,
     AsyncScopeMemoriesResource,
@@ -67,6 +72,7 @@ class ManagementScopesOperations:
     get_variation: str
     conversations: ScopeConversationsOperations
     memories: ScopeMemoriesOperations
+    evaluations: ScopeEvaluationsOperations
 
 
 MANAGEMENT_SCOPE_OPERATIONS = ManagementScopesOperations(
@@ -84,6 +90,7 @@ MANAGEMENT_SCOPE_OPERATIONS = ManagementScopesOperations(
     get_variation="ScopesController_getVariation",
     conversations=SCOPE_CONVERSATION_OPERATIONS,
     memories=SCOPE_MEMORY_OPERATIONS,
+    evaluations=SCOPE_EVALUATION_OPERATIONS,
 )
 
 
@@ -139,6 +146,10 @@ class ScopesResource:
     def memories(self, scope_id: Union[int, str]) -> ScopeMemoriesResource:
         """Return the memories sub-resource scoped to ``scope_id``."""
         return ScopeMemoriesResource(self._http, self._config, scope_id, self._ops.memories)
+
+    def evaluations(self, scope_id: Union[int, str]) -> ScopeEvaluationsResource:
+        """Return the evaluations sub-resource scoped to ``scope_id``."""
+        return ScopeEvaluationsResource(self._http, self._config, scope_id, self._ops.evaluations)
 
     def list(
         self,

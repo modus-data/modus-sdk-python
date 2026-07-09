@@ -614,6 +614,89 @@ class ErrorResponseDto(BaseModel):
     error: ErrorEnvelopeDto
 
 
+class EvaluationCadenceFrequency(str, Enum):
+    daily = 'daily'
+    weekly = 'weekly'
+    monthly = 'monthly'
+    custom = 'custom'
+
+
+class EvaluationRecipientDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    clerk_user_id: str = Field(..., alias='clerkUserId', description='Clerk user ID')
+    email: str = Field(..., description='Email address')
+    name: dict[str, Any] | None = Field(None, description='Display name')
+
+
+class EvaluationResultDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(..., description='Result ID')
+    case_id: str = Field(..., alias='caseId', description='Evaluation case ID')
+    task: str = Field(..., description='Task that was evaluated')
+    expected_output: str = Field(..., alias='expectedOutput', description='Expected output')
+    actual_output: dict[str, Any] | None = Field(
+        None, alias='actualOutput', description='Actual output from the scope'
+    )
+    passed: dict[str, Any] | None = Field(None, description='Whether the case passed')
+    score: dict[str, Any] | None = Field(None, description='Score (0-100)')
+    reasoning: dict[str, Any] | None = Field(None, description='Judge reasoning')
+    was_passing_before: dict[str, Any] | None = Field(
+        None,
+        alias='wasPassingBefore',
+        description='Whether this case was passing in the previous run',
+    )
+
+
+class EvaluationRunStatus(str, Enum):
+    running = 'running'
+    completed = 'completed'
+    completed_with_errors = 'completed_with_errors'
+    failed = 'failed'
+
+
+class EvaluationRunTrigger(str, Enum):
+    scheduled = 'scheduled'
+    manual = 'manual'
+
+
+class EvaluationRunWithResultsDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(..., description='Run ID')
+    skill_id: float | None = Field(..., alias='skillId', description='Scope ID')
+    trigger: EvaluationRunTrigger | None = Field(..., description='How the run was triggered')
+    status: EvaluationRunStatus = Field(..., description='Run status')
+    started_at: str = Field(..., alias='startedAt', description='When the run started')
+    finished_at: dict[str, Any] | None = Field(
+        None, alias='finishedAt', description='When the run finished'
+    )
+    total_cases: float = Field(
+        ..., alias='totalCases', description='Total number of evaluation cases'
+    )
+    passed_cases: float = Field(..., alias='passedCases', description='Number of passed cases')
+    failed_cases: float = Field(..., alias='failedCases', description='Number of failed cases')
+    avg_score: dict[str, Any] | None = Field(
+        None, alias='avgScore', description='Average score (0-100)'
+    )
+    is_regression: bool = Field(
+        ..., alias='isRegression', description='Whether this run detected a regression'
+    )
+    judge_model: str | None = Field(None, alias='judgeModel', description='Judge model used')
+    error_message: str | None = Field(
+        None, alias='errorMessage', description='Error message if failed'
+    )
+    results: list[EvaluationResultDto] = Field(..., description='Per-case results')
+
+
+class EvaluationSlackChannelDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    nango_connection_id: str = Field(
+        ..., alias='nangoConnectionId', description='Nango connection ID for Slack'
+    )
+    slack_user_id_by_recipient: dict[str, Any] = Field(
+        ..., alias='slackUserIdByRecipient', description='Mapping of Clerk user ID to Slack user ID'
+    )
+
+
 class StatusReason(str, Enum):
     approval_timeout = 'approval_timeout'
 
@@ -1195,6 +1278,14 @@ class TriggerType(str, Enum):
     manual = 'manual'
 
 
+class TriggerEvaluationRunResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    run_id: str = Field(..., alias='runId', description='The created run ID')
+    workflow_id: str | None = Field(
+        None, alias='workflowId', description='Workflow identifier for the run'
+    )
+
+
 class Frequency(str, Enum):
     hourly = 'hourly'
     daily = 'daily'
@@ -1622,6 +1713,68 @@ class ConversationMessageDto(BaseModel):
     )
 
 
+class EvaluationCadenceDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    frequency: EvaluationCadenceFrequency | None = Field(None, description='Schedule frequency')
+    time_of_day: str | None = Field(
+        None, alias='timeOfDay', description='Time of day in HH:MM format', examples=['09:00']
+    )
+    timezone: str | None = Field(None, description='IANA timezone', examples=['America/New_York'])
+    weekdays: list[str] | None = Field(
+        None, description='Days of week for weekly frequency', examples=[['MONDAY', 'WEDNESDAY']]
+    )
+    day_of_month: float | None = Field(
+        None, alias='dayOfMonth', description='Day of month for monthly frequency', ge=1.0, le=31.0
+    )
+    cron_expression: str | None = Field(
+        None,
+        alias='cronExpression',
+        description='Cron expression for custom frequency',
+        examples=['0 9 * * 1-5'],
+    )
+
+
+class EvaluationChannelsDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    email: bool = Field(..., description='Enable email notifications')
+    slack: EvaluationSlackChannelDto | None = Field(
+        None, description='Slack notification configuration'
+    )
+
+
+class EvaluationNotificationsDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    recipients: list[EvaluationRecipientDto] = Field(..., description='Notification recipients')
+    channels: EvaluationChannelsDto = Field(..., description='Notification channels')
+
+
+class EvaluationRunDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(..., description='Run ID')
+    skill_id: float | None = Field(..., alias='skillId', description='Scope ID')
+    trigger: EvaluationRunTrigger | None = Field(..., description='How the run was triggered')
+    status: EvaluationRunStatus = Field(..., description='Run status')
+    started_at: str = Field(..., alias='startedAt', description='When the run started')
+    finished_at: dict[str, Any] | None = Field(
+        None, alias='finishedAt', description='When the run finished'
+    )
+    total_cases: float = Field(
+        ..., alias='totalCases', description='Total number of evaluation cases'
+    )
+    passed_cases: float = Field(..., alias='passedCases', description='Number of passed cases')
+    failed_cases: float = Field(..., alias='failedCases', description='Number of failed cases')
+    avg_score: dict[str, Any] | None = Field(
+        None, alias='avgScore', description='Average score (0-100)'
+    )
+    is_regression: bool = Field(
+        ..., alias='isRegression', description='Whether this run detected a regression'
+    )
+    judge_model: str | None = Field(None, alias='judgeModel', description='Judge model used')
+    error_message: str | None = Field(
+        None, alias='errorMessage', description='Error message if failed'
+    )
+
+
 class ListAgentsResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     agents: list[AgentDto] = Field(
@@ -1633,6 +1786,14 @@ class ListAgentsResponseDto(BaseModel):
         alias='nextPageToken',
         description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
         examples=['eyJsYXN0SWQiOjQyfQ'],
+    )
+
+
+class ListEvaluationRunsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    runs: list[EvaluationRunDto]
+    next_page_token: str | None = Field(
+        None, alias='nextPageToken', description='Token for next page'
     )
 
 
@@ -1829,6 +1990,21 @@ class TriggerDto(BaseModel):
     )
     schedule: TriggerScheduleDto | None = Field(
         None, description='Schedule details. Required when trigger_type=schedule.'
+    )
+
+
+class UpdateEvaluationConfigDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    enabled: bool | None = Field(None, description='Whether scheduled evaluations are enabled')
+    cadence: EvaluationCadenceDto | None = Field(None, description='Schedule cadence configuration')
+    judge_model: str | None = Field(
+        None, alias='judgeModel', description='Model ID for the judge LLM'
+    )
+    judge_guidance: str | None = Field(
+        None, alias='judgeGuidance', description='Custom guidance for the judge LLM'
+    )
+    notifications: EvaluationNotificationsDto | None = Field(
+        None, description='Regression notification settings'
     )
 
 
@@ -2127,6 +2303,24 @@ class CreateSkillDto(BaseModel):
         None,
         alias='accessConfig',
         description='Access configuration. Omit to use the default (full-org shared with use + manage).',
+    )
+
+
+class EvaluationConfigDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    enabled: bool = Field(..., description='Whether scheduled evaluations are enabled')
+    cadence: EvaluationCadenceDto | None = Field(None, description='Schedule cadence configuration')
+    judge_model: str | None = Field(
+        None,
+        alias='judgeModel',
+        description='Model ID for the judge LLM',
+        examples=['openai/gpt-4o'],
+    )
+    judge_guidance: str | None = Field(
+        None, alias='judgeGuidance', description='Custom guidance for the judge LLM'
+    )
+    notifications: EvaluationNotificationsDto = Field(
+        ..., description='Regression notification settings'
     )
 
 

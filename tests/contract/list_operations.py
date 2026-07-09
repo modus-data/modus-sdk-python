@@ -164,6 +164,24 @@ def _scope_memories_invoke(client: Client) -> Any:
     return client.scopes.memories(42).list(page_size=25, page_token="tok_abc")
 
 
+def _scope_evaluations_invoke(client: Client) -> Any:
+    assert isinstance(client, ModusManagement)
+    return client.scopes.evaluations(42).list_runs(page_size=25, page_token="tok_abc")
+
+
+SAMPLE_EVAL_RUN: Dict[str, Any] = {
+    "id": "run-1",
+    "skillId": 42,
+    "trigger": "manual",
+    "status": "completed",
+    "startedAt": "2026-07-09T12:00:00Z",
+    "totalCases": 1,
+    "passedCases": 1,
+    "failedCases": 0,
+    "isRegression": False,
+}
+
+
 SDK_AIP_LIST_OPERATIONS: List[ListOperationSpec] = [
     ListOperationSpec(
         operation_id="ConnectionsController_list",
@@ -247,6 +265,15 @@ SDK_AIP_LIST_OPERATIONS: List[ListOperationSpec] = [
         sample_item=SAMPLE_MEMORY,
         client_kind="management",
         invoke=_scope_memories_invoke,
+    ),
+    ListOperationSpec(
+        operation_id="EvaluationsController_listRuns",
+        mock_url_suffix="/api/v1/scopes/42/evaluations/runs",
+        items_key="runs",
+        wrong_items_key="skills",
+        sample_item=SAMPLE_EVAL_RUN,
+        client_kind="management",
+        invoke=_scope_evaluations_invoke,
     ),
     # --- Workflows (/api/v1/workflows; response DTO keeps the ``agents`` envelope key) ---
     ListOperationSpec(

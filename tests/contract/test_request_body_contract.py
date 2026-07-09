@@ -26,6 +26,7 @@ from modus._generated.models import (
     ResumeRunDto,
     SkillChatRequestDto,
     SkillRunDto,
+    UpdateEvaluationConfigDto,
     WorkflowActionDto,
 )
 from modus.management.resources.scopes._update_body import _ScopeCreateBody, _ScopeUpdateBody
@@ -76,6 +77,7 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "ScopeContextController_compose": _model_wire_fields(ComposeSkillContextRequestDto),
     "ScopeMemoriesController_search": _model_wire_fields(MemorySearchRequest),
     "ScopeMemoriesController_update": _model_wire_fields(MemoryUpdate),
+    "EvaluationsController_updateConfig": _model_wire_fields(UpdateEvaluationConfigDto),
     "ScopeRunsController_create": _model_wire_fields(SkillRunDto),
     "ScopesController_requestOwnershipTransfer": {"newOwnerUserId"},
     "ScopesController_patchMcpConfig": {"config"},
