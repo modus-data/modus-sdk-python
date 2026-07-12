@@ -16,8 +16,10 @@ import pytest
 from modus._generated.models import (
     ActiveRunsBySessionDto,
     AgentRunDto,
+    BatchCreateCustomContextItemsDto,
     CancelRunDto,
     ComposeSkillContextRequestDto,
+    CreateCustomContextItemDto,
     EditQueuedRunDto,
     InterruptRunDto,
     ModusChatRequestDto,
@@ -26,6 +28,7 @@ from modus._generated.models import (
     ResumeRunDto,
     SkillChatRequestDto,
     SkillRunDto,
+    UpdateCustomContextItemDto,
     UpdateEvaluationConfigDto,
     WorkflowActionDto,
 )
@@ -70,6 +73,9 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
         "name", "connectionId", "query", "description", "path",
     },
     "ContextCreatorsController_createLink": {"url", "title", "isCrawl", "pageLimit"},
+    "CustomContextItemsController_create": _model_wire_fields(CreateCustomContextItemDto),
+    "CustomContextItemsController_batchCreate": _model_wire_fields(BatchCreateCustomContextItemsDto),
+    "CustomContextItemsController_update": _model_wire_fields(UpdateCustomContextItemDto),
     # --- Scopes (/api/v1/scopes; request schemas share the generated *Skill* DTOs) ---
     "ScopesController_create": _model_wire_fields(_ScopeCreateBody),
     "ScopesController_update": _model_wire_fields(_ScopeUpdateBody),

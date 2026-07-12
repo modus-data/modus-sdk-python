@@ -563,6 +563,50 @@ class CreatedContextItemResponseDto(BaseModel):
     )
 
 
+class CreatedCustomContextItemResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    context_item_id: str = Field(
+        ...,
+        alias='contextItemId',
+        description='Stable uid of the created or updated custom context item.',
+        examples=['7a3f9d2c-1111-4000-a000-000000000abc'],
+    )
+    context_type: str = Field(
+        ...,
+        alias='contextType',
+        description='Stored custom context type.',
+        examples=['custom_entity_metadata'],
+    )
+    data_path: list[str] = Field(
+        ...,
+        alias='dataPath',
+        description='Hierarchical path used to group custom context.',
+        examples=[['billing-db', 'contracts', 'contract-123']],
+    )
+    title: str | None = Field(
+        ..., description='Display title resolved for the item.', examples=['Acme renewal contract']
+    )
+
+
+class CustomAttributeDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    name: str | None = Field(..., description='Attribute name.', examples=['status'])
+    data_type: str | None = Field(
+        None, alias='dataType', description='Customer-defined attribute type.', examples=['string']
+    )
+    value: dict[str, Any] | None = Field(
+        None, description='Representative value for this attribute.'
+    )
+
+
+class CustomContextItemKind(str, Enum):
+    source = 'source'
+    collection = 'collection'
+    entity = 'entity'
+    field = 'field'
+    entity_samples = 'entity_samples'
+
+
 class DeleteContextItemResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     uid: str = Field(
@@ -888,6 +932,23 @@ class ListConversationsResponseDto(BaseModel):
         alias='pageSize',
         description='Legacy echo of the requested `pageSize`. Retained for SPA backwards-compatibility.',
         examples=[10],
+    )
+
+
+class ListCustomContextItemsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    context_items: list[ContextItemDto] = Field(
+        ..., alias='contextItems', description='Page of custom context items.'
+    )
+    next_page_token: str | None = Field(
+        ...,
+        alias='nextPageToken',
+        description='Opaque token for the next page; `null` when this was the last page.',
+    )
+    total_count: float | None = Field(
+        ...,
+        alias='totalCount',
+        description='Approximate total count of matching custom context items, when known.',
     )
 
 
@@ -1367,6 +1428,52 @@ class UpdateContextItemDto(BaseModel):
     )
 
 
+class UpdateCustomContextItemDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    name: str | None = Field(
+        None, description='Replacement display name.', examples=['Acme renewal contract']
+    )
+    entity_type: str | None = Field(
+        None,
+        alias='entityType',
+        description='Replacement customer-defined entity or field type.',
+        examples=['contract'],
+    )
+    description: str | None = Field(
+        None,
+        description='Replacement description.',
+        examples=['Updated internal billing metadata.'],
+    )
+    content: dict[str, Any] | None = Field(
+        None, description='Replacement main textual or structured content.'
+    )
+    url: str | None = Field(
+        None,
+        description='Replacement customer-facing URL.',
+        examples=['https://internal.example.com/contracts/contract-123'],
+    )
+    attributes: list[CustomAttributeDto] | None = Field(
+        None, description='Replacement structured attributes.'
+    )
+    data_type: str | None = Field(
+        None, alias='dataType', description='Replacement field data type.', examples=['timestamp']
+    )
+    value: dict[str, Any] | None = Field(
+        None, description='Replacement representative field value.'
+    )
+    samples: list[dict[str, Any]] | None = Field(
+        None, description='Replacement representative samples.'
+    )
+    raw: dict[str, Any] | None = Field(
+        None, description='Replacement customer-specific raw fields.'
+    )
+    topics: list[str] | None = Field(
+        None,
+        description='Replacement topic tags. Pass `[]` to clear all tags.',
+        examples=[['billing', 'verified']],
+    )
+
+
 class UpdateMemoryRequestDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     memory: str | None = Field(
@@ -1684,6 +1791,15 @@ class AgentDto(BaseModel):
     )
 
 
+class BatchCreateCustomContextItemsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    context_items: list[CreatedCustomContextItemResponseDto] = Field(
+        ...,
+        alias='contextItems',
+        description='Custom context items created or updated by the batch.',
+    )
+
+
 class ConversationMessageDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     type: ConversationMessageType | None = Field(
@@ -1711,6 +1827,100 @@ class ConversationMessageDto(BaseModel):
         alias='toolCallId',
         description='Tool call id this message responds to (for `tool` turns).',
     )
+
+
+class CreateCustomContextItemDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    kind: CustomContextItemKind = Field(
+        ..., description='Shape of custom context item to create.', examples=['entity']
+    )
+    source_id: str = Field(
+        ...,
+        alias='sourceId',
+        description='Stable identifier for the customer-defined source.',
+        examples=['billing-db'],
+    )
+    source_name: str | None = Field(
+        None,
+        alias='sourceName',
+        description='Display name for the customer-defined source.',
+        examples=['Billing database'],
+    )
+    collection_id: str | None = Field(
+        None,
+        alias='collectionId',
+        description='Stable identifier for the collection inside the source.',
+        examples=['contracts'],
+    )
+    collection_name: str | None = Field(
+        None,
+        alias='collectionName',
+        description='Display name for the collection.',
+        examples=['Contracts'],
+    )
+    external_id: str | None = Field(
+        None,
+        alias='externalId',
+        description='Stable identifier for the entity inside the collection.',
+        examples=['contract-123'],
+    )
+    field_name: str | None = Field(
+        None,
+        alias='fieldName',
+        description='Field name for field-level custom context.',
+        examples=['renewalDate'],
+    )
+    name: str | None = Field(
+        None, description='Display name for the item.', examples=['Acme renewal contract']
+    )
+    entity_type: str | None = Field(
+        None,
+        alias='entityType',
+        description='Customer-defined entity or field type.',
+        examples=['contract'],
+    )
+    description: str | None = Field(
+        None,
+        description='Human-readable description.',
+        examples=['Enterprise contract renewal metadata from the internal billing system.'],
+    )
+    content: dict[str, Any] | None = Field(
+        None, description='Main textual or structured content for the custom item.'
+    )
+    url: str | None = Field(
+        None,
+        description='Customer-facing URL for the source object, when available.',
+        examples=['https://internal.example.com/contracts/contract-123'],
+    )
+    attributes: list[CustomAttributeDto] | None = Field(
+        None, description='Structured attributes for entity-level custom context.'
+    )
+    data_type: str | None = Field(
+        None,
+        alias='dataType',
+        description='Field data type for field-level custom context.',
+        examples=['timestamp'],
+    )
+    value: dict[str, Any] | None = Field(
+        None, description='Representative value for field-level custom context.'
+    )
+    samples: list[dict[str, Any]] | None = Field(
+        None, description='Representative samples for entity sample context.'
+    )
+    raw: dict[str, Any] | None = Field(
+        None,
+        description='Customer-specific fields that should be retained but are not part of the normalized contract.',
+    )
+    topics: list[str] | None = Field(
+        None, description='Topic tags for filtering.', examples=[['billing', 'renewals']]
+    )
+    idempotency_key: str | None = Field(
+        None,
+        alias='idempotencyKey',
+        description='Optional stable key used to make single-item creates idempotent.',
+        examples=['billing-db/contracts/contract-123'],
+    )
+    access: AccessPolicyDto | None = None
 
 
 class EvaluationCadenceDto(BaseModel):
@@ -2166,6 +2376,14 @@ class AgentSelectionDto(BaseModel):
     )
 
 
+class BatchCreateCustomContextItemsDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    items: list[CreateCustomContextItemDto] = Field(
+        ...,
+        description='Custom context items to upsert. Batch imports are idempotent by item hierarchy.',
+    )
+
+
 class ConversationDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     thread_id: str = Field(
@@ -2561,6 +2779,7 @@ class RunConfigDto(BaseModel):
     toolset: dict[str, Any] | None = Field(None, description='Map of tool name to tool config.')
     strategies: list[str] | None = None
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
+    model_only: bool | None = Field(None, alias='modelOnly')
     debug: bool | None = None
     composer_file_offload: bool | None = Field(
         None, alias='composerFileOffload', description='Set false to keep composer output inline.'
@@ -2595,6 +2814,7 @@ class SkillRunDto(BaseModel):
         None, alias='runId', description='Client-supplied run id (Idempotency-Key header wins).'
     )
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
+    model_only: bool | None = Field(None, alias='modelOnly')
     debug: bool | None = None
     subordinate_skill_ids: list[float] | None = Field(
         None,
@@ -2659,6 +2879,7 @@ class AgentRunDto(BaseModel):
         None, alias='runId', description='Client-supplied run id (Idempotency-Key header wins).'
     )
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
+    model_only: bool | None = Field(None, alias='modelOnly')
     debug: bool | None = None
 
 
@@ -2690,6 +2911,7 @@ class ModusRunDto(BaseModel):
         None, alias='runId', description='Client-supplied run id (Idempotency-Key header wins).'
     )
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
+    model_only: bool | None = Field(None, alias='modelOnly')
     debug: bool | None = None
     subordinate_skill_ids: list[float] | None = Field(
         None, alias='subordinateSkillIds', description='Saved scope ids to scope the Modus run to.'
@@ -2724,5 +2946,6 @@ class ResumeRunDto(BaseModel):
         None, alias='runId', description='Client-supplied run id (Idempotency-Key header wins).'
     )
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
+    model_only: bool | None = Field(None, alias='modelOnly')
     debug: bool | None = None
     decision: Decision = Field(..., description='Decision that resumes the interrupted run.')

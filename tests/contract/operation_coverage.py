@@ -79,6 +79,12 @@ OPERATIONS: dict[str, str] = {
     "ContextCreatorsController_createNote": "mgmt.context.create_note()",
     "ContextCreatorsController_createSavedQuery": "mgmt.context.create_saved_query()",
     "ContextCreatorsController_createLink": "mgmt.context.create_link()",
+    "CustomContextItemsController_list": "client.context.custom_items.list() / mgmt.context.custom_items.list()",
+    "CustomContextItemsController_get": "client.context.custom_items.get() / mgmt.context.custom_items.get()",
+    "CustomContextItemsController_create": "mgmt.context.custom_items.create()",
+    "CustomContextItemsController_batchCreate": "mgmt.context.custom_items.batch_create()",
+    "CustomContextItemsController_update": "mgmt.context.custom_items.update()",
+    "CustomContextItemsController_delete": "mgmt.context.custom_items.delete()",
     # --- Connections ---
     "ConnectionsController_list": "client.connections.list()",
     # --- Suggestions ---

@@ -123,6 +123,10 @@ def _context_items_invoke(client: Client) -> Any:
     return client.context.items.list(page_size=25, page_token="tok_abc", context_type="note")
 
 
+def _custom_context_items_invoke(client: Client) -> Any:
+    return client.context.custom_items.list(page_size=25, page_token="tok_abc")
+
+
 def _context_list_values_invoke(client: Client) -> Any:
     return client.context.items.list_values(
         "7a3f9d2c-1111-4000-a000-000000000abc",
@@ -210,6 +214,24 @@ SDK_AIP_LIST_OPERATIONS: List[ListOperationSpec] = [
         sample_item=SAMPLE_CONTEXT_ITEM,
         client_kind="modus",
         invoke=_context_items_invoke,
+    ),
+    ListOperationSpec(
+        operation_id="CustomContextItemsController_list",
+        mock_url_suffix="/api/v1/context/custom-items",
+        items_key="contextItems",
+        wrong_items_key="skills",
+        sample_item=SAMPLE_CONTEXT_ITEM,
+        client_kind="modus",
+        invoke=_custom_context_items_invoke,
+    ),
+    ListOperationSpec(
+        operation_id="CustomContextItemsController_list",
+        mock_url_suffix="/api/v1/context/custom-items",
+        items_key="contextItems",
+        wrong_items_key="skills",
+        sample_item=SAMPLE_CONTEXT_ITEM,
+        client_kind="management",
+        invoke=_custom_context_items_invoke,
     ),
     ListOperationSpec(
         operation_id="ContextItemsController_listValues",

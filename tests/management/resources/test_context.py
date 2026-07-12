@@ -146,6 +146,68 @@ def test_context_items_delete(client):
 
 
 @respx.mock
+def test_custom_context_items_create(client):
+    route = respx.post(f"{BASE}/api/v1/context/custom-items").mock(
+        return_value=httpx.Response(
+            201,
+            json={
+                "contextItemId": "custom-1",
+                "contextType": "custom_entity_metadata",
+                "dataPath": ["billing-db", "contracts", "contract-123"],
+                "title": "Acme renewal",
+            },
+        )
+    )
+    result = client.context.custom_items.create(
+        kind="entity",
+        source_id="billing-db",
+        collection_id="contracts",
+        external_id="contract-123",
+        name="Acme renewal",
+    )
+
+    assert result["contextItemId"] == "custom-1"
+    body = json.loads(route.calls[0].request.read())
+    assert body == {
+        "kind": "entity",
+        "sourceId": "billing-db",
+        "collectionId": "contracts",
+        "externalId": "contract-123",
+        "name": "Acme renewal",
+    }
+
+
+@respx.mock
+def test_custom_context_items_list(client):
+    route = respx.get(f"{BASE}/api/v1/context/custom-items").mock(
+        return_value=httpx.Response(200, json={"contextItems": [], "nextPageToken": None})
+    )
+    page = client.context.custom_items.list(topics=["billing"])
+
+    assert len(page) == 0
+    assert route.calls[0].request.url.params["topics"] == "billing"
+
+
+@respx.mock
+def test_custom_context_items_update_and_delete(client):
+    uid = "custom-1"
+    patch_route = respx.patch(f"{BASE}/api/v1/context/custom-items/{uid}").mock(
+        return_value=httpx.Response(200, json={"uid": uid})
+    )
+    delete_route = respx.delete(f"{BASE}/api/v1/context/custom-items/{uid}").mock(
+        return_value=httpx.Response(200, json={"uid": uid, "contextType": "custom_entity_metadata"})
+    )
+
+    client.context.custom_items.update(uid, description="Reviewed", topics=["billing"])
+    deleted = client.context.custom_items.delete(uid)
+
+    body = json.loads(patch_route.calls[0].request.read())
+    assert body == {"description": "Reviewed", "topics": ["billing"]}
+    assert delete_route.called
+    assert deleted.context_type == "custom_entity_metadata"
+
+
+@respx.mock
 def test_context_update_note_merges_content(client):
     uid = "note-id-001"
     wire = _context_item_wire(uid, "note", NOTE_CONTENT)

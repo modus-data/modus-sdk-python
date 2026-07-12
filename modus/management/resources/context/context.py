@@ -24,6 +24,7 @@ from ._content_merge import (
     resolve_existing_content,
     update_with_merged_content,
 )
+from .custom_items import AsyncCustomContextItemsResource, CustomContextItemsResource
 from .items import AsyncContextItemsResource, ContextItemsResource
 
 
@@ -47,6 +48,7 @@ class ContextResource:
         self._http = http
         self._config = config
         self.items = ContextItemsResource(http, config)
+        self.custom_items = CustomContextItemsResource(http, config)
 
     def _create(self, operation_id: str, payload: dict) -> CreatedContextItem:
         data = with_retry(
@@ -211,6 +213,7 @@ class AsyncContextResource:
         self._http = http
         self._config = config
         self.items = AsyncContextItemsResource(http, config)
+        self.custom_items = AsyncCustomContextItemsResource(http, config)
 
     async def _create(self, operation_id: str, payload: dict) -> CreatedContextItem:
         data = await async_with_retry(
