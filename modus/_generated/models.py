@@ -2794,11 +2794,6 @@ class SkillRunDto(BaseModel):
         alias='sessionId',
         description='Opaque client-generated conversation token for continuity. The server NEVER derives the run target identity (scope/workflow/modus) from this string — target identity comes only from the request path and DTO (see RunTarget). It is used solely to thread successive turns of the same conversation together.',
     )
-    mcp_session_id: str | None = Field(
-        None,
-        alias='mcpSessionId',
-        description="Conversation-level MCP session label (mcp-session-*). Observability only — groups the run's trace into a session; never affects behavior.",
-    )
     organization_id: str | None = Field(
         None,
         alias='organizationId',
@@ -2864,11 +2859,6 @@ class AgentRunDto(BaseModel):
         alias='sessionId',
         description='Opaque client-generated conversation token for continuity. The server NEVER derives the run target identity (scope/workflow/modus) from this string — target identity comes only from the request path and DTO (see RunTarget). It is used solely to thread successive turns of the same conversation together.',
     )
-    mcp_session_id: str | None = Field(
-        None,
-        alias='mcpSessionId',
-        description="Conversation-level MCP session label (mcp-session-*). Observability only — groups the run's trace into a session; never affects behavior.",
-    )
     organization_id: str | None = Field(
         None,
         alias='organizationId',
@@ -2900,11 +2890,6 @@ class ModusRunDto(BaseModel):
         ...,
         alias='sessionId',
         description='Opaque client-generated conversation token for continuity. The server NEVER derives the run target identity (scope/workflow/modus) from this string — target identity comes only from the request path and DTO (see RunTarget). It is used solely to thread successive turns of the same conversation together.',
-    )
-    mcp_session_id: str | None = Field(
-        None,
-        alias='mcpSessionId',
-        description="Conversation-level MCP session label (mcp-session-*). Observability only — groups the run's trace into a session; never affects behavior.",
     )
     organization_id: str | None = Field(
         None,
@@ -2940,11 +2925,6 @@ class ResumeRunDto(BaseModel):
         ...,
         alias='sessionId',
         description='Opaque client-generated conversation token for continuity. The server NEVER derives the run target identity (scope/workflow/modus) from this string — target identity comes only from the request path and DTO (see RunTarget). It is used solely to thread successive turns of the same conversation together.',
-    )
-    mcp_session_id: str | None = Field(
-        None,
-        alias='mcpSessionId',
-        description="Conversation-level MCP session label (mcp-session-*). Observability only — groups the run's trace into a session; never affects behavior.",
     )
     organization_id: str | None = Field(
         None,
