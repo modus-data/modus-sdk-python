@@ -1140,7 +1140,7 @@ class ModusContextResponseDto(BaseModel):
         ...,
         alias='contextItems',
         deprecated=True,
-        description='Deprecated. Always an empty array.',
+        description='Deprecated. Always an empty array. Use `context` for composed text (markdown or JSON fallback).',
         examples=[[]],
     )
     original_count: float = Field(
