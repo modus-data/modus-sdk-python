@@ -20,6 +20,7 @@
 - **`client.suggestions`** (sync + async) — `list()` returns approved suggested questions (optional `skill_id(s)` filter), `record_event()` records an impression/click/dismiss event against a suggestion.
 - **`client.workflows.runs.active()` / `active_by_session(session_ids)`** (sync + async) — list active (queued/pending/running) conversation runs for the current user, or look up active runs for specific conversation thread ids.
 - `Skill.variation.model_settings` now exposes optional model runtime controls (`reasoning_effort`, `context_window`) from the public schema.
+- **`mgmt.scopes.evaluations(scope_id)`** — `get_config()` / `update_config()` manage a scope's evaluation schedule and judge settings; `trigger_run()` starts a manual evaluation run; `list_runs()` / `get_run(run_id)` read run history and per-case results.
 
 ### Removed
 
