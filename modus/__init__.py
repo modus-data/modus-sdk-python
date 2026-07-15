@@ -71,6 +71,7 @@ from .types import (
     saved_query_sql,
 )
 from .types.runs import (
+    AssistantContentResetEvent,
     CancelledEvent,
     DoneEvent,
     ErrorEvent,
@@ -85,6 +86,7 @@ except PackageNotFoundError:
 
 __all__ = [
     "APIConnectionError",
+    "AssistantContentResetEvent",
     "Agent",
     "AgentRun",
     "AgentRunCreateRequest",

@@ -18,6 +18,7 @@ import json
 from typing import Any, Dict, Iterator, Optional
 
 from .types.runs import (
+    AssistantContentResetEvent,
     CancelledEvent,
     DoneEvent,
     ErrorEvent,
@@ -26,17 +27,19 @@ from .types.runs import (
     TokenEvent,
 )
 
-_SILENTLY_IGNORED = frozenset({
-    "heartbeat",
-    "ws_chunk",
-    "unknown",
-    "tool_start",
-    "tool_end",
-    "tool_chunk",
-    "agent_thinking",
-    "warning",
-    "selected_final_content",
-})
+_SILENTLY_IGNORED = frozenset(
+    {
+        "heartbeat",
+        "ws_chunk",
+        "unknown",
+        "tool_start",
+        "tool_end",
+        "tool_chunk",
+        "agent_thinking",
+        "warning",
+        "selected_final_content",
+    }
+)
 
 
 def _parse_line(line: str) -> Optional[Dict[str, Any]]:
@@ -89,6 +92,24 @@ def parse_sse_stream(lines: Iterator[str]) -> Iterator[RunEvent]:
             yield CancelledEvent()
         elif event_type == "stream_timeout":
             yield StreamTimeoutEvent()
+        elif event_type == "assistant_content_reset":
+            content = data.get("content")
+            if not isinstance(content, str):
+                continue
+            yield AssistantContentResetEvent(
+                content=content,
+                visible_content=(
+                    str(data["visibleContent"])
+                    if isinstance(data.get("visibleContent"), str)
+                    else None
+                ),
+                attempt=(int(data["attempt"]) if isinstance(data.get("attempt"), int) else 1),
+                reason=(
+                    str(data["reason"])
+                    if isinstance(data.get("reason"), str)
+                    else "provider_stream_failed"
+                ),
+            )
         elif event_type in _SILENTLY_IGNORED:
             continue
         # Truly unknown types: silently ignored for forward compatibility

@@ -22,6 +22,10 @@
 - `Skill.variation.model_settings` now exposes optional model runtime controls (`reasoning_effort`, `context_window`) from the public schema.
 - **`mgmt.scopes.evaluations(scope_id)`** — `get_config()` / `update_config()` manage a scope's evaluation schedule and judge settings; `trigger_run()` starts a manual evaluation run; `list_runs()` / `get_run(run_id)` read run history and per-case results.
 
+### Fixed
+
+- Typed run event streams now recover from interrupted model providers and emit `AssistantContentResetEvent` when previously streamed assistant content is replaced.
+
 ### Removed
 
 - **BREAKING: `client.skills` / `client.agents` and `mgmt.skills` / `mgmt.agents`** (sync + async) — the legacy accessors are removed in favour of `client.scopes` / `client.workflows` and `mgmt.scopes` / `mgmt.workflows`. Migrate `client.skills.*` → `client.scopes.*`, `client.agents.*` → `client.workflows.*`, `client.agents.runs.create_skill(...)` → `client.workflows.runs.create_scope(...)`.

@@ -1,4 +1,5 @@
 """Shared chat path building and SSE stream session helpers."""
+
 from __future__ import annotations
 
 from typing import Any, AsyncIterator, Dict, Iterator, List, Literal, Optional, Union
@@ -12,6 +13,7 @@ from ._streaming import parse_sse_stream
 from ._validation import validate_chat_model, validate_id
 from .types.chat import ChatResult
 from .types.runs import (
+    AssistantContentResetEvent,
     CancelledEvent,
     DoneEvent,
     ErrorEvent,
@@ -135,17 +137,25 @@ class ChatStream:
 
     @property
     def text_stream(self) -> Iterator[str]:
-        for event in self.event_stream:
+        for event in self._event_stream_impl(supports_reset=False):
             if isinstance(event, TokenEvent):
                 yield event.content
 
     @property
     def event_stream(self) -> Iterator[RunEvent]:
-        for line in self._http.stream_post(self._path, json=self._body):
+        return self._event_stream_impl(supports_reset=True)
+
+    def _event_stream_impl(self, *, supports_reset: bool) -> Iterator[RunEvent]:
+        body = dict(self._body)
+        if supports_reset:
+            body["streamProtocolVersion"] = 2
+        for line in self._http.stream_post(self._path, json=body):
             for event in parse_sse_stream(iter([line])):
                 event = _raise_for_event(event)
                 if isinstance(event, TokenEvent):
                     self._text_parts.append(event.content)
+                if isinstance(event, AssistantContentResetEvent):
+                    self._text_parts[:] = [event.content]
                 if isinstance(event, DoneEvent):
                     content = "".join(self._text_parts)
                     self._final = SkillChatResponseDto(
@@ -192,20 +202,25 @@ class AsyncChatStream:
         return self._text_stream_impl()
 
     async def _text_stream_impl(self) -> AsyncIterator[str]:
-        async for event in self.event_stream:
+        async for event in self._event_stream_impl(supports_reset=False):
             if isinstance(event, TokenEvent):
                 yield event.content
 
     @property
     def event_stream(self) -> AsyncIterator[RunEvent]:
-        return self._event_stream_impl()
+        return self._event_stream_impl(supports_reset=True)
 
-    async def _event_stream_impl(self) -> AsyncIterator[RunEvent]:
-        async for line in self._http.stream_post(self._path, json=self._body):
+    async def _event_stream_impl(self, *, supports_reset: bool) -> AsyncIterator[RunEvent]:
+        body = dict(self._body)
+        if supports_reset:
+            body["streamProtocolVersion"] = 2
+        async for line in self._http.stream_post(self._path, json=body):
             for event in parse_sse_stream(iter([line])):
                 event = _raise_for_event(event)
                 if isinstance(event, TokenEvent):
                     self._text_parts.append(event.content)
+                if isinstance(event, AssistantContentResetEvent):
+                    self._text_parts[:] = [event.content]
                 if isinstance(event, DoneEvent):
                     content = "".join(self._text_parts)
                     self._final = SkillChatResponseDto(

@@ -2,6 +2,7 @@
 
 from modus._streaming import parse_sse_stream
 from modus.types.runs import (
+    AssistantContentResetEvent,
     CancelledEvent,
     DoneEvent,
     ErrorEvent,
@@ -22,10 +23,14 @@ def test_token_event():
 
 
 def test_multiple_token_events():
-    events = list(parse_sse_stream(lines(
-        'data: {"type":"token","content":"Hello"}',
-        'data: {"type":"token","content":" world"}',
-    )))
+    events = list(
+        parse_sse_stream(
+            lines(
+                'data: {"type":"token","content":"Hello"}',
+                'data: {"type":"token","content":" world"}',
+            )
+        )
+    )
     assert [e.content for e in events] == ["Hello", " world"]
 
 
@@ -38,20 +43,13 @@ def test_done_event():
 
 def test_done_event_includes_thread_id():
     events = list(
-        parse_sse_stream(
-            lines(
-                'data: {"type":"done","runId":"run-123",'
-                '"threadId":"thread-456"}'
-            )
-        )
+        parse_sse_stream(lines('data: {"type":"done","runId":"run-123","threadId":"thread-456"}'))
     )
     assert events[0].thread_id == "thread-456"
 
 
 def test_error_event_uses_error_field():
-    events = list(
-        parse_sse_stream(lines('data: {"type":"error","error":"Quota exceeded"}'))
-    )
+    events = list(parse_sse_stream(lines('data: {"type":"error","error":"Quota exceeded"}')))
     assert isinstance(events[0], ErrorEvent)
     assert events[0].message == "Quota exceeded"
 
@@ -71,6 +69,38 @@ def test_cancelled_event():
 def test_stream_timeout_event():
     events = list(parse_sse_stream(lines('data: {"type":"stream_timeout"}')))
     assert isinstance(events[0], StreamTimeoutEvent)
+
+
+def test_assistant_content_reset_event():
+    events = list(
+        parse_sse_stream(
+            lines(
+                'data: {"type":"assistant_content_reset","content":"kept ",'
+                '"visibleContent":"kept ","attempt":2,'
+                '"reason":"provider_connection_reset"}'
+            )
+        )
+    )
+    assert isinstance(events[0], AssistantContentResetEvent)
+    assert events[0].content == "kept "
+    assert events[0].visible_content == "kept "
+    assert events[0].attempt == 2
+    assert events[0].reason == "provider_connection_reset"
+
+
+def test_malformed_assistant_content_reset_ignored():
+    events = list(
+        parse_sse_stream(
+            lines(
+                'data: {"type":"assistant_content_reset"}',
+                'data: {"type":"assistant_content_reset","content":null}',
+                'data: {"type":"token","content":"kept"}',
+            )
+        )
+    )
+    assert len(events) == 1
+    assert isinstance(events[0], TokenEvent)
+    assert events[0].content == "kept"
 
 
 def test_heartbeat_silently_ignored():
@@ -99,12 +129,16 @@ def test_unknown_event_type_ignored():
 
 
 def test_non_data_lines_ignored():
-    events = list(parse_sse_stream(lines(
-        ": keep-alive comment",
-        "",
-        "event: message",
-        'data: {"type":"token","content":"hi"}',
-    )))
+    events = list(
+        parse_sse_stream(
+            lines(
+                ": keep-alive comment",
+                "",
+                "event: message",
+                'data: {"type":"token","content":"hi"}',
+            )
+        )
+    )
     assert len(events) == 1
     assert events[0].content == "hi"
 

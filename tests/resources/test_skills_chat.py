@@ -52,9 +52,7 @@ def test_skills_chat_blank_thread_id_uses_new_chat_path(client):
 
 @respx.mock
 def test_skills_chat_continue(client):
-    route = respx.post(
-        f"{BASE}/api/v1/scopes/42/conversations/thread-abc/chat"
-    ).mock(
+    route = respx.post(f"{BASE}/api/v1/scopes/42/conversations/thread-abc/chat").mock(
         return_value=httpx.Response(
             200,
             json={
@@ -64,9 +62,7 @@ def test_skills_chat_continue(client):
             },
         )
     )
-    result = client.scopes.chat(
-        42, "And then?", model=MODEL, thread_id="thread-abc"
-    )
+    result = client.scopes.chat(42, "And then?", model=MODEL, thread_id="thread-abc")
     assert route.called
     assert result.content == "Follow-up"
 
@@ -83,10 +79,7 @@ def test_skills_chat_stream(client):
         assert json == {"message": "Stream me", "config": {"model": MODEL}}
         yield 'data: {"type":"token","content":"Hi"}'
         yield 'data: {"type":"token","content":" there"}'
-        yield (
-            'data: {"type":"done","runId":"run-s1",'
-            '"threadId":"thread-s1"}'
-        )
+        yield ('data: {"type":"done","runId":"run-s1","threadId":"thread-s1"}')
 
     with patch.object(client._agent_http, "stream_post", fake_stream_post):
         with client.scopes.chat_stream(42, "Stream me", model=MODEL) as stream:
@@ -101,6 +94,12 @@ def test_skills_chat_stream(client):
 
 def test_skills_chat_stream_event_stream_populates_final_text(client):
     def fake_stream_post(path: str, *, json=None):
+        assert json["streamProtocolVersion"] == 2
+        yield 'data: {"type":"token","content":"failed"}'
+        yield (
+            'data: {"type":"assistant_content_reset","content":"kept ",'
+            '"attempt":2,"reason":"provider_stream_failed"}'
+        )
         yield 'data: {"type":"token","content":"A"}'
         yield 'data: {"type":"done","runId":"r1","threadId":"t1"}'
 
@@ -109,9 +108,9 @@ def test_skills_chat_stream_event_stream_populates_final_text(client):
             events = list(stream.event_stream)
             final = stream.get_final_result()
 
-    assert len(events) == 2
+    assert len(events) == 4
     assert isinstance(events[0], TokenEvent)
-    assert final.content == "A"
+    assert final.content == "kept A"
 
 
 def test_skills_chat_stream_error_event(client):

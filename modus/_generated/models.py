@@ -1537,6 +1537,10 @@ class Version(str, Enum):
     draft = 'draft'
 
 
+class StreamProtocolVersion(float, Enum):
+    number_2 = 2
+
+
 class CancelRunDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     pass
@@ -2813,6 +2817,11 @@ class SkillRunDto(BaseModel):
     run_id: str | None = Field(
         None, alias='runId', description='Client-supplied run id (Idempotency-Key header wins).'
     )
+    stream_protocol_version: StreamProtocolVersion | None = Field(
+        None,
+        alias='streamProtocolVersion',
+        description='Streaming protocol version. Version 2 supports assistant-content replacement events.',
+    )
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
     model_only: bool | None = Field(None, alias='modelOnly')
     debug: bool | None = None
@@ -2878,6 +2887,11 @@ class AgentRunDto(BaseModel):
     run_id: str | None = Field(
         None, alias='runId', description='Client-supplied run id (Idempotency-Key header wins).'
     )
+    stream_protocol_version: StreamProtocolVersion | None = Field(
+        None,
+        alias='streamProtocolVersion',
+        description='Streaming protocol version. Version 2 supports assistant-content replacement events.',
+    )
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
     model_only: bool | None = Field(None, alias='modelOnly')
     debug: bool | None = None
@@ -2909,6 +2923,11 @@ class ModusRunDto(BaseModel):
     source: RunSource | None = Field(None, description='Origin of the run.')
     run_id: str | None = Field(
         None, alias='runId', description='Client-supplied run id (Idempotency-Key header wins).'
+    )
+    stream_protocol_version: StreamProtocolVersion | None = Field(
+        None,
+        alias='streamProtocolVersion',
+        description='Streaming protocol version. Version 2 supports assistant-content replacement events.',
     )
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
     model_only: bool | None = Field(None, alias='modelOnly')
@@ -2944,6 +2963,11 @@ class ResumeRunDto(BaseModel):
     source: RunSource | None = Field(None, description='Origin of the run.')
     run_id: str | None = Field(
         None, alias='runId', description='Client-supplied run id (Idempotency-Key header wins).'
+    )
+    stream_protocol_version: StreamProtocolVersion | None = Field(
+        None,
+        alias='streamProtocolVersion',
+        description='Streaming protocol version. Version 2 supports assistant-content replacement events.',
     )
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
     model_only: bool | None = Field(None, alias='modelOnly')
