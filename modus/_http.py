@@ -253,6 +253,24 @@ class HttpClient:
             return None
         return response.json()
 
+    def put(
+        self,
+        path: str,
+        *,
+        json: Optional[Dict[str, Any]] = None,
+        params: Optional[Dict[str, Any]] = None,
+        base_url: Optional[str] = None,
+    ) -> Any:
+        effective_base_url = base_url or self._config.base_url
+        try:
+            response = self._client.put(_request_url(path, base_url), json=json, params=params)
+        except _NETWORK_ERRORS as exc:
+            raise _wrap_network_error(exc, effective_base_url) from exc
+        _raise_for_status(response)
+        if response.status_code == 204 or not response.content:
+            return None
+        return response.json()
+
     def delete(self, path: str, *, base_url: Optional[str] = None) -> Optional[Any]:
         effective_base_url = base_url or self._config.base_url
         try:
@@ -377,6 +395,24 @@ class AsyncHttpClient:
         effective_base_url = base_url or self._config.base_url
         try:
             response = await self._client.patch(_request_url(path, base_url), json=json, params=params)
+        except _NETWORK_ERRORS as exc:
+            raise _wrap_network_error(exc, effective_base_url) from exc
+        _raise_for_status(response)
+        if response.status_code == 204 or not response.content:
+            return None
+        return response.json()
+
+    async def put(
+        self,
+        path: str,
+        *,
+        json: Optional[Dict[str, Any]] = None,
+        params: Optional[Dict[str, Any]] = None,
+        base_url: Optional[str] = None,
+    ) -> Any:
+        effective_base_url = base_url or self._config.base_url
+        try:
+            response = await self._client.put(_request_url(path, base_url), json=json, params=params)
         except _NETWORK_ERRORS as exc:
             raise _wrap_network_error(exc, effective_base_url) from exc
         _raise_for_status(response)

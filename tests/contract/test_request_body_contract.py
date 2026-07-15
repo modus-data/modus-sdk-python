@@ -85,6 +85,8 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "ScopeMemoriesController_update": _model_wire_fields(MemoryUpdate),
     "EvaluationsController_updateConfig": _model_wire_fields(UpdateEvaluationConfigDto),
     "ScopeRunsController_create": _model_wire_fields(SkillRunDto),
+    "ScopeSupervisionController_set": {"subordinateAgentIds"},
+    "ScopeSupervisionController_setActive": {"subordinateAgentIds"},
     "ScopesController_requestOwnershipTransfer": {"newOwnerUserId"},
     "ScopesController_patchMcpConfig": {"config"},
     # Deploy takes an optional body; the SDK sends none (empty body), which the
@@ -94,6 +96,9 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "WorkflowsController_create": _model_wire_fields(_WorkflowCreateBody),
     "WorkflowsController_update": _model_wire_fields(_WorkflowUpdateBody),
     "WorkflowRunsController_create": _model_wire_fields(AgentRunDto),
+    "WorkflowsController_toggle": {"active"},
+    "WorkflowInterfacesController_add": {"type", "name", "config"},
+    "WorkflowInterfacesController_update": {"name", "config"},
     "WorkflowsController_requestOwnershipTransfer": {"newOwnerUserId"},
     "WorkflowsController_deploy": set(),
 }

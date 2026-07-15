@@ -55,6 +55,12 @@ class AgentGroupPermissionDto(BaseModel):
     )
 
 
+class AgentInterfaceType(str, Enum):
+    slack = 'slack'
+    mcp = 'mcp'
+    teams = 'teams'
+
+
 class AgentSelectionEntryDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     agent_id: float = Field(
@@ -1014,6 +1020,16 @@ class LookupContextItemRowDto(BaseModel):
     )
 
 
+class MemberGroupDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    uid: str
+    name: str
+    description: str
+    member_ids: list[str]
+    created_at: str
+    updated_at: str
+
+
 class MemoryDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(..., description='Opaque memory id.', examples=['mem_01HRQX...ABC'])
@@ -1156,6 +1172,16 @@ class ModusContextResponseDto(BaseModel):
     )
 
 
+class OrgMemberDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    user_id: str
+    first_name: str
+    last_name: str
+    email: str
+    image_url: str
+    role: str
+
+
 class PendingOwnershipTransferDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     pending_owner_user_id: str = Field(
@@ -1219,6 +1245,16 @@ class SearchMemoriesRequestDto(BaseModel):
         examples=[10],
         ge=1.0,
         le=1000.0,
+    )
+
+
+class SetSupervisionRequestDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    subordinate_agent_ids: list[float] = Field(
+        ...,
+        alias='subordinateAgentIds',
+        description='Replacement list of subordinate scope ids. The previous list is fully replaced; pass `[]` to clear.',
+        examples=[[17, 23, 91]],
     )
 
 
@@ -1299,6 +1335,31 @@ class SuggestionQuestionDto(BaseModel):
     rationale: str | None = Field(None, description='Reason this suggestion was generated.')
     metadata: dict[str, Any] | None = Field(
         None, description='Suggestion metadata for diagnostics and ranking.'
+    )
+
+
+class SupervisionDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    supervisor_agent_id: float = Field(
+        ...,
+        alias='supervisorAgentId',
+        description='Numeric id of the scope that supervises the listed subordinates. Echoes the `:id` from the URL path.',
+        examples=[42],
+    )
+    subordinate_agent_ids: list[float] = Field(
+        ...,
+        alias='subordinateAgentIds',
+        description='Numeric ids of the scopes supervised by `supervisorAgentId`. The order is preserved across writes and reads.',
+        examples=[[17, 23, 91]],
+    )
+
+
+class ToggleAgentDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    active: bool = Field(
+        ...,
+        description='Target enabled state. `true` enables the workflow schedule; `false` disables it.',
+        examples=[True],
     )
 
 
@@ -1396,6 +1457,22 @@ class TriggerScheduleDto(BaseModel):
         None,
         description='Human-readable description of the custom schedule. Required when frequency=custom.',
         examples=['Weekdays at 9am'],
+    )
+
+
+class UpdateAgentInterfaceDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    name: str | None = Field(
+        None,
+        description='New display name.',
+        examples=['Internal MCP v2'],
+        max_length=200,
+        min_length=1,
+    )
+    config: dict[str, Any] | None = Field(
+        None,
+        description='New config payload (interface-type-specific). Free-form JSONB. Replaces the prior config.',
+        examples=[{}],
     )
 
 
@@ -1648,6 +1725,27 @@ class WorkflowActionSource(str, Enum):
     other = 'other'
 
 
+class AddAgentInterfaceDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    type: AgentInterfaceType | None = Field(
+        ...,
+        description='Interface type. Only `slack`, `mcp`, and `teams` are accepted.',
+        examples=['mcp'],
+    )
+    name: str | None = Field(
+        ...,
+        description='Display name for the interface.',
+        examples=['Internal MCP'],
+        max_length=200,
+        min_length=1,
+    )
+    config: dict[str, Any] | None = Field(
+        None,
+        description='Initial config payload (interface-type-specific). Free-form JSONB.',
+        examples=[{}],
+    )
+
+
 class AgentAccessConfigDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     visibility: Visibility = Field(
@@ -1792,6 +1890,43 @@ class AgentDto(BaseModel):
         alias='manageDenial',
         description='Why `canManage` is false, for client-facing guidance: `needs_group_manage` (shared, but no group you belong to grants Manage) or `not_owner` (private, and you are not the owner). `null` when `canManage` is true. Derived server-side from the principal + accessConfig.',
         examples=['needs_group_manage'],
+    )
+
+
+class AgentInterfaceDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(
+        ...,
+        description='Interface row id (UUID).',
+        examples=['00000000-0000-4000-a000-000000000300'],
+    )
+    agent_id: float = Field(..., alias='agentId', description='Parent workflow id.', examples=[42])
+    type: AgentInterfaceType | None = Field(
+        ...,
+        description='Interface type. `slack` and `teams` deliver chat triggers; `mcp` exposes the workflow as an MCP server.',
+        examples=['mcp'],
+    )
+    name: str | None = Field(
+        ...,
+        description='Display name for the interface (shown in the SPA).',
+        examples=['Internal MCP'],
+    )
+    config: dict[str, Any] = Field(
+        ...,
+        description='Interface-type-specific configuration (e.g. webhook url, MCP token references). Free-form JSONB.',
+        examples=[{}],
+    )
+    created_at: str = Field(
+        ...,
+        alias='createdAt',
+        description='Creation timestamp.',
+        examples=['2026-05-01T10:00:00.000Z'],
+    )
+    updated_at: str = Field(
+        ...,
+        alias='updatedAt',
+        description='Most recent update timestamp.',
+        examples=['2026-05-11T10:00:00.000Z'],
     )
 
 
@@ -1989,6 +2124,18 @@ class EvaluationRunDto(BaseModel):
     )
 
 
+class ListAgentInterfacesResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    interfaces: list[AgentInterfaceDto] = Field(
+        ..., description='All interfaces attached to the workflow (in creation order).'
+    )
+    next_page_token: str | None = Field(
+        ...,
+        alias='nextPageToken',
+        description='Token for the next page, or null when there are no more results.',
+    )
+
+
 class ListAgentsResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     agents: list[AgentDto] = Field(
@@ -2011,6 +2158,12 @@ class ListEvaluationRunsResponseDto(BaseModel):
     )
 
 
+class ListMemberGroupsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    groups: list[MemberGroupDto]
+    next_page_token: str | None = Field(..., alias='nextPageToken')
+
+
 class ListMemoriesResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     memories: list[MemoryDto] = Field(..., description='Memories belonging to the scope.')
@@ -2020,6 +2173,12 @@ class ListMemoriesResponseDto(BaseModel):
         description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
         examples=['eyJvZmZzZXQiOjI1LCJwYWdlU2l6ZSI6MjV9'],
     )
+
+
+class ListOrgMembersResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    members: list[OrgMemberDto]
+    next_page_token: str | None = Field(..., alias='nextPageToken')
 
 
 class ListSuggestionQuestionsResponseDto(BaseModel):

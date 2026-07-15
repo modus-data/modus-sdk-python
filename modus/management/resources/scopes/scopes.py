@@ -47,6 +47,7 @@ from .memories import (
     ScopeMemoriesOperations,
     ScopeMemoriesResource,
 )
+from .supervision import AsyncScopeSupervisionResource, ScopeSupervisionResource
 
 
 @dataclass(frozen=True)
@@ -150,6 +151,10 @@ class ScopesResource:
     def evaluations(self, scope_id: Union[int, str]) -> ScopeEvaluationsResource:
         """Return the evaluations sub-resource scoped to ``scope_id``."""
         return ScopeEvaluationsResource(self._http, self._config, scope_id, self._ops.evaluations)
+
+    def supervision(self, scope_id: Union[int, str]) -> ScopeSupervisionResource:
+        """Return the supervision sub-resource scoped to ``scope_id``."""
+        return ScopeSupervisionResource(self._http, self._config, scope_id)
 
     def list(
         self,
@@ -465,6 +470,10 @@ class AsyncScopesResource:
 
     def memories(self, scope_id: Union[int, str]) -> AsyncScopeMemoriesResource:
         return AsyncScopeMemoriesResource(self._http, self._config, scope_id, self._ops.memories)
+
+    def supervision(self, scope_id: Union[int, str]) -> AsyncScopeSupervisionResource:
+        """Return the supervision sub-resource scoped to ``scope_id``."""
+        return AsyncScopeSupervisionResource(self._http, self._config, scope_id)
 
     async def list(
         self,

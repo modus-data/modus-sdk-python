@@ -77,7 +77,7 @@ def invoke_operation(
     if method == "PATCH":
         return http.patch(path, json=json_body, params=params, base_url=base_url)
     if method == "PUT":
-        raise NotImplementedError("PUT operations are not in the public modus-api spec")
+        return http.put(path, json=json_body, params=params, base_url=base_url)
     if method == "DELETE":
         return http.delete(path, base_url=base_url)
     raise ValueError(f"Unsupported HTTP method {method!r}")
@@ -118,7 +118,7 @@ async def invoke_operation_async(
     if method == "PATCH":
         return await http.patch(path, json=json_body, params=params, base_url=base_url)
     if method == "PUT":
-        raise NotImplementedError("PUT operations are not in the public modus-api spec")
+        return await http.put(path, json=json_body, params=params, base_url=base_url)
     if method == "DELETE":
         return await http.delete(path, base_url=base_url)
     raise ValueError(f"Unsupported HTTP method {method!r}")

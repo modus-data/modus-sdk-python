@@ -28,7 +28,14 @@ REJECTED_LIST_RESPONSE_BODY: Dict[str, Any] = {
 }
 
 # OpenAPI GET operations with pageSize not yet exposed on the Python SDK.
-SDK_LIST_OPS_EXCLUDED: frozenset[str] = frozenset()
+# Thin envelopes today: SDK returns unwrapped arrays and always receives nextPageToken=null.
+SDK_LIST_OPS_EXCLUDED: frozenset[str] = frozenset(
+    {
+        "MemberGroupsController_list",
+        "OrgMembersController_list",
+        "WorkflowInterfacesController_list",
+    }
+)
 
 FORBIDDEN_RESPONSE_KEYS = frozenset({"items", "data", "results"})
 

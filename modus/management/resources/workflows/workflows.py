@@ -29,6 +29,7 @@ from .._access_config_write import (
     access_config_body_for_update,
 )
 from ._update_body import _WorkflowCreateBody, _WorkflowUpdateBody
+from .interfaces import AsyncWorkflowInterfacesResource, WorkflowInterfacesResource
 
 
 @dataclass(frozen=True)
@@ -45,6 +46,7 @@ class ManagementWorkflowsOperations:
     request_ownership_transfer: str
     cancel_ownership_transfer: str
     accept_ownership_transfer: str
+    toggle: str
 
 
 MANAGEMENT_WORKFLOW_OPERATIONS = ManagementWorkflowsOperations(
@@ -58,6 +60,7 @@ MANAGEMENT_WORKFLOW_OPERATIONS = ManagementWorkflowsOperations(
     request_ownership_transfer="WorkflowsController_requestOwnershipTransfer",
     cancel_ownership_transfer="WorkflowsController_cancelOwnershipTransfer",
     accept_ownership_transfer="WorkflowsController_acceptOwnershipTransfer",
+    toggle="WorkflowsController_toggle",
 )
 
 
@@ -180,6 +183,10 @@ class WorkflowsResource:
         )
         return _parse_workflow(data)
 
+    def interfaces(self, workflow_id: Union[int, str]) -> WorkflowInterfacesResource:
+        """Return the interfaces sub-resource scoped to ``workflow_id``."""
+        return WorkflowInterfacesResource(self._http, self._config, workflow_id)
+
     def create(
         self,
         name: str,
@@ -288,6 +295,18 @@ class WorkflowsResource:
             retry_not_found_on_deploy=True,
         )
         return AgentDeployResponseDto.model_validate(raw).agent
+
+    def toggle(self, workflow_id: Union[int, str], *, active: bool) -> Agent:
+        """Enable or disable a workflow."""
+        validate_id(workflow_id, name="workflow_id")
+        raw = with_retry(
+            lambda: invoke_operation(
+                self._http, self._ops.toggle, path_params={"id": workflow_id},
+                json_body={"active": active},
+            ),
+            self._config.max_retries,
+        )
+        return _parse_workflow(raw)
 
     def delete(self, workflow_id: Union[int, str]) -> None:
         """Delete a Modus workflow."""
@@ -444,6 +463,10 @@ class AsyncWorkflowsResource:
         )
         return _parse_workflow(data)
 
+    def interfaces(self, workflow_id: Union[int, str]) -> AsyncWorkflowInterfacesResource:
+        """Return the interfaces sub-resource scoped to ``workflow_id``."""
+        return AsyncWorkflowInterfacesResource(self._http, self._config, workflow_id)
+
     async def create(self, name: str, type: AgentType, *,
                      description: Optional[str] = None,
                      trigger: Optional[TriggerInput] = None,
@@ -542,6 +565,17 @@ class AsyncWorkflowsResource:
             retry_not_found_on_deploy=True,
         )
         return AgentDeployResponseDto.model_validate(raw).agent
+
+    async def toggle(self, workflow_id: Union[int, str], *, active: bool) -> Agent:
+        validate_id(workflow_id, name="workflow_id")
+        raw = await async_with_retry(
+            lambda: invoke_operation_async(
+                self._http, self._ops.toggle, path_params={"id": workflow_id},
+                json_body={"active": active},
+            ),
+            self._config.max_retries,
+        )
+        return _parse_workflow(raw)
 
     async def delete(self, workflow_id: Union[int, str]) -> None:
         validate_id(workflow_id, name="workflow_id")
