@@ -2614,8 +2614,8 @@ class CreateAgentDto(BaseModel):
     workflow_structure: dict[str, Any] | None = Field(
         None,
         alias='workflowStructure',
-        description='Workflow graph (nodes + edges) when `type` is `workflow`. Free-form JSONB.',
-        examples=[{'nodes': [], 'edges': []}],
+        description='Workflow graph when `type` is `workflow`. Object with `nodes` and `edges` arrays. Each node: `{ id, type, data, position? }` where `type` is one of `start` | `action` | `condition` | `agent` | `humanApproval`. Each edge: `{ id, source, target, sourceHandle? }` and NOTHING else — extra keys (React-Flow cosmetics like `type`/`animated`/`targetHandle`, or `null` fields) are rejected. The server validates this shape on write (422 on mismatch); a graph that is accepted but non-conformant would break every later deploy and re-open of the workflow.',
+        examples=[{'nodes': [{'id': '1', 'type': 'start', 'position': {'x': 0, 'y': 50}, 'data': {}}], 'edges': []}],
     )
     access_config: AgentAccessConfigDto | None = Field(
         None,
@@ -2835,8 +2835,8 @@ class UpdateAgentDto(BaseModel):
     workflow_structure: dict[str, Any] | None = Field(
         None,
         alias='workflowStructure',
-        description='Updated workflow graph (nodes + edges).',
-        examples=[{'nodes': [], 'edges': []}],
+        description='Updated workflow graph. Object with `nodes` and `edges` arrays. Each node: `{ id, type, data, position? }` where `type` is one of `start` | `action` | `condition` | `agent` | `humanApproval`. Each edge: `{ id, source, target, sourceHandle? }` and NOTHING else — extra keys (React-Flow cosmetics like `type`/`animated`/`targetHandle`, or `null` fields) are rejected. The server validates this shape on write (422 on mismatch); a graph that is accepted but non-conformant would break every later deploy and re-open of the workflow.',
+        examples=[{'nodes': [{'id': '1', 'type': 'start', 'position': {'x': 0, 'y': 50}, 'data': {}}], 'edges': []}],
     )
     access_config: AgentAccessConfigDto | None = Field(
         None,
