@@ -163,6 +163,11 @@ from .models import (
     Weekday,
     WorkflowActionDto,
     WorkflowActionSource,
+    WorkflowEdgeDto,
+    WorkflowNodeDto,
+    WorkflowNodePositionDto,
+    WorkflowNodeType,
+    WorkflowStructureDto,
 )
 __all__ = [
     "AccessConfigDto",
@@ -328,4 +333,9 @@ __all__ = [
     "Weekday",
     "WorkflowActionDto",
     "WorkflowActionSource",
+    "WorkflowEdgeDto",
+    "WorkflowNodeDto",
+    "WorkflowNodePositionDto",
+    "WorkflowNodeType",
+    "WorkflowStructureDto",
 ]

@@ -1593,6 +1593,33 @@ class UsageTotalsDto(BaseModel):
     )
 
 
+class WorkflowEdgeDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(..., description='Stable edge id, unique within the graph.', examples=['e1'])
+    source: str = Field(..., description='Source node id.', examples=['1'])
+    target: str = Field(..., description='Target node id.', examples=['2'])
+    source_handle: str | None = Field(
+        None,
+        alias='sourceHandle',
+        description='Source port handle (e.g. a condition branch). Omit for a single-output node.',
+        examples=['branch_0'],
+    )
+
+
+class WorkflowNodePositionDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    x: float = Field(..., examples=[0])
+    y: float = Field(..., examples=[50])
+
+
+class WorkflowNodeType(str, Enum):
+    start = 'start'
+    action = 'action'
+    condition = 'condition'
+    agent = 'agent'
+    human_approval = 'humanApproval'
+
+
 class ActiveConversationRunStatus(str, Enum):
     queued = 'queued'
     pending = 'pending'
@@ -2381,6 +2408,34 @@ class UpdateEvaluationConfigDto(BaseModel):
     )
 
 
+class WorkflowNodeDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(..., description='Stable node id, unique within the graph.', examples=['1'])
+    type: WorkflowNodeType | None = Field(
+        ...,
+        description='Node kind. Determines how the runtime interprets `data`.',
+        examples=['start'],
+    )
+    position: WorkflowNodePositionDto | None = Field(
+        None, description='Canvas position. Optional — preserved for builder layout when present.'
+    )
+    data: dict[str, Any] | None = Field(
+        None,
+        description='Node-type-specific payload (intentionally open — shape varies by `type`). Defaults to `{}`.',
+        examples=[{}],
+    )
+
+
+class WorkflowStructureDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    nodes: list[WorkflowNodeDto] | None = Field(
+        None, description='Workflow nodes. Defaults to `[]`.'
+    )
+    edges: list[WorkflowEdgeDto] | None = Field(
+        None, description='Directed edges connecting the nodes. Defaults to `[]`.'
+    )
+
+
 class ActiveConversationRunDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     run_id: str = Field(..., alias='runId', description='Run identifier.')
@@ -2611,11 +2666,10 @@ class CreateAgentDto(BaseModel):
         alias='agentSelection',
         description='Workflow selection (for task workflows): ordered scopes plus per-scope instructions.',
     )
-    workflow_structure: dict[str, Any] | None = Field(
+    workflow_structure: WorkflowStructureDto | None = Field(
         None,
         alias='workflowStructure',
-        description='Workflow graph when `type` is `workflow`. Object with `nodes` and `edges` arrays. Each node: `{ id, type, data, position? }` where `type` is one of `start` | `action` | `condition` | `agent` | `humanApproval`. Each edge: `{ id, source, target, sourceHandle? }` and NOTHING else — extra keys (React-Flow cosmetics like `type`/`animated`/`targetHandle`, or `null` fields) are rejected. The server validates this shape on write (422 on mismatch); a graph that is accepted but non-conformant would break every later deploy and re-open of the workflow.',
-        examples=[{'nodes': [{'id': '1', 'type': 'start', 'position': {'x': 0, 'y': 50}, 'data': {}}], 'edges': []}],
+        description='Workflow graph (nodes + edges) when `type` is `workflow`. Unknown node/edge keys and out-of-enum node types are rejected with a 422.',
     )
     access_config: AgentAccessConfigDto | None = Field(
         None,
@@ -2832,11 +2886,10 @@ class UpdateAgentDto(BaseModel):
     agent_selection: AgentSelectionDto | None = Field(
         None, alias='agentSelection', description='Updated workflow selection.'
     )
-    workflow_structure: dict[str, Any] | None = Field(
+    workflow_structure: WorkflowStructureDto | None = Field(
         None,
         alias='workflowStructure',
-        description='Updated workflow graph. Object with `nodes` and `edges` arrays. Each node: `{ id, type, data, position? }` where `type` is one of `start` | `action` | `condition` | `agent` | `humanApproval`. Each edge: `{ id, source, target, sourceHandle? }` and NOTHING else — extra keys (React-Flow cosmetics like `type`/`animated`/`targetHandle`, or `null` fields) are rejected. The server validates this shape on write (422 on mismatch); a graph that is accepted but non-conformant would break every later deploy and re-open of the workflow.',
-        examples=[{'nodes': [{'id': '1', 'type': 'start', 'position': {'x': 0, 'y': 50}, 'data': {}}], 'edges': []}],
+        description='Updated workflow graph (nodes + edges). Unknown node/edge keys and out-of-enum node types are rejected with a 422.',
     )
     access_config: AgentAccessConfigDto | None = Field(
         None,
