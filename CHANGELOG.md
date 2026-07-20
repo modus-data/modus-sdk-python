@@ -1,12 +1,9 @@
 # Changelog
 
-**Current release:** not yet on production PyPI. Prior TestPyPI builds (`0.1.0`–`0.1.7`) were pre-public only.
+**Current release:** [`0.2.0`](https://pypi.org/project/modus-sdk/0.2.0/).
 
-Next public cut: **`0.2.0`** on [pypi.org](https://pypi.org/project/modus-sdk/) (first production publish).
 
-## [Unreleased]
-
-Content below ships as **`0.2.0`** — first production-ready `modus-sdk` on PyPI.
+## [0.2.0] — 2026-07-20
 
 ### Added
 
@@ -37,3 +34,6 @@ Content below ships as **`0.2.0`** — first production-ready `modus-sdk` on PyP
 | Version | Notes |
 |---------|--------|
 | 0.1.0–0.1.7 | Internal / TestPyPI previews. Not published to production PyPI. Superseded by `0.2.0`. |
+
+## [Unreleased]
+
