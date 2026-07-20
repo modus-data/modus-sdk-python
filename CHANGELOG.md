@@ -1,21 +1,11 @@
 # Changelog
 
-**Current release:** [`0.2.0`](https://pypi.org/project/modus-sdk/0.2.0/).
+**Current release:** [`0.2.2`](https://pypi.org/project/modus-sdk/0.2.2/).
 
 
 ## [Unreleased]
 
-### Fixed
-
-- Streaming always sends `sessionId` (thread id or generated UUID) on agent-host runs.
-- Optional `organization_id` / `MODUS_ORGANIZATION_ID` for stream bodies; agent-service accepts omitted org and uses the PAT principal.
-- Default API/agent hosts are `*.getmodus.com` (no longer `*.modus.com`).
-- `base_urls['agent-service']` drives the streaming agent-host client (parity with TypeScript).
-
-### Added
-
-- Create responses expose `.uid` as an alias of `context_item_id`.
-- Staging smoke includes buffered chat + streaming as a hard gate.
+## [0.2.2] — 2026-07-20
 
 ## [0.2.0] — 2026-07-20
 
