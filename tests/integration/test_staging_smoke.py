@@ -168,3 +168,16 @@ def test_staging_chat_and_stream() -> None:
     assert tokens
     assert final.content
     assert final.thread_id or final.run_id
+
+    # create_modus must mint sessionId + negotiate SSE (not JSON pending).
+    create_tokens = 0
+    for event in client.workflows.runs.create_modus(
+        {
+            "message": "sdk staging smoke — create_modus one short word",
+            "config": {"model": model},
+        }
+    ):
+        content = getattr(event, "content", None)
+        if getattr(event, "type", None) == "token" and isinstance(content, str) and content:
+            create_tokens += 1
+    assert create_tokens > 0

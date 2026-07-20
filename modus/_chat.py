@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import uuid
 from typing import Any, AsyncIterator, Dict, Iterator, List, Literal, Optional, Union
 from urllib.parse import quote
 
+from ._agent_run_request import resolve_agent_run_session_id
 from ._exceptions import ModusError, RunCancelledError, StreamTimeoutError
 from ._generated.models import SkillChatRequestDto, SkillChatResponseDto
 from ._http import AsyncHttpClient, HttpClient
@@ -37,8 +37,7 @@ def _effective_thread_id(thread_id: Optional[str]) -> Optional[str]:
 
 def _resolve_session_id(thread_id: Optional[str]) -> str:
     """Agent-host runs always require sessionId — reuse thread_id or mint a UUID."""
-    tid = _effective_thread_id(thread_id)
-    return tid if tid is not None else str(uuid.uuid4())
+    return resolve_agent_run_session_id(_effective_thread_id(thread_id))
 
 
 def _chat_path(
