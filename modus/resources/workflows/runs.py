@@ -14,6 +14,7 @@ from typing import (
     Sequence,
     Union,
 )
+from uuid import uuid4
 
 from ..._config import ModusConfig
 from ..._generated.models import (
@@ -115,7 +116,12 @@ def _runs_list_params(
 
 
 def _request_body(body: Mapping[str, Any]) -> Dict[str, Any]:
-    return dict(body)
+    """Copy body and mint sessionId when omitted (parity with chat_stream)."""
+    out = dict(body)
+    session = out.get("sessionId")
+    if not (isinstance(session, str) and session.strip()):
+        out["sessionId"] = str(uuid4())
+    return out
 
 
 def _optional_body(body: Optional[Mapping[str, Any]]) -> Dict[str, Any]:

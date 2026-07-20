@@ -307,7 +307,14 @@ class HttpClient:
         """Make a streaming request and yield raw SSE lines."""
         effective_base_url = base_url or self._config.base_url
         try:
-            with self._client.stream(method, _request_url(path, base_url), json=json) as response:
+            # Override client default Accept: application/json — agent-service
+            # negotiates SSE vs JSON polling on Accept.
+            with self._client.stream(
+                method,
+                _request_url(path, base_url),
+                json=json,
+                headers={"Accept": "text/event-stream"},
+            ) as response:
                 _raise_for_status(response)
                 for line in response.iter_lines():
                     if line.strip():
@@ -453,7 +460,12 @@ class AsyncHttpClient:
         """Streaming request — yields raw SSE lines."""
         effective_base_url = base_url or self._config.base_url
         try:
-            async with self._client.stream(method, _request_url(path, base_url), json=json) as response:
+            async with self._client.stream(
+                method,
+                _request_url(path, base_url),
+                json=json,
+                headers={"Accept": "text/event-stream"},
+            ) as response:
                 await _raise_for_status_async(response)
                 async for line in response.aiter_lines():
                     if line.strip():
