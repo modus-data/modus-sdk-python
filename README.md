@@ -8,8 +8,8 @@
 
 # Modus Python SDK
 
-[![TestPyPI](https://img.shields.io/badge/TestPyPI-modus--sdk-blue)](https://test.pypi.org/project/modus-sdk/)
-[![Python versions](https://img.shields.io/badge/python-3.10%2B-blue)](https://test.pypi.org/project/modus-sdk/)
+[![PyPI](https://img.shields.io/pypi/v/modus-sdk)](https://pypi.org/project/modus-sdk/)
+[![Python versions](https://img.shields.io/pypi/pyversions/modus-sdk)](https://pypi.org/project/modus-sdk/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 Official Python client for Modus — your organization's context layer for AI.
@@ -35,11 +35,11 @@ Async variants: `AsyncModus` and `AsyncModusManagement`.
 
 ## Installation
 
-Pre-release on [TestPyPI](https://test.pypi.org/project/modus-sdk/) (production PyPI coming later):
-
 ```bash
-pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ modus-sdk
+pip install modus-sdk
 ```
+
+Requires Python 3.10+.
 
 ## Getting started
 
