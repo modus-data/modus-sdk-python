@@ -2942,7 +2942,6 @@ class RunConfigDto(BaseModel):
     toolset: dict[str, Any] | None = Field(None, description='Map of tool name to tool config.')
     strategies: list[str] | None = None
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
-    model_only: bool | None = Field(None, alias='modelOnly')
     debug: bool | None = None
     composer_file_offload: bool | None = Field(
         None, alias='composerFileOffload', description='Set false to keep composer output inline.'
@@ -2982,7 +2981,6 @@ class SkillRunDto(BaseModel):
         description='Streaming protocol version. Version 2 supports assistant-content replacement events.',
     )
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
-    model_only: bool | None = Field(None, alias='modelOnly')
     debug: bool | None = None
     subordinate_skill_ids: list[float] | None = Field(
         None,
@@ -3052,7 +3050,6 @@ class AgentRunDto(BaseModel):
         description='Streaming protocol version. Version 2 supports assistant-content replacement events.',
     )
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
-    model_only: bool | None = Field(None, alias='modelOnly')
     debug: bool | None = None
 
 
@@ -3089,7 +3086,6 @@ class ModusRunDto(BaseModel):
         description='Streaming protocol version. Version 2 supports assistant-content replacement events.',
     )
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
-    model_only: bool | None = Field(None, alias='modelOnly')
     debug: bool | None = None
     subordinate_skill_ids: list[float] | None = Field(
         None, alias='subordinateSkillIds', description='Saved scope ids to scope the Modus run to.'
@@ -3129,6 +3125,5 @@ class ResumeRunDto(BaseModel):
         description='Streaming protocol version. Version 2 supports assistant-content replacement events.',
     )
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
-    model_only: bool | None = Field(None, alias='modelOnly')
     debug: bool | None = None
     decision: Decision = Field(..., description='Decision that resumes the interrupted run.')
