@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from modus import AuthenticationError, Modus, NotFoundError
@@ -43,8 +43,9 @@ def _mgmt() -> ModusManagement:
 
 @pytest.mark.skipif(not _has_live, reason="MODUS_API_KEY not set")
 def test_staging_journey() -> None:
-    """Auth → browse → pagination → compose → note write/cleanup → typed errors."""
+    """Auth → browse → pagination → compose → mgmt reads → note write → errors."""
     client = _client()
+    mgmt = _mgmt()
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     run_id = uuid.uuid4().hex[:8]
 
@@ -56,14 +57,30 @@ def test_staging_journey() -> None:
     if not scope_id and scopes.items:
         scope_id = str(scopes.items[0].id)
 
-    # Browse
+    # Browse (read client)
     if scope_id:
         got = client.scopes.get(scope_id)
         assert got.id is not None
+        convos = client.scopes.conversations(scope_id).list(page_size=5)
+        assert isinstance(convos.items, list)
+
     workflows = client.workflows.list(page_size=5)
     assert isinstance(workflows.items, list)
+    if workflows.items:
+        wf = client.workflows.get(workflows.items[0].id)
+        assert wf.id is not None
+
     notes = client.context.items.list(context_type="note", page_size=1)
     assert isinstance(notes.items, list)
+
+    connections = client.connections.list(page_size=5)
+    assert isinstance(connections.items, list)
+
+    suggestions = client.suggestions.list(page_size=5)
+    assert isinstance(suggestions.items, list)
+
+    active_runs = client.workflows.runs.active(page_size=5)
+    assert isinstance(active_runs.items, list)
 
     # Pagination (follow token only when present)
     page1 = client.scopes.list(page_size=1)
@@ -81,8 +98,22 @@ def test_staging_journey() -> None:
         )
         assert scope_composed is not None
 
+    # Management reads
+    mgmt_scopes = mgmt.scopes.list(page_size=5)
+    assert isinstance(mgmt_scopes.items, list)
+    members = mgmt.users.list_org_members()
+    assert isinstance(members, list)
+
+    until = datetime.now(timezone.utc)
+    since = until - timedelta(days=1)
+    usage = mgmt.usage.list(
+        since=since.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        until=until.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        rollup="day",
+    )
+    assert usage is not None
+
     # Write + cleanup (note — ephemeral; always delete)
-    mgmt = _mgmt()
     title = f"[SDK Staging Smoke] {stamp}-{run_id}"
     uid: str | None = None
     try:
