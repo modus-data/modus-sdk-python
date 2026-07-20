@@ -33,6 +33,15 @@
       ],
       "outputs": ["{projectRoot}/reports"]
     },
+    "test-staging-smoke": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install"],
+      "options": {
+        "command": "bash -c 'mkdir -p reports && bash ../../../../scripts/sdk-python/ensure-uv.sh run pytest tests/integration/test_staging_smoke.py -m integration -v --tb=short'",
+        "cwd": "{projectRoot}"
+      },
+      "cache": false
+    },
     "lint": {
       "executor": "nx:run-commands",
       "dependsOn": ["install"],
