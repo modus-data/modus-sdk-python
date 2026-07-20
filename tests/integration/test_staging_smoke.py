@@ -98,9 +98,9 @@ def test_staging_journey() -> None:
         if uid is not None:
             mgmt.context.items.delete(uid)
 
-    # Errors
+    # Errors — scope path param is numeric (ParseIntPipe); a missing id → 404.
     with pytest.raises(NotFoundError):
-        client.scopes.get("__sdk_staging_smoke_missing_scope__")
+        client.scopes.get(999_999_999)
 
     bad = Modus(
         api_key="modus_00000000_dead_beef_invalid_key_for_smoke",
