@@ -146,6 +146,10 @@ from modus.management import ModusManagement
 mgmt = ModusManagement()  # reads MODUS_API_KEY
 scope = mgmt.scopes.create(name="Analyst", model="claude-sonnet-5")
 mgmt.scopes.deploy(scope.id)
+
+# Create returns context_item_id (also available as .uid); list/get use .uid
+note = mgmt.context.create_note("Title", "Body")
+print(note.context_item_id, note.uid)  # same UUID
 ```
 
 Requires a token with write access to scopes and workflows (same as the Modus UI).

@@ -8,7 +8,7 @@ from modus._exceptions import AuthenticationError
 def test_sync_client_init(monkeypatch):
     monkeypatch.delenv("MODUS_BASE_URL", raising=False)
     client = Modus(api_key="modus_testkey")
-    assert repr(client) == "Modus(base_url='https://api.modus.com')"
+    assert repr(client) == "Modus(base_url='https://api.getmodus.com')"
 
 
 def test_sync_client_from_env(monkeypatch):
@@ -109,7 +109,7 @@ def test_explicit_base_url_takes_precedence_over_env(monkeypatch):
 def test_async_client_init(monkeypatch):
     monkeypatch.delenv("MODUS_BASE_URL", raising=False)
     client = AsyncModus(api_key="modus_testkey")
-    assert repr(client) == "AsyncModus(base_url='https://api.modus.com')"
+    assert repr(client) == "AsyncModus(base_url='https://api.getmodus.com')"
 
 
 def test_async_base_url_from_env(monkeypatch):

@@ -21,6 +21,7 @@ from ._exceptions import AuthenticationError
 _ENV_VAR = "MODUS_API_KEY"
 _BASE_URL_ENV_VAR = "MODUS_BASE_URL"
 _AGENT_HOST_ENV_VAR = "MODUS_AGENT_HOST"
+_ORGANIZATION_ID_ENV_VAR = "MODUS_ORGANIZATION_ID"
 _TIMEOUT_ENV_VAR = "MODUS_TIMEOUT"
 _MAX_RETRIES_ENV_VAR = "MODUS_MAX_RETRIES"
 _KEY_PREFIX = "modus_"
@@ -37,13 +38,13 @@ def resolve_api_key(api_key: Optional[str]) -> str:
         raise AuthenticationError(
             f"No API key provided. "
             f"Pass api_key= or set the {_ENV_VAR} environment variable. "
-            f"Create a token at app.modus.com → Settings → API Tokens."
+            f"Create a token at app.getmodus.com → Settings → API Tokens."
         )
 
     if not key.startswith(_KEY_PREFIX):
         raise AuthenticationError(
             f"Invalid API key format. Modus API keys start with '{_KEY_PREFIX}'. "
-            f"Create a token at app.modus.com → Settings → API Tokens."
+            f"Create a token at app.getmodus.com → Settings → API Tokens."
         )
 
     return key
@@ -62,9 +63,22 @@ def resolve_agent_host(agent_host: Optional[str]) -> Optional[str]:
     """
     Resolve the agent host from an explicit constructor argument, or from the
     ``MODUS_AGENT_HOST`` environment variable when set. Returns ``None`` if
-    neither is set (streaming falls back to ``base_url``).
+    neither is set (caller uses the production default).
     """
     return agent_host or os.environ.get(_AGENT_HOST_ENV_VAR) or None
+
+
+def resolve_organization_id(organization_id: Optional[str]) -> Optional[str]:
+    """
+    Resolve an optional Clerk organization id for agent-host run bodies.
+    From ``organization_id=`` or ``MODUS_ORGANIZATION_ID``. Usually omitted —
+    agent-service falls back to the PAT principal's org.
+    """
+    raw = organization_id if organization_id is not None else os.environ.get(_ORGANIZATION_ID_ENV_VAR)
+    if raw is None:
+        return None
+    stripped = raw.strip()
+    return stripped or None
 
 
 def resolve_timeout(explicit: Union[float, httpx.Timeout, None]) -> Union[float, httpx.Timeout, None]:

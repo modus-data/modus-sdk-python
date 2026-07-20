@@ -343,7 +343,7 @@ SDK_AIP_LIST_OPERATIONS: List[ListOperationSpec] = [
         client_kind="modus",
         invoke=_active_workflow_runs_invoke,
         expected_page_size=50,
-        mock_base_url="https://agent.modus.com",
+        mock_base_url="https://agent.getmodus.com",
         bad_body_raises_pydantic=True,
     ),
 ]

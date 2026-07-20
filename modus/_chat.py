@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import Any, AsyncIterator, Dict, Iterator, List, Literal, Optional, Union
 from urllib.parse import quote
 
@@ -32,6 +33,12 @@ def _effective_thread_id(thread_id: Optional[str]) -> Optional[str]:
     if isinstance(thread_id, str) and not thread_id.strip():
         return None
     return thread_id
+
+
+def _resolve_session_id(thread_id: Optional[str]) -> str:
+    """Agent-host runs always require sessionId — reuse thread_id or mint a UUID."""
+    tid = _effective_thread_id(thread_id)
+    return tid if tid is not None else str(uuid.uuid4())
 
 
 def _chat_path(
@@ -82,26 +89,33 @@ def _agent_runs_body(
     message: str,
     model: str,
     *,
-    session_id: Optional[str] = None,
+    session_id: str,
+    organization_id: Optional[str] = None,
     version: Optional[RunVersion] = None,
 ) -> Dict[str, Any]:
     """Build the request body for agent-host runs (streaming) requests.
 
     Args:
-        message:    The user message.
-        model:      Model id, e.g. ``"claude-sonnet-5"``.
-        session_id: Existing conversation/session ID (``thread_id`` on the SDK surface).
-        version:    Run a specific variation — ``"published"`` or ``"draft"``.
+        message:          The user message.
+        model:            Model id, e.g. ``"claude-sonnet-5"``.
+        session_id:       Conversation/session ID (always required by agent-host).
+        organization_id:  Optional Clerk org id; omit to let the server use the PAT org.
+        version:          Run a specific variation — ``"published"`` or ``"draft"``.
     """
     body: Dict[str, Any] = {
         "message": message,
         "config": {"model": model},
+        "sessionId": session_id,
     }
-    if session_id is not None:
-        body["sessionId"] = session_id
+    if organization_id is not None:
+        body["organizationId"] = organization_id
     if version is not None:
         body["version"] = version
     return body
+
+
+def _org_from_http(http: Union[HttpClient, AsyncHttpClient]) -> Optional[str]:
+    return getattr(http.config, "organization_id", None)
 
 
 def _raise_for_event(event: RunEvent) -> RunEvent:
@@ -318,9 +332,13 @@ def modus_stream_session(
 ) -> ChatStream:
     """Stream a Modus chat via the agent host's by-reference runs path."""
     validate_chat_model(model)
-    session_id = _effective_thread_id(thread_id)
     path = _agent_host_modus_runs_path()
-    body = _agent_runs_body(message, model, session_id=session_id)
+    body = _agent_runs_body(
+        message,
+        model,
+        session_id=_resolve_session_id(thread_id),
+        organization_id=_org_from_http(agent_http),
+    )
     return ChatStream(agent_http, path, body)
 
 
@@ -333,9 +351,13 @@ def modus_stream_session_async(
 ) -> AsyncChatStream:
     """Async stream a Modus chat via the agent host's by-reference runs path."""
     validate_chat_model(model)
-    session_id = _effective_thread_id(thread_id)
     path = _agent_host_modus_runs_path()
-    body = _agent_runs_body(message, model, session_id=session_id)
+    body = _agent_runs_body(
+        message,
+        model,
+        session_id=_resolve_session_id(thread_id),
+        organization_id=_org_from_http(agent_http),
+    )
     return AsyncChatStream(agent_http, path, body)
 
 
@@ -351,9 +373,14 @@ def scope_stream_session(
     """Stream a scope chat via the agent host's by-reference runs path."""
     validate_id(resource_id, name="scope_id")
     validate_chat_model(model)
-    session_id = _effective_thread_id(thread_id)
     path = format_operation_path("ScopeRunsController_create", {"id": resource_id})
-    body = _agent_runs_body(message, model, session_id=session_id, version=version)
+    body = _agent_runs_body(
+        message,
+        model,
+        session_id=_resolve_session_id(thread_id),
+        organization_id=_org_from_http(agent_http),
+        version=version,
+    )
     return ChatStream(agent_http, path, body)
 
 
@@ -369,9 +396,14 @@ def scope_stream_session_async(
     """Async stream a scope chat via the agent host's by-reference runs path."""
     validate_id(resource_id, name="scope_id")
     validate_chat_model(model)
-    session_id = _effective_thread_id(thread_id)
     path = format_operation_path("ScopeRunsController_create", {"id": resource_id})
-    body = _agent_runs_body(message, model, session_id=session_id, version=version)
+    body = _agent_runs_body(
+        message,
+        model,
+        session_id=_resolve_session_id(thread_id),
+        organization_id=_org_from_http(agent_http),
+        version=version,
+    )
     return AsyncChatStream(agent_http, path, body)
 
 
@@ -387,9 +419,14 @@ def workflow_stream_session(
     """Stream a workflow chat via the agent host's by-reference runs path."""
     validate_id(resource_id, name="workflow_id")
     validate_chat_model(model)
-    session_id = _effective_thread_id(thread_id)
     path = format_operation_path("WorkflowRunsController_create", {"id": resource_id})
-    body = _agent_runs_body(message, model, session_id=session_id, version=version)
+    body = _agent_runs_body(
+        message,
+        model,
+        session_id=_resolve_session_id(thread_id),
+        organization_id=_org_from_http(agent_http),
+        version=version,
+    )
     return ChatStream(agent_http, path, body)
 
 
@@ -405,7 +442,12 @@ def workflow_stream_session_async(
     """Async stream a workflow chat via the agent host's by-reference runs path."""
     validate_id(resource_id, name="workflow_id")
     validate_chat_model(model)
-    session_id = _effective_thread_id(thread_id)
     path = format_operation_path("WorkflowRunsController_create", {"id": resource_id})
-    body = _agent_runs_body(message, model, session_id=session_id, version=version)
+    body = _agent_runs_body(
+        message,
+        model,
+        session_id=_resolve_session_id(thread_id),
+        organization_id=_org_from_http(agent_http),
+        version=version,
+    )
     return AsyncChatStream(agent_http, path, body)

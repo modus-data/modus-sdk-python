@@ -39,7 +39,7 @@ class ModusManagement:
         api_key:     Your Modus API key (requires scopes:write + workflows:write scopes).
                      Falls back to MODUS_API_KEY env var.
         base_url:    API origin without a path suffix (default
-                     https://api.modus.com).
+                     https://api.getmodus.com).
         timeout:     Request timeout as seconds or httpx.Timeout. Default is
                      5s connect and 300s read.
         max_retries: Retries on 429/5xx (default 2).
@@ -109,7 +109,7 @@ class AsyncModusManagement:
     Args:
         api_key:     Modus API key with write scopes. Falls back to MODUS_API_KEY.
         base_url:    API origin without a path suffix (default
-                     https://api.modus.com).
+                     https://api.getmodus.com).
         timeout:     Request timeout as seconds or httpx.Timeout. Default is
                      5s connect and 300s read.
         max_retries: Retries on 429/5xx (default 2).

@@ -2,9 +2,11 @@
 Staging journey smoke — real PAT against staging (or any reachable API).
 
 Env:
-  MODUS_API_KEY   required (staging PAT)
-  MODUS_BASE_URL  default https://api.staging.getmodus.com when unset in CI
-  MODUS_SCOPE_ID  optional stable scope id/slug for get / get_context
+  MODUS_API_KEY     required (staging PAT)
+  MODUS_BASE_URL    default https://api.staging.getmodus.com when unset in CI
+  MODUS_AGENT_HOST  default https://agent.staging.getmodus.com (chat/stream)
+  MODUS_SMOKE_MODEL default claude-sonnet-5
+  MODUS_SCOPE_ID    optional stable scope id/slug for get / get_context
 
 Run:
   export MODUS_API_KEY=modus_...
@@ -109,3 +111,29 @@ def test_staging_journey() -> None:
     )
     with pytest.raises(AuthenticationError):
         bad.scopes.list(page_size=1)
+
+
+@pytest.mark.skipif(not _has_live, reason="MODUS_API_KEY not set")
+def test_staging_chat_and_stream() -> None:
+    """Buffered chat + streaming against staging agent host (hard gate)."""
+    model = os.getenv("MODUS_SMOKE_MODEL") or "claude-sonnet-5"
+    agent_host = os.getenv("MODUS_AGENT_HOST") or "https://agent.staging.getmodus.com"
+    client = Modus(base_url=_base_url(), agent_host=agent_host, timeout=180.0)
+
+    buffered = client.modus.chat(
+        "sdk staging smoke — reply with one short word",
+        model=model,
+    )
+    assert buffered.content
+    assert buffered.thread_id
+
+    with client.modus.chat_stream(
+        "sdk staging smoke — stream one short word",
+        model=model,
+    ) as stream:
+        tokens = list(stream.text_stream)
+        final = stream.get_final_result()
+
+    assert tokens
+    assert final.content
+    assert final.thread_id or final.run_id

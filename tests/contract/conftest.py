@@ -30,7 +30,11 @@ def openapi() -> dict:
 
 @pytest.fixture
 def contract_client() -> Modus:
-    return Modus(api_key=TEST_API_KEY, base_url=TEST_BASE_URL)
+    return Modus(
+        api_key=TEST_API_KEY,
+        base_url=TEST_BASE_URL,
+        agent_host="https://agent.getmodus.com",
+    )
 
 
 @pytest.fixture

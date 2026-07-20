@@ -16,9 +16,16 @@ from ._auth import (
     resolve_api_key,
     resolve_base_url,
     resolve_max_retries,
+    resolve_organization_id,
     resolve_timeout,
 )
-from ._config import DEFAULT_BASE_URL, DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT, ModusConfig
+from ._config import (
+    DEFAULT_AGENT_HOST,
+    DEFAULT_BASE_URL,
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_TIMEOUT,
+    ModusConfig,
+)
 from ._http import AsyncHttpClient, HttpClient
 from .resources import (
     AsyncConnectionsResource,
@@ -47,11 +54,13 @@ class Modus:
         api_key:     Your Modus API key. If omitted, reads from the
                      MODUS_API_KEY environment variable.
         base_url:    API origin without a path suffix (default
-                     https://api.modus.com).
-        agent_host:  Agent host origin for streaming runs (e.g.
-                     https://agent.modus.com). If omitted, reads from the
-                     MODUS_AGENT_HOST environment variable. When not set,
-                     streaming falls back to ``base_url``.
+                     https://api.getmodus.com).
+        agent_host:  Agent host origin for streaming runs (default
+                     https://agent.getmodus.com). Override via argument or
+                     MODUS_AGENT_HOST.
+        organization_id: Optional Clerk org id for agent-host run bodies.
+                     Usually omit — agent-service uses the PAT principal org.
+                     Override via MODUS_ORGANIZATION_ID when needed.
         base_urls:   Optional service-specific API origins.
         timeout:     Request timeout as seconds or httpx.Timeout. Default is
                      5s connect and 300s read.
@@ -81,13 +90,20 @@ class Modus:
         *,
         base_url: Optional[str] = None,
         agent_host: Optional[str] = None,
+        organization_id: Optional[str] = None,
         base_urls: Optional[Mapping[str, str]] = None,
         timeout: Union[float, httpx.Timeout, None] = None,
         max_retries: Optional[int] = None,
     ) -> None:
         resolved_key = resolve_api_key(api_key)
         resolved_url = resolve_base_url(base_url) or DEFAULT_BASE_URL
-        resolved_agent_host = resolve_agent_host(agent_host)
+        # Same precedence as TS: base_urls['agent-service'] drives streaming too.
+        resolved_agent_host = (
+            (base_urls or {}).get("agent-service")
+            or resolve_agent_host(agent_host)
+            or DEFAULT_AGENT_HOST
+        )
+        resolved_org = resolve_organization_id(organization_id)
         _t = resolve_timeout(timeout)
         resolved_timeout = _t if _t is not None else DEFAULT_TIMEOUT
         resolved_retries = resolve_max_retries(max_retries)
@@ -99,22 +115,20 @@ class Modus:
             timeout=resolved_timeout,
             max_retries=resolved_retries,
             agent_host=resolved_agent_host,
+            organization_id=resolved_org,
             base_urls=base_urls or {},
         )
         self._http = HttpClient(self._config)
         # Dedicated HTTP client for streaming to the agent host.
-        # When agent_host is not configured, _agent_http shares the same
-        # base_url as _http so streaming falls back gracefully.
-        if resolved_agent_host is not None:
-            _agent_config = ModusConfig(
-                api_key=resolved_key,
-                base_url=resolved_agent_host,
-                timeout=resolved_timeout,
-                max_retries=resolved_retries,
-            )
-            self._agent_http: HttpClient = HttpClient(_agent_config)
-        else:
-            self._agent_http = self._http
+        _agent_config = ModusConfig(
+            api_key=resolved_key,
+            base_url=resolved_agent_host,
+            timeout=resolved_timeout,
+            max_retries=resolved_retries,
+            agent_host=resolved_agent_host,
+            organization_id=resolved_org,
+        )
+        self._agent_http: HttpClient = HttpClient(_agent_config)
 
         self.scopes: ScopesResource = ScopesResource(self._http, self._agent_http, self._config)
         self.modus: ModusResource = ModusResource(self._http, self._agent_http, self._config)
@@ -148,11 +162,11 @@ class AsyncModus:
     Args:
         api_key:     Your Modus API key. If omitted, reads from MODUS_API_KEY.
         base_url:    API origin without a path suffix (default
-                     https://api.modus.com).
-        agent_host:  Agent host origin for streaming runs (e.g.
-                     https://agent.modus.com). If omitted, reads from the
-                     MODUS_AGENT_HOST environment variable. When not set,
-                     streaming falls back to ``base_url``.
+                     https://api.getmodus.com).
+        agent_host:  Agent host origin for streaming runs (default
+                     https://agent.getmodus.com). Override via argument or
+                     MODUS_AGENT_HOST.
+        organization_id: Optional Clerk org id for agent-host run bodies.
         base_urls:   Optional service-specific API origins.
         timeout:     Request timeout as seconds or httpx.Timeout. Default is
                      5s connect and 300s read.
@@ -176,13 +190,20 @@ class AsyncModus:
         *,
         base_url: Optional[str] = None,
         agent_host: Optional[str] = None,
+        organization_id: Optional[str] = None,
         base_urls: Optional[Mapping[str, str]] = None,
         timeout: Union[float, httpx.Timeout, None] = None,
         max_retries: Optional[int] = None,
     ) -> None:
         resolved_key = resolve_api_key(api_key)
         resolved_url = resolve_base_url(base_url) or DEFAULT_BASE_URL
-        resolved_agent_host = resolve_agent_host(agent_host)
+        # Same precedence as TS: base_urls['agent-service'] drives streaming too.
+        resolved_agent_host = (
+            (base_urls or {}).get("agent-service")
+            or resolve_agent_host(agent_host)
+            or DEFAULT_AGENT_HOST
+        )
+        resolved_org = resolve_organization_id(organization_id)
         _t = resolve_timeout(timeout)
         resolved_timeout = _t if _t is not None else DEFAULT_TIMEOUT
         resolved_retries = resolve_max_retries(max_retries)
@@ -194,20 +215,19 @@ class AsyncModus:
             timeout=resolved_timeout,
             max_retries=resolved_retries,
             agent_host=resolved_agent_host,
+            organization_id=resolved_org,
             base_urls=base_urls or {},
         )
         self._http = AsyncHttpClient(self._config)
-        # Dedicated HTTP client for streaming to the agent host.
-        if resolved_agent_host is not None:
-            _agent_config = ModusConfig(
-                api_key=resolved_key,
-                base_url=resolved_agent_host,
-                timeout=resolved_timeout,
-                max_retries=resolved_retries,
-            )
-            self._agent_http: AsyncHttpClient = AsyncHttpClient(_agent_config)
-        else:
-            self._agent_http = self._http
+        _agent_config = ModusConfig(
+            api_key=resolved_key,
+            base_url=resolved_agent_host,
+            timeout=resolved_timeout,
+            max_retries=resolved_retries,
+            agent_host=resolved_agent_host,
+            organization_id=resolved_org,
+        )
+        self._agent_http: AsyncHttpClient = AsyncHttpClient(_agent_config)
 
         self.scopes: AsyncScopesResource = AsyncScopesResource(
             self._http, self._agent_http, self._config

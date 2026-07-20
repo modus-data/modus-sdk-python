@@ -68,7 +68,7 @@ class AuthenticationError(ModusError):
     The API key is missing, invalid, or expired (HTTP 401).
 
     Check that MODUS_API_KEY is set correctly, or pass api_key= explicitly.
-    Create a token at app.modus.com → Settings → API Tokens.
+    Create a token at app.getmodus.com → Settings → API Tokens.
     """
     def __init__(self, message: str, **kwargs: Any) -> None:
         super().__init__(message, status_code=401, **kwargs)

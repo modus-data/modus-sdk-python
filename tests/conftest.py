@@ -10,12 +10,13 @@ TEST_BASE_URL = "https://api.modus.com"
 
 @pytest.fixture
 def client() -> Modus:
-    return Modus(api_key=TEST_API_KEY, base_url=TEST_BASE_URL)
+    # Point agent_host at the same mock origin as base_url so respx fixtures stay single-host.
+    return Modus(api_key=TEST_API_KEY, base_url=TEST_BASE_URL, agent_host=TEST_BASE_URL)
 
 
 @pytest.fixture
 def async_client() -> AsyncModus:
-    return AsyncModus(api_key=TEST_API_KEY, base_url=TEST_BASE_URL)
+    return AsyncModus(api_key=TEST_API_KEY, base_url=TEST_BASE_URL, agent_host=TEST_BASE_URL)
 
 
 @pytest.fixture
