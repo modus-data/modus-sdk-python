@@ -868,7 +868,6 @@ class ListConnectionsResponseDto(BaseModel):
         ...,
         alias='nextPageToken',
         description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
-        examples=['eyJjcmVhdGVkQXQiOiIyMDI2'],
     )
 
 
@@ -2053,7 +2052,9 @@ class ListEvaluationRunsResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     runs: list[EvaluationRunDto]
     next_page_token: str | None = Field(
-        None, alias='nextPageToken', description='Token for next page'
+        ...,
+        alias='nextPageToken',
+        description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
     )
 
 
@@ -2755,7 +2756,6 @@ class ListAgentsResponseDto(BaseModel):
         ...,
         alias='nextPageToken',
         description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
-        examples=['eyJsYXN0SWQiOjQyfQ'],
     )
 
 
@@ -3066,7 +3066,6 @@ class ListSkillsResponseDto(BaseModel):
         ...,
         alias='nextPageToken',
         description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
-        examples=['eyJsYXN0SWQiOjQyfQ'],
     )
 
 
