@@ -15,13 +15,11 @@ from modus._http import AsyncHttpClient, HttpClient
 
 from .resources import (
     AsyncContextResource,
-    AsyncOrganizationResource,
     AsyncScopesResource,
     AsyncUsageResource,
     AsyncUsersResource,
     AsyncWorkflowsResource,
     ContextResource,
-    OrganizationResource,
     ScopesResource,
     UsageResource,
     UsersResource,
@@ -86,7 +84,6 @@ class ModusManagement:
         self.context: ContextResource = ContextResource(self._http, self._config)
         self.usage: UsageResource = UsageResource(self._http, self._config)
         self.users: UsersResource = UsersResource(self._http, self._config)
-        self.organization: OrganizationResource = OrganizationResource(self._http, self._config)
 
     def close(self) -> None:
         """Close the underlying HTTP connection pool."""
@@ -150,9 +147,6 @@ class AsyncModusManagement:
         self.context: AsyncContextResource = AsyncContextResource(self._http, self._config)
         self.usage: AsyncUsageResource = AsyncUsageResource(self._http, self._config)
         self.users: AsyncUsersResource = AsyncUsersResource(self._http, self._config)
-        self.organization: AsyncOrganizationResource = AsyncOrganizationResource(
-            self._http, self._config
-        )
 
     async def aclose(self) -> None:
         """Close the underlying async HTTP connection pool."""

@@ -308,16 +308,6 @@ OPERATIONS: dict[str, OperationSpec] = {
         "request_schema": None,
         "response_schema": 'ListOrgMembersResponseDto',
     },
-    "OrganizationController_deleteOrganization": {
-        "method": "DELETE",
-        "path": '/api/v1/users/organization',
-        "service": 'modus-api',
-        "server_url": 'https://api.getmodus.com',
-        "path_params": (),
-        "query_params": (),
-        "request_schema": None,
-        "response_schema": None,
-    },
     "ResumeRunsController_create": {
         "method": "POST",
         "path": '/agent/v1/runs/{runId}/resume',
