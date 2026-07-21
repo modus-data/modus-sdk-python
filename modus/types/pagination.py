@@ -29,9 +29,9 @@ Example (sync):
         page = page.get_next_page()
 
 Example (async):
-    page = await client.skills.list()
-    async for skill in page.auto_paging_iter():
-        print(skill.name)
+    page = await client.scopes.list()
+    async for scope in page.auto_paging_iter():
+        print(scope.name)
 """
 
 from __future__ import annotations

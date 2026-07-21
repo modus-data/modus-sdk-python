@@ -80,7 +80,7 @@ def get_buffered_client() -> modus.Modus:
 def load_active_skills() -> list[dict[str, Any]]:
     client = get_list_client()
     skills = []
-    for skill in client.skills.list().auto_paging_iter():
+    for skill in client.scopes.list().auto_paging_iter():
         if skill.status == "active":
             skills.append(
                 {

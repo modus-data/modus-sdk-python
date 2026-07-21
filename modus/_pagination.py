@@ -2,7 +2,10 @@
 Helpers to build Page[T] / AsyncPage[T] from Modus API list responses.
 
 Public list endpoints return resource-plural arrays and ``nextPageToken``:
-    { "skills": [...], "nextPageToken": "..." }
+    { "scopes": [...], "nextPageToken": "..." }
+
+Release N may also emit deprecated envelope keys (``skills``, ``agents``); use
+:func:`resolve_list_items_key` when parsing list responses.
 
 Query params use ``pageSize`` and ``pageToken``. Python resources expose
 ``page_size`` / ``page_token``; ``Page.next_page_token`` maps from ``nextPageToken``.
@@ -40,6 +43,26 @@ def aip_list_params(
 
 def _next_page_token_from_response(data: Dict[str, Any]) -> Optional[str]:
     return normalize_page_token(data.get("nextPageToken"))
+
+
+def resolve_list_items_key(
+    data: Any, preferred: str, fallback: str
+) -> str:
+    """Return ``preferred`` when its value is a list; else ``fallback`` if that is a list.
+
+    When neither key holds a list, returns ``preferred`` so downstream builders
+    raise a clear error for the canonical envelope key.
+    """
+    if not isinstance(data, dict):
+        raise ModusError(
+            f"Unexpected list response shape: expected an object, "
+            f"got {type(data).__name__}. This is likely a backend error."
+        )
+    if isinstance(data.get(preferred), list):
+        return preferred
+    if isinstance(data.get(fallback), list):
+        return fallback
+    return preferred
 
 
 def _require_items_list(data: Dict[str, Any], items_key: str) -> List[Any]:

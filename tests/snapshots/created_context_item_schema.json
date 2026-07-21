@@ -10,6 +10,7 @@
       "type": "string"
     }
   },
+  "description": "Create response with ``uid`` aliased to ``context_item_id`` for list/get parity.",
   "properties": {
     "contextItemId": {
       "description": "UUID of the newly-created context item. Use it on subsequent GET / PATCH / DELETE calls.",
@@ -63,6 +64,6 @@
     "contextItemId",
     "kind"
   ],
-  "title": "CreatedContextItemResponseDto",
+  "title": "CreatedContextItem",
   "type": "object"
 }

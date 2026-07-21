@@ -10,6 +10,7 @@ BASE = "https://api.modus.com"
 def _list_item(i: int = 0) -> dict:
     return {
         "threadId": f"thread-{i}",
+        "scopeId": 42,
         "skillId": 42,
         "firstMessage": f"Hello from thread {i}",
         "title": None,
@@ -34,9 +35,10 @@ def test_conversations_list_is_scoped_to_skill(client):
 @respx.mock
 def test_conversations_get_is_scoped_to_skill(client):
     respx.get(f"{BASE}/api/v1/scopes/42/conversations/thread-abc").mock(
-        return_value=httpx.Response(200, json={
-            "threadId": "thread-abc",
-            "skillId": 42,
+            return_value=httpx.Response(200, json={
+                "threadId": "thread-abc",
+                "scopeId": 42,
+                "skillId": 42,
             "messages": [{"type": "human", "content": "Hi"}],
             "createdAt": "2026-01-01T00:00:00.000Z",
             "updatedAt": "2026-01-01T00:00:00.000Z",

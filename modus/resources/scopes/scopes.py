@@ -22,6 +22,7 @@ from ..._pagination import (
     aip_list_params,
     build_aip_page_mapped,
     build_async_aip_page_mapped,
+    resolve_list_items_key,
 )
 from ..._retry import async_with_retry, with_retry
 from ..._validation import validate_id, validate_page_size
@@ -153,7 +154,7 @@ class ScopesResource:
         )
         return build_aip_page_mapped(
             data,
-            "skills",
+            resolve_list_items_key(data, "scopes", "skills"),
             _parse_scope,
             lambda cur: self._list_page(page_size, cur, search, view, manager_id),
         )
@@ -343,7 +344,7 @@ class AsyncScopesResource:
         )
         return build_async_aip_page_mapped(
             data,
-            "skills",
+            resolve_list_items_key(data, "scopes", "skills"),
             _parse_scope,
             lambda cur: self._list_page(page_size, cur, search, view, manager_id),
         )

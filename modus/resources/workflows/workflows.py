@@ -20,6 +20,7 @@ from ..._pagination import (
     aip_list_params,
     build_aip_page_mapped,
     build_async_aip_page_mapped,
+    resolve_list_items_key,
 )
 from ..._retry import async_with_retry, with_retry
 from ..._validation import validate_id, validate_page_size
@@ -152,7 +153,7 @@ class WorkflowsResource:
         )
         return build_aip_page_mapped(
             data,
-            "agents",
+            resolve_list_items_key(data, "workflows", "agents"),
             _parse_workflow,
             lambda cur: self._list_page(
                 page_size, cur, search, type, view, include_variation
@@ -290,7 +291,7 @@ class AsyncWorkflowsResource:
         )
         return build_async_aip_page_mapped(
             data,
-            "agents",
+            resolve_list_items_key(data, "workflows", "agents"),
             _parse_workflow,
             lambda cur: self._list_page(
                 page_size, cur, search, type, view, include_variation

@@ -14,6 +14,7 @@ def make_list_item(i: int = 0) -> dict:
     """Matches the real ConversationListItem shape from the API list endpoint."""
     return {
         "threadId": f"thread-{i}",
+        "scopeId": 42,
         "skillId": 42,
         "firstMessage": f"Hello from thread {i}",
         "title": None,
@@ -28,6 +29,7 @@ def make_conversation() -> dict:
     """Matches the real Conversation shape from the API get endpoint."""
     return {
         "threadId": "thread-abc",
+        "scopeId": 42,
         "skillId": 42,
         "messages": [
             {"type": "human", "content": "Hello"},
@@ -210,9 +212,10 @@ def test_conversations_get_rejects_before_index_without_limit(client):
 def test_conversations_get_with_tool_calls(client):
     """Messages with toolCalls are parsed correctly."""
     respx.get(f"{BASE}/api/v1/scopes/42/conversations/thread-tools").mock(
-        return_value=httpx.Response(200, json={
-            "threadId": "thread-tools",
-            "skillId": 42,
+            return_value=httpx.Response(200, json={
+                "threadId": "thread-tools",
+                "scopeId": 42,
+                "skillId": 42,
             "messages": [
                 {"type": "human", "content": "Run a query"},
                 {

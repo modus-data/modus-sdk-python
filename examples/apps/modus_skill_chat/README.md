@@ -1,6 +1,6 @@
 # Modus Skill Chat (Streamlit)
 
-Optional interactive demo: compare **streaming** (`client.skills.chat_stream()`) vs **buffered** (`client.skills.chat()`) skill chat side by side.
+Optional interactive demo: compare **streaming** (`client.scopes.chat_stream()`) vs **buffered** (`client.scopes.chat()`) scope chat side by side.
 
 ## Setup
 

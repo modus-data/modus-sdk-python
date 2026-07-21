@@ -61,6 +61,7 @@ SAMPLE_SUGGESTION: Dict[str, Any] = {
 
 SAMPLE_CONVERSATION_LIST_ITEM: Dict[str, Any] = {
     "threadId": "thread-0",
+    "scopeId": 42,
     "skillId": 42,
     "firstMessage": "Hello",
     "title": None,
@@ -258,12 +259,12 @@ SDK_AIP_LIST_OPERATIONS: List[ListOperationSpec] = [
         client_kind="modus",
         invoke=_modus_conversations_invoke,
     ),
-    # --- Scopes (/api/v1/scopes; response DTO keeps the ``skills`` envelope key) ---
+    # --- Scopes / Workflows (canonical public surface) ---
     ListOperationSpec(
         operation_id="ScopesController_list",
         mock_url_suffix="/api/v1/scopes",
-        items_key="skills",
-        wrong_items_key="agents",
+        items_key="scopes",
+        wrong_items_key="workflows",
         sample_item=SAMPLE_SKILL,
         client_kind="modus",
         invoke=_scopes_invoke,
@@ -271,8 +272,8 @@ SDK_AIP_LIST_OPERATIONS: List[ListOperationSpec] = [
     ListOperationSpec(
         operation_id="ScopesController_list",
         mock_url_suffix="/api/v1/scopes",
-        items_key="skills",
-        wrong_items_key="agents",
+        items_key="scopes",
+        wrong_items_key="workflows",
         sample_item=SAMPLE_SKILL,
         client_kind="management",
         invoke=_scopes_invoke,
@@ -304,12 +305,12 @@ SDK_AIP_LIST_OPERATIONS: List[ListOperationSpec] = [
         client_kind="management",
         invoke=_scope_evaluations_invoke,
     ),
-    # --- Workflows (/api/v1/workflows; response DTO keeps the ``agents`` envelope key) ---
+    # --- Workflows (/api/v1/workflows) ---
     ListOperationSpec(
         operation_id="WorkflowsController_list",
         mock_url_suffix="/api/v1/workflows",
-        items_key="agents",
-        wrong_items_key="skills",
+        items_key="workflows",
+        wrong_items_key="scopes",
         sample_item=SAMPLE_AGENT,
         client_kind="modus",
         invoke=_workflows_invoke,
@@ -317,8 +318,8 @@ SDK_AIP_LIST_OPERATIONS: List[ListOperationSpec] = [
     ListOperationSpec(
         operation_id="WorkflowsController_list",
         mock_url_suffix="/api/v1/workflows",
-        items_key="agents",
-        wrong_items_key="skills",
+        items_key="workflows",
+        wrong_items_key="scopes",
         sample_item=SAMPLE_AGENT,
         client_kind="management",
         invoke=_workflows_invoke,

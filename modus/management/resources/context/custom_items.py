@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from modus._config import ModusConfig
+from modus._exceptions import ModusError
 from modus._http import AsyncHttpClient, HttpClient
 from modus._openapi_invoke import invoke_operation, invoke_operation_async
 from modus._pagination import (
@@ -33,6 +34,17 @@ _FIELD_ALIASES = {
 
 def _omit_none(payload: Dict[str, Any]) -> Dict[str, Any]:
     return {key: value for key, value in payload.items() if value is not None}
+
+
+def _with_created_uid(data: Dict[str, Any]) -> Dict[str, Any]:
+    out = dict(data)
+    context_item_id = out.get("contextItemId")
+    if not isinstance(context_item_id, str) or not context_item_id:
+        raise ModusError(
+            "Custom context create response missing non-empty string contextItemId"
+        )
+    out["uid"] = context_item_id
+    return out
 
 
 def _wire_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -129,7 +141,7 @@ class CustomContextItemsResource:
             ),
             self._config.max_retries,
         )
-        return dict(data)
+        return _with_created_uid(dict(data))
 
     def batch_create(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Create or update a batch of custom context items by stable hierarchy."""
@@ -142,7 +154,7 @@ class CustomContextItemsResource:
             self._config.max_retries,
         )
         raw_items = dict(data).get("contextItems", [])
-        return [dict(item) for item in raw_items] if isinstance(raw_items, list) else []
+        return [_with_created_uid(dict(item)) for item in raw_items] if isinstance(raw_items, list) else []
 
     def update(self, uid: str, **payload: Any) -> Dict[str, Any]:
         """Update mutable fields on a custom context item.
@@ -262,7 +274,7 @@ class AsyncCustomContextItemsResource:
             ),
             self._config.max_retries,
         )
-        return dict(data)
+        return _with_created_uid(dict(data))
 
     async def batch_create(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Create or update a batch of custom context items by stable hierarchy."""
@@ -275,7 +287,7 @@ class AsyncCustomContextItemsResource:
             self._config.max_retries,
         )
         raw_items = dict(data).get("contextItems", [])
-        return [dict(item) for item in raw_items] if isinstance(raw_items, list) else []
+        return [_with_created_uid(dict(item)) for item in raw_items] if isinstance(raw_items, list) else []
 
     async def update(self, uid: str, **payload: Any) -> Dict[str, Any]:
         """Update mutable fields on a custom context item.

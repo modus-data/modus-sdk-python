@@ -15,7 +15,12 @@ from modus._generated.models import (
 )
 from modus._http import AsyncHttpClient, HttpClient
 from modus._openapi_invoke import invoke_operation, invoke_operation_async
-from modus._pagination import aip_list_params, build_aip_page_mapped, build_async_aip_page_mapped
+from modus._pagination import (
+    aip_list_params,
+    build_aip_page_mapped,
+    build_async_aip_page_mapped,
+    resolve_list_items_key,
+)
 from modus._query import update_mask_query
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_id, validate_page_size
@@ -97,6 +102,24 @@ MANAGEMENT_SCOPE_OPERATIONS = ManagementScopesOperations(
 
 def _parse_scope(raw: dict) -> Skill:
     return SkillDto.model_validate(raw)
+
+
+def _parse_deploy_scope(raw: Any) -> Skill:
+    """Validate deploy envelope; mirror canonical/deprecated keys for Release N.
+
+    Wire ``scope`` is generated as ``ScopeDto``; re-validate as ``SkillDto`` so
+    deploy matches the rest of this resource's Skill return type during Release N.
+    """
+    if not isinstance(raw, dict):
+        scope = DeployResponseDto.model_validate(raw).scope
+    else:
+        data = dict(raw)
+        if data.get("scope") is None and data.get("skill") is not None:
+            data["scope"] = data["skill"]
+        if data.get("skill") is None and data.get("scope") is not None:
+            data["skill"] = data["scope"]
+        scope = DeployResponseDto.model_validate(data).scope
+    return SkillDto.model_validate(scope.model_dump(by_alias=True))
 
 
 def _scopes_list_params(
@@ -195,7 +218,7 @@ class ScopesResource:
         )
         return build_aip_page_mapped(
             data,
-            "skills",
+            resolve_list_items_key(data, "scopes", "skills"),
             _parse_scope,
             lambda cur: self._list_page(page_size, cur, search, view, manager_id),
         )
@@ -346,7 +369,7 @@ class ScopesResource:
             self._config.max_retries,
             retry_not_found_on_deploy=True,
         )
-        return DeployResponseDto.model_validate(raw).skill
+        return _parse_deploy_scope(raw)
 
     def delete(self, scope_id: Union[int, str]) -> None:
         """Delete a Modus scope."""
@@ -514,7 +537,7 @@ class AsyncScopesResource:
         )
         return build_async_aip_page_mapped(
             data,
-            "skills",
+            resolve_list_items_key(data, "scopes", "skills"),
             _parse_scope,
             lambda cur: self._list_page(page_size, cur, search, view, manager_id),
         )
@@ -658,7 +681,7 @@ class AsyncScopesResource:
             self._config.max_retries,
             retry_not_found_on_deploy=True,
         )
-        return DeployResponseDto.model_validate(raw).skill
+        return _parse_deploy_scope(raw)
 
     async def delete(self, scope_id: Union[int, str]) -> None:
         validate_id(scope_id, name="scope_id")

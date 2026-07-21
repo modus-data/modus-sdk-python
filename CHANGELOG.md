@@ -3,7 +3,20 @@
 **Current release:** [`0.2.3`](https://pypi.org/project/modus-sdk/0.2.3/).
 
 
+
 ## [Unreleased]
+
+### Deprecated
+
+- **`Skill` / `Agent` type names** — use `Scope` / `Workflow` (and `ScopeStatus` / `WorkflowStatus`, `WorkflowType`, etc.). `Skill` and `Agent` remain as aliases for Release N.
+- **OpenAPI `SkillDto` / `AgentDto`** — prefer generated `ScopeDto` / `WorkflowDto` (same shape; legacy names marked deprecated in the spec).
+- **List/deploy response envelope keys** — list endpoints prefer `scopes` / `workflows`; deploy responses prefer `scope` / `workflow`. Deprecated `skills` / `agents` / `skill` / `agent` keys are still accepted when the canonical key is absent.
+- **`conversation_skill_id()`** — use `conversation_scope_id()`. `client.modus.conversations.list(kind=...)` accepts `scopes` (canonical) or deprecated `skills`.
+
+### Changed
+
+- SDK read types are now exported as `Scope` / `Workflow` backed by generated `ScopeDto` / `WorkflowDto`.
+- Custom context create responses always expose `.uid` (same value as `contextItemId`).
 
 ### Removed
 
@@ -53,11 +66,4 @@
 
 ### Removed
 
-- Legacy **`client.skills` / `client.agents`** accessors — use `scopes` / `workflows`.
-- Unimplemented context-creator stubs (`dimension` / `fact` / `metric` / `filter` create DTOs).
-
-## Prior (TestPyPI only)
-
-| Version | Notes |
-|---------|--------|
-| 0.1.0–0.1.7 | Internal / TestPyPI previews. Not published to production PyPI. Superseded by `0.2.0`. |
+- Legacy **`client.skills` / `client.agents`** accessors (and management equivalents).

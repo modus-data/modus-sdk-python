@@ -1,4 +1,4 @@
-"""Skill read types — shared with modus.types (OpenAPI DTO re-exports)."""
+"""Skill read types — deprecated aliases of modus.types.scopes."""
 
 from modus.types.skills import Skill, SkillStatus, SkillVariation
 

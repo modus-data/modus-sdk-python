@@ -526,7 +526,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": ('id',),
         "query_params": (),
         "request_schema": None,
-        "response_schema": 'SkillDto',
+        "response_schema": 'ScopeDto',
     },
     "ScopesController_cancelOwnershipTransfer": {
         "method": "DELETE",
@@ -536,7 +536,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": ('id',),
         "query_params": (),
         "request_schema": None,
-        "response_schema": 'SkillDto',
+        "response_schema": 'ScopeDto',
     },
     "ScopesController_create": {
         "method": "POST",
@@ -546,7 +546,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": (),
         "query_params": (),
         "request_schema": 'CreateSkillDto',
-        "response_schema": 'SkillDto',
+        "response_schema": 'ScopeDto',
     },
     "ScopesController_delete": {
         "method": "DELETE",
@@ -576,7 +576,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": ('id',),
         "query_params": ('view',),
         "request_schema": None,
-        "response_schema": 'SkillDto',
+        "response_schema": 'ScopeDto',
     },
     "ScopesController_getVariation": {
         "method": "GET",
@@ -586,7 +586,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": ('id', 'variationUid'),
         "query_params": (),
         "request_schema": None,
-        "response_schema": 'SkillDto',
+        "response_schema": 'ScopeDto',
     },
     "ScopesController_list": {
         "method": "GET",
@@ -616,7 +616,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": ('id',),
         "query_params": (),
         "request_schema": 'TransferOwnershipDto',
-        "response_schema": 'SkillDto',
+        "response_schema": 'ScopeDto',
     },
     "ScopesController_restore": {
         "method": "POST",
@@ -626,7 +626,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": ('id',),
         "query_params": (),
         "request_schema": None,
-        "response_schema": 'SkillDto',
+        "response_schema": 'ScopeDto',
     },
     "ScopesController_update": {
         "method": "PATCH",
@@ -636,7 +636,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": ('id',),
         "query_params": ('updateMask',),
         "request_schema": 'UpdateSkillDto',
-        "response_schema": 'SkillDto',
+        "response_schema": 'ScopeDto',
     },
     "SuggestionsController_listApproved": {
         "method": "GET",
@@ -644,7 +644,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "service": 'modus-api',
         "server_url": 'https://api.getmodus.com',
         "path_params": (),
-        "query_params": ('pageToken', 'pageSize', 'skill_id', 'skill_ids'),
+        "query_params": ('pageToken', 'pageSize', 'scope_id', 'skill_id', 'scope_ids', 'skill_ids'),
         "request_schema": None,
         "response_schema": 'ListSuggestionQuestionsResponseDto',
     },
@@ -776,7 +776,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": ('id',),
         "query_params": (),
         "request_schema": None,
-        "response_schema": 'AgentDto',
+        "response_schema": 'WorkflowDto',
     },
     "WorkflowsController_cancelOwnershipTransfer": {
         "method": "DELETE",
@@ -786,7 +786,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": ('id',),
         "query_params": (),
         "request_schema": None,
-        "response_schema": 'AgentDto',
+        "response_schema": 'WorkflowDto',
     },
     "WorkflowsController_create": {
         "method": "POST",
@@ -796,7 +796,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": (),
         "query_params": (),
         "request_schema": 'CreateAgentDto',
-        "response_schema": 'AgentDto',
+        "response_schema": 'WorkflowDto',
     },
     "WorkflowsController_delete": {
         "method": "DELETE",
@@ -826,7 +826,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": ('id',),
         "query_params": ('view',),
         "request_schema": None,
-        "response_schema": 'AgentDto',
+        "response_schema": 'WorkflowDto',
     },
     "WorkflowsController_list": {
         "method": "GET",
@@ -846,7 +846,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": ('id',),
         "query_params": (),
         "request_schema": 'TransferOwnershipDto',
-        "response_schema": 'AgentDto',
+        "response_schema": 'WorkflowDto',
     },
     "WorkflowsController_restore": {
         "method": "POST",
@@ -856,7 +856,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": ('id',),
         "query_params": (),
         "request_schema": None,
-        "response_schema": 'AgentDto',
+        "response_schema": 'WorkflowDto',
     },
     "WorkflowsController_toggle": {
         "method": "POST",
@@ -866,7 +866,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": ('id',),
         "query_params": (),
         "request_schema": 'ToggleAgentDto',
-        "response_schema": 'AgentDto',
+        "response_schema": 'WorkflowDto',
     },
     "WorkflowsController_update": {
         "method": "PATCH",
@@ -876,6 +876,6 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": ('id',),
         "query_params": ('updateMask',),
         "request_schema": 'UpdateAgentDto',
-        "response_schema": 'AgentDto',
+        "response_schema": 'WorkflowDto',
     },
 }

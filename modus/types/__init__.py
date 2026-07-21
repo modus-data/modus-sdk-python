@@ -31,10 +31,18 @@ from .context_accessors import (
     saved_query_sql,
 )
 from .context_compose import SkillContextComposition
-from .conversations import Conversation, ConversationListItem, Message
+from .conversations import (
+    Conversation,
+    ConversationListItem,
+    Message,
+    conversation_scope_id,
+    conversation_skill_id,
+)
 from .pagination import AsyncPage, Page
+from .scopes import Scope, ScopeStatus, ScopeVariation
 from .skills import Skill, SkillStatus
 from .suggestions import SuggestionEventSource, SuggestionEventType, SuggestionQuestion
+from .workflows import Workflow, WorkflowStatus, WorkflowType, WorkflowVariation
 
 __all__ = [
     "ActiveConversationRun",
@@ -66,9 +74,14 @@ __all__ = [
     "Conversation",
     "ConversationListItem",
     "Message",
+    "conversation_scope_id",
+    "conversation_skill_id",
     "ModusRunCreateRequest",
     "Page",
     "ResumeRunRequest",
+    "Scope",
+    "ScopeStatus",
+    "ScopeVariation",
     "Skill",
     "SkillContextComposition",
     "SkillRunCreateRequest",
@@ -76,5 +89,9 @@ __all__ = [
     "SuggestionEventSource",
     "SuggestionEventType",
     "SuggestionQuestion",
+    "Workflow",
     "WorkflowActionRequest",
+    "WorkflowStatus",
+    "WorkflowType",
+    "WorkflowVariation",
 ]

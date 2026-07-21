@@ -6,13 +6,13 @@ Quick start:
 
     client = modus.Modus(api_key="modus_xxx")
 
-    for skill in client.skills.list():
-        print(skill.name, skill.status)
+    for scope in client.scopes.list():
+        print(scope.name, scope.status)
 
     for item in client.context.items.list():
         print(modus.context_item_label(item))
 
-To create or configure skills, use modus.management.ModusManagement.
+To create or configure scopes, use modus.management.ModusManagement.
 """
 
 from importlib.metadata import PackageNotFoundError
@@ -53,6 +53,9 @@ from .types import (
     ModusRunCreateRequest,
     Page,
     ResumeRunRequest,
+    Scope,
+    ScopeStatus,
+    ScopeVariation,
     Skill,
     SkillContextComposition,
     SkillRunCreateRequest,
@@ -60,8 +63,14 @@ from .types import (
     SuggestionEventSource,
     SuggestionEventType,
     SuggestionQuestion,
+    Workflow,
     WorkflowActionRequest,
+    WorkflowStatus,
+    WorkflowType,
+    WorkflowVariation,
     context_item_label,
+    conversation_scope_id,
+    conversation_skill_id,
     is_verified,
     link_title,
     link_url,
@@ -128,6 +137,9 @@ __all__ = [
     "RateLimitError",
     "ResumeRunRequest",
     "RunCancelledError",
+    "Scope",
+    "ScopeStatus",
+    "ScopeVariation",
     "Skill",
     "SkillContextComposition",
     "SkillRunCreateRequest",
@@ -139,6 +151,12 @@ __all__ = [
     "StreamTimeoutEvent",
     "TokenEvent",
     "UnprocessableError",
+    "Workflow",
     "WorkflowActionRequest",
+    "WorkflowStatus",
+    "WorkflowType",
+    "WorkflowVariation",
+    "conversation_scope_id",
+    "conversation_skill_id",
     "__version__",
 ]
