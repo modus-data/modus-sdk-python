@@ -17,8 +17,8 @@ from ..._validation import validate_id, validate_page_size
 from ...types.conversations import Conversation, ConversationListItem
 from ...types.pagination import AsyncPage, Page
 
-ConversationKind = Literal["all", "modus", "scopes", "skills"]
-_ALLOWED_KINDS = frozenset({"all", "modus", "scopes", "skills"})
+ConversationKind = Literal["all", "modus", "scopes"]
+_ALLOWED_KINDS = frozenset({"all", "modus", "scopes"})
 
 
 def _list_params(
@@ -52,9 +52,8 @@ class ModusConversationsResource:
         Args:
             page_size:  Items per page (default 25).
             page_token: Opaque token from a previous page's ``next_page_token``.
-            kind:       ``"modus"`` for direct Modus chats only; ``"scopes"`` (or
-                        deprecated ``"skills"``) to exclude them; omit or ``"all"``
-                        for everything.
+            kind:       ``"modus"`` for direct Modus chats only; ``"scopes"``
+                        to exclude them; omit or ``"all"`` for everything.
         """
         validate_page_size(page_size)
         return self._list_page(page_size, page_token, kind)

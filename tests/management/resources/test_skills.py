@@ -14,7 +14,7 @@ BASE = "https://api.modus.com"
 @respx.mock
 def test_skills_list_returns_page_of_skills(client, skill_list_row):
     respx.get(f"{BASE}/api/v1/scopes").mock(
-        return_value=httpx.Response(200, json={"skills": [skill_list_row], "nextPageToken": None})
+        return_value=httpx.Response(200, json={"scopes": [skill_list_row], "nextPageToken": None})
     )
     page = client.scopes.list()
     assert len(page) == 1
@@ -29,7 +29,7 @@ def test_skills_list_returns_page_of_skills(client, skill_list_row):
 def test_skills_list_row_has_none_instructions(client, skill_list_row):
     """List rows must have variation fields as None."""
     respx.get(f"{BASE}/api/v1/scopes").mock(
-        return_value=httpx.Response(200, json={"skills": [skill_list_row], "nextPageToken": None})
+        return_value=httpx.Response(200, json={"scopes": [skill_list_row], "nextPageToken": None})
     )
     skill = client.scopes.list().items[0]
     assert skill.variation is None
@@ -39,7 +39,7 @@ def test_skills_list_row_has_none_instructions(client, skill_list_row):
 def test_skills_list_row_has_guardrails(client, skill_list_row):
     """guardrails must be surfaced from accessConfig on list rows."""
     respx.get(f"{BASE}/api/v1/scopes").mock(
-        return_value=httpx.Response(200, json={"skills": [skill_list_row], "nextPageToken": None})
+        return_value=httpx.Response(200, json={"scopes": [skill_list_row], "nextPageToken": None})
     )
     skill = client.scopes.list().items[0]
     assert skill.access_config.guardrails == ["no-pii"]
@@ -48,7 +48,7 @@ def test_skills_list_row_has_guardrails(client, skill_list_row):
 @respx.mock
 def test_skills_list_forwards_search_filter(client, skill_list_row):
     route = respx.get(f"{BASE}/api/v1/scopes").mock(
-        return_value=httpx.Response(200, json={"skills": [skill_list_row], "nextPageToken": None})
+        return_value=httpx.Response(200, json={"scopes": [skill_list_row], "nextPageToken": None})
     )
     client.scopes.list(search="churn")
     assert route.calls[0].request.url.params["search"] == "churn"
@@ -57,7 +57,7 @@ def test_skills_list_forwards_search_filter(client, skill_list_row):
 @respx.mock
 def test_skills_list_omits_search_when_not_set(client, skill_list_row):
     route = respx.get(f"{BASE}/api/v1/scopes").mock(
-        return_value=httpx.Response(200, json={"skills": [skill_list_row], "nextPageToken": None})
+        return_value=httpx.Response(200, json={"scopes": [skill_list_row], "nextPageToken": None})
     )
     client.scopes.list()
     assert "search" not in route.calls[0].request.url.params

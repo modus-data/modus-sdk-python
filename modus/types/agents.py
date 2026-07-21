@@ -1,24 +1,23 @@
-"""Agent read types — deprecated aliases of OpenAPI ``AgentDto``."""
+"""Agent read types — deprecated aliases of Workflow."""
 
 from __future__ import annotations
 
 from .workflows import (
-    AgentDto,
+    Agent,
+    WorkflowDto,
     WorkflowStatus,
     WorkflowType,
     WorkflowVariation,
 )
 
-# Deprecated twin schema (same shape as WorkflowDto). Prefer Workflow / WorkflowDto.
-Agent = AgentDto
 AgentStatus = WorkflowStatus
 AgentType = WorkflowType
 AgentVariation = WorkflowVariation
 
 __all__ = [
     "Agent",
-    "AgentDto",
     "AgentStatus",
     "AgentType",
     "AgentVariation",
+    "WorkflowDto",
 ]

@@ -644,7 +644,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "service": 'modus-api',
         "server_url": 'https://api.getmodus.com',
         "path_params": (),
-        "query_params": ('pageToken', 'pageSize', 'scope_id', 'skill_id', 'scope_ids', 'skill_ids'),
+        "query_params": ('pageToken', 'pageSize', 'scope_id', 'scope_ids'),
         "request_schema": None,
         "response_schema": 'ListSuggestionQuestionsResponseDto',
     },

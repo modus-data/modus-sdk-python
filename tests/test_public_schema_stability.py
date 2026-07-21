@@ -18,21 +18,21 @@ def _load_snapshot(name: str) -> dict:
     return json.loads(path.read_text())
 
 
-def test_skill_schema_stable():
-    from modus.types.skills import Skill
-    current = Skill.model_json_schema()
+def test_scope_schema_stable():
+    from modus.types.scopes import Scope
+    current = Scope.model_json_schema()
     snapshot = _load_snapshot("skill")
     assert current == snapshot, (
-        "Skill public schema changed. If intentional:\n"
+        "Scope public schema changed. If intentional:\n"
         "  python scripts/update_snapshots.py\n"
         "  git add tests/snapshots/skill_schema.json\n"
         "  Add a CHANGELOG.md entry"
     )
 
 
-def test_agent_schema_stable():
-    from modus.types.agents import Agent
-    current = Agent.model_json_schema()
+def test_workflow_schema_stable():
+    from modus.types.workflows import Workflow
+    current = Workflow.model_json_schema()
     snapshot = _load_snapshot("agent")
     assert current == snapshot
 

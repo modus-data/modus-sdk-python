@@ -32,16 +32,16 @@ def _enum_value(value: Union[str, Enum]) -> str:
 def _list_params(
     page_size: int,
     page_token: Optional[str],
-    skill_id: Optional[int],
-    skill_ids: Optional[Sequence[int]],
+    scope_id: Optional[int],
+    scope_ids: Optional[Sequence[int]],
 ) -> dict:
     params: dict[str, Any] = {"pageSize": page_size}
     if page_token is not None:
         params["pageToken"] = page_token
-    if skill_id is not None:
-        params["skill_id"] = skill_id
-    if skill_ids is not None:
-        params["skill_ids"] = ",".join(str(item) for item in skill_ids)
+    if scope_id is not None:
+        params["scope_id"] = scope_id
+    if scope_ids is not None:
+        params["scope_ids"] = ",".join(str(item) for item in scope_ids)
     return params
 
 
@@ -77,25 +77,32 @@ class SuggestionsResource:
         *,
         page_size: int = DEFAULT_SUGGESTIONS_PAGE_SIZE,
         page_token: Optional[str] = None,
-        skill_id: Optional[int] = None,
-        skill_ids: Optional[Sequence[int]] = None,
+        scope_id: Optional[int] = None,
+        scope_ids: Optional[Sequence[int]] = None,
     ) -> Page[SuggestionQuestion]:
-        """List approved suggested questions for the caller organization."""
+        """List approved suggested questions for the caller organization.
+
+        Args:
+            page_size: Maximum number of suggestions to return.
+            page_token: Cursor from a previous page, if any.
+            scope_id: Optional single scope id filter.
+            scope_ids: Optional multi-scope id filter (comma-joined on the wire).
+        """
         validate_page_size(page_size, max_page_size=MAX_SUGGESTIONS_PAGE_SIZE)
-        return self._list_page(page_size, page_token, skill_id, skill_ids)
+        return self._list_page(page_size, page_token, scope_id, scope_ids)
 
     def _list_page(
         self,
         page_size: int,
         page_token: Optional[str],
-        skill_id: Optional[int],
-        skill_ids: Optional[Sequence[int]],
+        scope_id: Optional[int],
+        scope_ids: Optional[Sequence[int]],
     ) -> Page[SuggestionQuestion]:
         data = with_retry(
             lambda: invoke_operation(
                 self._http,
                 "SuggestionsController_listApproved",
-                query=_list_params(page_size, page_token, skill_id, skill_ids),
+                query=_list_params(page_size, page_token, scope_id, scope_ids),
             ),
             self._config.max_retries,
         )
@@ -103,7 +110,7 @@ class SuggestionsResource:
             data,
             "suggestions",
             _parse_suggestion,
-            lambda cur: self._list_page(page_size, cur, skill_id, skill_ids),
+            lambda cur: self._list_page(page_size, cur, scope_id, scope_ids),
         )
 
     def record_event(
@@ -148,25 +155,32 @@ class AsyncSuggestionsResource:
         *,
         page_size: int = DEFAULT_SUGGESTIONS_PAGE_SIZE,
         page_token: Optional[str] = None,
-        skill_id: Optional[int] = None,
-        skill_ids: Optional[Sequence[int]] = None,
+        scope_id: Optional[int] = None,
+        scope_ids: Optional[Sequence[int]] = None,
     ) -> AsyncPage[SuggestionQuestion]:
-        """List approved suggested questions for the caller organization."""
+        """List approved suggested questions for the caller organization.
+
+        Args:
+            page_size: Maximum number of suggestions to return.
+            page_token: Cursor from a previous page, if any.
+            scope_id: Optional single scope id filter.
+            scope_ids: Optional multi-scope id filter (comma-joined on the wire).
+        """
         validate_page_size(page_size, max_page_size=MAX_SUGGESTIONS_PAGE_SIZE)
-        return await self._list_page(page_size, page_token, skill_id, skill_ids)
+        return await self._list_page(page_size, page_token, scope_id, scope_ids)
 
     async def _list_page(
         self,
         page_size: int,
         page_token: Optional[str],
-        skill_id: Optional[int],
-        skill_ids: Optional[Sequence[int]],
+        scope_id: Optional[int],
+        scope_ids: Optional[Sequence[int]],
     ) -> AsyncPage[SuggestionQuestion]:
         data = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,
                 "SuggestionsController_listApproved",
-                query=_list_params(page_size, page_token, skill_id, skill_ids),
+                query=_list_params(page_size, page_token, scope_id, scope_ids),
             ),
             self._config.max_retries,
         )
@@ -174,7 +188,7 @@ class AsyncSuggestionsResource:
             data,
             "suggestions",
             _parse_suggestion,
-            lambda cur: self._list_page(page_size, cur, skill_id, skill_ids),
+            lambda cur: self._list_page(page_size, cur, scope_id, scope_ids),
         )
 
     async def record_event(

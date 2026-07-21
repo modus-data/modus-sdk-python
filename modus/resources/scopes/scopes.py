@@ -15,14 +15,13 @@ from ..._chat import (
     scope_stream_session_async,
 )
 from ..._config import ModusConfig
-from ..._generated.models import ComposeSkillContextRequestDto, SkillDto
+from ..._generated.models import ComposeSkillContextRequestDto, ScopeDto
 from ..._http import AsyncHttpClient, HttpClient
 from ..._openapi_invoke import invoke_operation, invoke_operation_async
 from ..._pagination import (
     aip_list_params,
     build_aip_page_mapped,
     build_async_aip_page_mapped,
-    resolve_list_items_key,
 )
 from ..._retry import async_with_retry, with_retry
 from ..._validation import validate_id, validate_page_size
@@ -67,7 +66,7 @@ SCOPE_OPERATIONS = ScopesOperations(
 
 
 def _parse_scope(raw: dict) -> Skill:
-    return SkillDto.model_validate(raw)
+    return ScopeDto.model_validate(raw)
 
 
 def _scopes_list_params(
@@ -154,7 +153,7 @@ class ScopesResource:
         )
         return build_aip_page_mapped(
             data,
-            resolve_list_items_key(data, "scopes", "skills"),
+            "scopes",
             _parse_scope,
             lambda cur: self._list_page(page_size, cur, search, view, manager_id),
         )
@@ -344,7 +343,7 @@ class AsyncScopesResource:
         )
         return build_async_aip_page_mapped(
             data,
-            resolve_list_items_key(data, "scopes", "skills"),
+            "scopes",
             _parse_scope,
             lambda cur: self._list_page(page_size, cur, search, view, manager_id),
         )

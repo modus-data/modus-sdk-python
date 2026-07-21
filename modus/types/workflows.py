@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from .._generated.models import (
-    AgentDto,
     AgentType,
     AgentVariationDto,
     ResourceLifecycleStatus,
@@ -14,12 +13,11 @@ Workflow = WorkflowDto
 WorkflowStatus = ResourceLifecycleStatus
 WorkflowVariation = AgentVariationDto
 WorkflowType = AgentType
-# Deprecated twin of WorkflowDto (same shape). Prefer Workflow.
-Agent = AgentDto
+# Deprecated product name. Prefer Workflow.
+Agent = WorkflowDto
 
 __all__ = [
     "Agent",
-    "AgentDto",
     "Workflow",
     "WorkflowDto",
     "WorkflowStatus",

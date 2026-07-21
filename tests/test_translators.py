@@ -1,8 +1,8 @@
-"""DTO parsing coverage for SkillDto and AgentDto."""
+"""DTO parsing coverage for ScopeDto and WorkflowDto."""
 
-from modus._generated.models import AgentDto, SkillDto
-from modus.types.agents import Agent
-from modus.types.skills import Skill
+from modus._generated.models import ScopeDto, WorkflowDto
+from modus.types.scopes import Scope
+from modus.types.workflows import Workflow
 
 _PERMISSION = {"canManage": True, "canUse": True, "manageDenial": "not_owner"}
 
@@ -19,10 +19,10 @@ _AGENT_ACCESS_CONFIG = {
     "sharedWith": [],
 }
 
-_SKILL_BASE = {
+_SCOPE_BASE = {
     "id": 1,
-    "slug": "test-skill",
-    "name": "Test Skill",
+    "slug": "test-scope",
+    "name": "Test Scope",
     "status": "active",
     "orgUuid": "org-uuid",
     "hasUnpublishedChanges": False,
@@ -35,8 +35,8 @@ _SKILL_BASE = {
     **_PERMISSION,
 }
 
-_SKILL_DETAIL = {
-    **_SKILL_BASE,
+_SCOPE_DETAIL = {
+    **_SCOPE_BASE,
     "variation": {
         "instructions": ["Do stuff"],
         "model": "gpt-4o",
@@ -51,12 +51,12 @@ _SKILL_DETAIL = {
     },
 }
 
-_SKILL_LIST = {**_SKILL_BASE, "variation": None}
+_SCOPE_LIST = {**_SCOPE_BASE, "variation": None}
 
-_AGENT_BASE = {
+_WORKFLOW_BASE = {
     "id": 2,
-    "slug": "test-agent",
-    "name": "Test Agent",
+    "slug": "test-workflow",
+    "name": "Test Workflow",
     "status": "active",
     "type": "task",
     "orgUuid": "org-uuid",
@@ -71,56 +71,56 @@ _AGENT_BASE = {
     **_PERMISSION,
 }
 
-_AGENT_DETAIL = {
-    **_AGENT_BASE,
+_WORKFLOW_DETAIL = {
+    **_WORKFLOW_BASE,
     "variation": {"agentSelection": {"agents": [], "model": "gpt-4o-mini"}},
 }
 
-_AGENT_LIST = {**_AGENT_BASE, "variation": None}
+_WORKFLOW_LIST = {**_WORKFLOW_BASE, "variation": None}
 
 
-def test_skill_dto_detail_exposes_variation_instructions():
-    public = SkillDto.model_validate(_SKILL_DETAIL)
-    assert isinstance(public, Skill)
+def test_scope_dto_detail_exposes_variation_instructions():
+    public = ScopeDto.model_validate(_SCOPE_DETAIL)
+    assert isinstance(public, Scope)
     assert public.variation is not None
     assert public.variation.instructions == ["Do stuff"]
     assert public.access_config.guardrails == ["no-pii"]
 
 
-def test_skill_dto_list_row_has_no_variation():
-    public = SkillDto.model_validate(_SKILL_LIST)
+def test_scope_dto_list_row_has_no_variation():
+    public = ScopeDto.model_validate(_SCOPE_LIST)
     assert public.variation is None
     assert public.access_config.guardrails == ["no-pii"]
 
 
-def test_skill_dto_status_preserved():
-    public = SkillDto.model_validate(_SKILL_DETAIL)
+def test_scope_dto_status_preserved():
+    public = ScopeDto.model_validate(_SCOPE_DETAIL)
     assert public.status == "active"
 
 
-def test_skill_dto_has_unpublished_changes():
-    payload = {**_SKILL_DETAIL, "hasUnpublishedChanges": True}
-    assert SkillDto.model_validate(payload).has_unpublished_changes is True
+def test_scope_dto_has_unpublished_changes():
+    payload = {**_SCOPE_DETAIL, "hasUnpublishedChanges": True}
+    assert ScopeDto.model_validate(payload).has_unpublished_changes is True
 
 
-def test_agent_dto_detail_exposes_variation():
-    public = AgentDto.model_validate(_AGENT_DETAIL)
-    assert isinstance(public, Agent)
+def test_workflow_dto_detail_exposes_variation():
+    public = WorkflowDto.model_validate(_WORKFLOW_DETAIL)
+    assert isinstance(public, Workflow)
     assert public.variation is not None
     assert public.variation.agent_selection is not None
 
 
-def test_agent_dto_list_row_has_no_variation():
-    public = AgentDto.model_validate(_AGENT_LIST)
+def test_workflow_dto_list_row_has_no_variation():
+    public = WorkflowDto.model_validate(_WORKFLOW_LIST)
     assert public.variation is None
 
 
-def test_agent_dto_type_preserved():
-    public = AgentDto.model_validate(_AGENT_DETAIL)
+def test_workflow_dto_type_preserved():
+    public = WorkflowDto.model_validate(_WORKFLOW_DETAIL)
     assert public.type == "task"
 
 
-def test_agent_dto_flags():
-    public = AgentDto.model_validate(_AGENT_DETAIL)
+def test_workflow_dto_flags():
+    public = WorkflowDto.model_validate(_WORKFLOW_DETAIL)
     assert public.is_enabled is True
     assert public.has_unpublished_changes is False

@@ -1,17 +1,22 @@
-"""Skill read types — deprecated aliases of OpenAPI ``SkillDto``."""
+"""Skill read types — deprecated aliases of Scope."""
 
 from __future__ import annotations
 
 from .scopes import (
     AccessConfigDto,
+    ScopeDto,
     ScopeStatus,
     ScopeVariation,
-    SkillDto,
+    Skill,
 )
 
-# Deprecated twin schema (same shape as ScopeDto). Prefer Scope / ScopeDto.
-Skill = SkillDto
 SkillStatus = ScopeStatus
 SkillVariation = ScopeVariation
 
-__all__ = ["AccessConfigDto", "Skill", "SkillStatus", "SkillVariation", "SkillDto"]
+__all__ = [
+    "AccessConfigDto",
+    "Skill",
+    "SkillStatus",
+    "SkillVariation",
+    "ScopeDto",
+]

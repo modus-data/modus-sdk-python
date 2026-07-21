@@ -4,9 +4,6 @@ Helpers to build Page[T] / AsyncPage[T] from Modus API list responses.
 Public list endpoints return resource-plural arrays and ``nextPageToken``:
     { "scopes": [...], "nextPageToken": "..." }
 
-Release N may also emit deprecated envelope keys (``skills``, ``agents``); use
-:func:`resolve_list_items_key` when parsing list responses.
-
 Query params use ``pageSize`` and ``pageToken``. Python resources expose
 ``page_size`` / ``page_token``; ``Page.next_page_token`` maps from ``nextPageToken``.
 """

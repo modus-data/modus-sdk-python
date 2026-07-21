@@ -36,11 +36,6 @@ class AccessPolicyDto(BaseModel):
     )
 
 
-class ManageDenial(str, Enum):
-    not_owner = 'not_owner'
-    needs_group_manage = 'needs_group_manage'
-
-
 class AgentGroupPermissionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     use: bool = Field(
@@ -389,13 +384,6 @@ class ConversationListItemDto(BaseModel):
         ...,
         alias='scopeId',
         description='Numeric scope id returned by the list adapter. This is not conversation ownership.',
-        examples=[42],
-    )
-    skill_id: float | None = Field(
-        ...,
-        alias='skillId',
-        deprecated=True,
-        description='Deprecated. Use `scopeId`. Same value as `scopeId` (kept for Release N compatibility).',
         examples=[42],
     )
     first_message: str = Field(
@@ -1233,6 +1221,11 @@ class ResourceLifecycleStatus(str, Enum):
     deleted = 'deleted'
 
 
+class ManageDenial(str, Enum):
+    not_owner = 'not_owner'
+    needs_group_manage = 'needs_group_manage'
+
+
 class SearchMemoriesRequestDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     query: str = Field(
@@ -1810,120 +1803,6 @@ class AgentAccessConfigDto(BaseModel):
         alias='ownerEmail',
         description='Lowercased email of the workflow owner. Used by private-workflow ACL when owner email matches.',
         examples=['alice@example.com'],
-    )
-
-
-class AgentDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    id: float = Field(
-        ...,
-        description='Numeric workflow id (stable per-org; not reused after delete).',
-        examples=[42],
-    )
-    slug: str = Field(
-        ...,
-        description='URL-safe slug used in human-readable links. Unique per org.',
-        examples=['customer-churn-agent-a3f'],
-    )
-    name: str | None = Field(
-        ...,
-        description='Display name of the workflow. Shown in the builder and in run logs.',
-        examples=['Customer Churn Analyzer'],
-    )
-    description: str | None = Field(
-        None,
-        description='Optional one-paragraph description of what this workflow does.',
-        examples=['Predicts churn risk for a customer given a 90-day usage window.'],
-    )
-    status: ResourceLifecycleStatus = Field(
-        ...,
-        description='Lifecycle status. `draft` = never deployed. `active` = deployed. `deleted` = soft-deleted.',
-        examples=['active'],
-    )
-    type: AgentType | None = Field(
-        ...,
-        description='Type of workflow. `task` = single-step scope orchestration; `workflow` = multi-step graph.',
-        examples=['task'],
-    )
-    org_uuid: str = Field(
-        ...,
-        alias='orgUuid',
-        description='Org UUID this workflow belongs to. Matches the caller’s principal.',
-        examples=['00000000-0000-0000-0000-000000000001'],
-    )
-    active_variation_id: str | None = Field(
-        None,
-        alias='activeVariationId',
-        description='Active (deployed) variation id. Null until the workflow is first deployed.',
-        examples=['00000000-0000-4000-a000-000000000100'],
-    )
-    draft_variation_id: str | None = Field(
-        None,
-        alias='draftVariationId',
-        description='Most recent draft variation id. Null when there is no draft pending.',
-        examples=['00000000-0000-4000-a000-000000000101'],
-    )
-    has_unpublished_changes: bool = Field(
-        ...,
-        alias='hasUnpublishedChanges',
-        description='True when the draft variation differs from the active variation (deploy would publish changes).',
-        examples=[False],
-    )
-    is_enabled: bool = Field(
-        ...,
-        alias='isEnabled',
-        description='Whether the workflow’s schedule is currently active. Toggle via the workflow schedule API.',
-        examples=[True],
-    )
-    access_config: AgentAccessConfigDto = Field(
-        ...,
-        alias='accessConfig',
-        description='Access configuration — who in the org can use / manage this workflow.',
-    )
-    pending_ownership_transfer: (
-        PendingOwnershipTransferDto | None
-    ) = (
-        Field(None, alias='pendingOwnershipTransfer', description='Pending ownership transfer awaiting recipient acceptance. Absent when no request is in flight.')
-    )
-    variation: AgentVariationDto | None = Field(
-        None,
-        description='Variation-detail payload (`trigger`, `workflowStructure`, `agentSelection`) for the requested view. Present on detail responses; absent on list rows.',
-    )
-    created_at: str = Field(
-        ...,
-        alias='createdAt',
-        description='Creation timestamp.',
-        examples=['2026-05-01T10:00:00.000Z'],
-    )
-    updated_at: str = Field(
-        ...,
-        alias='updatedAt',
-        description='Most recent update timestamp.',
-        examples=['2026-05-11T10:00:00.000Z'],
-    )
-    deleted_at: str | None = Field(
-        None,
-        alias='deletedAt',
-        description='Soft-delete timestamp. Null for active workflows.',
-        examples=[None],
-    )
-    can_manage: bool = Field(
-        ...,
-        alias='canManage',
-        description='Whether the requesting principal can manage (edit/delete/deploy/toggle) this workflow. Derived server-side from the principal + accessConfig. Always present on every Workflow response.',
-        examples=[True],
-    )
-    can_use: bool = Field(
-        ...,
-        alias='canUse',
-        description='Whether the requesting principal can use (run, view history of) this workflow. Derived server-side from the principal + accessConfig. Always present on every Workflow response.',
-        examples=[True],
-    )
-    manage_denial: ManageDenial | None = Field(
-        ...,
-        alias='manageDenial',
-        description='Why `canManage` is false, for client-facing guidance: `needs_group_manage` (shared, but no group you belong to grants Manage) or `not_owner` (private, and you are not the owner). `null` when `canManage` is true. Derived server-side from the principal + accessConfig.',
-        examples=['needs_group_manage'],
     )
 
 
@@ -2680,11 +2559,6 @@ class AgentDeployResponseDto(BaseModel):
         ...,
         description='The workflow after the deploy. `hasUnpublishedChanges` is false and `activeVariationId` matches the newly-published variation.',
     )
-    agent: AgentDto = Field(
-        ...,
-        deprecated=True,
-        description='Deprecated. Use `workflow`. Same object as `workflow` (kept for Release N compatibility).',
-    )
     deployed_at: str = Field(
         ...,
         alias='deployedAt',
@@ -2726,13 +2600,6 @@ class ConversationDto(BaseModel):
         ...,
         alias='scopeId',
         description='Numeric scope id returned by the list/detail adapter. This is not conversation ownership.',
-        examples=[42],
-    )
-    skill_id: float | None = Field(
-        ...,
-        alias='skillId',
-        deprecated=True,
-        description='Deprecated. Use `scopeId`. Same value as `scopeId` (kept for Release N compatibility).',
         examples=[42],
     )
     messages: list[ConversationMessageDto] = Field(
@@ -2884,11 +2751,6 @@ class ListAgentsResponseDto(BaseModel):
         ...,
         description='Page of workflows the caller can at least `use`. Workflows the caller cannot see are filtered out (not enumerated).',
     )
-    agents: list[AgentDto] = Field(
-        ...,
-        deprecated=True,
-        description='Deprecated. Use `workflows`. Same page array as `workflows` (kept for Release N compatibility).',
-    )
     next_page_token: str | None = Field(
         ...,
         alias='nextPageToken',
@@ -2898,109 +2760,6 @@ class ListAgentsResponseDto(BaseModel):
 
 
 class ScopeDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    id: float = Field(
-        ...,
-        description='Numeric scope id (stable per-org; not reused after delete).',
-        examples=[42],
-    )
-    slug: str = Field(
-        ...,
-        description='URL-safe slug used in human-readable links. Unique per org.',
-        examples=['customer-churn-analyzer-a3f'],
-    )
-    name: str | None = Field(
-        ...,
-        description='Display name of the scope. Shown in the builder and in run logs.',
-        examples=['Customer Churn Analyzer'],
-    )
-    description: str | None = Field(
-        None,
-        description='Optional one-paragraph description of what this scope does.',
-        examples=['Predicts churn risk for a customer given a 90-day usage window.'],
-    )
-    status: ResourceLifecycleStatus = Field(
-        ...,
-        description='Lifecycle status. `draft` = never deployed. `active` = deployed. `deleted` = soft-deleted.',
-        examples=['active'],
-    )
-    org_uuid: str = Field(
-        ...,
-        alias='orgUuid',
-        description='Org UUID this scope belongs to. Matches the caller’s principal.',
-        examples=['00000000-0000-0000-0000-000000000001'],
-    )
-    active_variation_id: str | None = Field(
-        None,
-        alias='activeVariationId',
-        description='Active (deployed) variation id. Null until the scope is first deployed.',
-        examples=['00000000-0000-4000-a000-000000000100'],
-    )
-    draft_variation_id: str | None = Field(
-        None,
-        alias='draftVariationId',
-        description='Most recent draft variation id. Null when there is no draft pending.',
-        examples=['00000000-0000-4000-a000-000000000101'],
-    )
-    has_unpublished_changes: bool = Field(
-        ...,
-        alias='hasUnpublishedChanges',
-        description='True when the draft variation differs from the active variation (deploy would publish changes).',
-        examples=[False],
-    )
-    access_config: AccessConfigDto = Field(
-        ...,
-        alias='accessConfig',
-        description='Access configuration — who in the org can use / manage this scope.',
-    )
-    pending_ownership_transfer: (
-        PendingOwnershipTransferDto | None
-    ) = (
-        Field(None, alias='pendingOwnershipTransfer', description='Pending ownership transfer awaiting recipient acceptance. Absent when no request is in flight.')
-    )
-    variation: SkillVariationDto | None = Field(
-        None,
-        description='Variation-detail payload (`toolset`, `instructions`, `model`, etc.) for the requested view. Present on detail responses; absent on list rows.',
-    )
-    created_at: str = Field(
-        ...,
-        alias='createdAt',
-        description='Creation timestamp.',
-        examples=['2026-05-01T10:00:00.000Z'],
-    )
-    updated_at: str = Field(
-        ...,
-        alias='updatedAt',
-        description='Most recent update timestamp.',
-        examples=['2026-05-11T10:00:00.000Z'],
-    )
-    deleted_at: str | None = Field(
-        None,
-        alias='deletedAt',
-        description='Soft-delete timestamp. Null for active scopes.',
-        examples=[None],
-    )
-    can_manage: bool = Field(
-        ...,
-        alias='canManage',
-        description='Whether the requesting principal can manage (edit/delete/deploy) this scope. Derived server-side from the principal + accessConfig. Present on every Scope response.',
-        examples=[True],
-    )
-    can_use: bool = Field(
-        ...,
-        alias='canUse',
-        description='Whether the requesting principal can use (run, view history of) this scope. Derived server-side from the principal + accessConfig.',
-        examples=[True],
-    )
-    manage_denial: ManageDenial | None = Field(
-        ...,
-        alias='manageDenial',
-        description='Why `canManage` is false, for client-facing guidance: `needs_group_manage` (shared, but no group you belong to grants Manage) or `not_owner` (private, and you are not the owner). `null` when `canManage` is true.',
-        examples=['needs_group_manage'],
-    )
-
-
-class SkillDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: float = Field(
         ...,
@@ -3289,11 +3048,6 @@ class DeployResponseDto(BaseModel):
         ...,
         description='The scope after the deploy. `hasUnpublishedChanges` is false and `activeVariationId` matches the newly-published variation.',
     )
-    skill: SkillDto = Field(
-        ...,
-        deprecated=True,
-        description='Deprecated. Use `scope`. Same object as `scope` (kept for Release N compatibility).',
-    )
     deployed_at: str = Field(
         ...,
         alias='deployedAt',
@@ -3307,11 +3061,6 @@ class ListSkillsResponseDto(BaseModel):
     scopes: list[ScopeDto] = Field(
         ...,
         description='Page of scopes the caller can at least `use`. Scopes the caller cannot see are filtered out (not enumerated).',
-    )
-    skills: list[SkillDto] = Field(
-        ...,
-        deprecated=True,
-        description='Deprecated. Use `scopes`. Same page array as `scopes` (kept for Release N compatibility).',
     )
     next_page_token: str | None = Field(
         ...,

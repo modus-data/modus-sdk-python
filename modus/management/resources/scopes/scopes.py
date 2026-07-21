@@ -9,7 +9,7 @@ from modus._config import ModusConfig
 from modus._generated.models import (
     DeployResponseDto,
     PatchSkillMcpConfigDto,
-    SkillDto,
+    ScopeDto,
     SkillMcpInterfaceConfigDto,
     TransferOwnershipDto,
 )
@@ -19,7 +19,6 @@ from modus._pagination import (
     aip_list_params,
     build_aip_page_mapped,
     build_async_aip_page_mapped,
-    resolve_list_items_key,
 )
 from modus._query import update_mask_query
 from modus._retry import async_with_retry, with_retry
@@ -101,25 +100,12 @@ MANAGEMENT_SCOPE_OPERATIONS = ManagementScopesOperations(
 
 
 def _parse_scope(raw: dict) -> Skill:
-    return SkillDto.model_validate(raw)
+    return ScopeDto.model_validate(raw)
 
 
 def _parse_deploy_scope(raw: Any) -> Skill:
-    """Validate deploy envelope; mirror canonical/deprecated keys for Release N.
-
-    Wire ``scope`` is generated as ``ScopeDto``; re-validate as ``SkillDto`` so
-    deploy matches the rest of this resource's Skill return type during Release N.
-    """
-    if not isinstance(raw, dict):
-        scope = DeployResponseDto.model_validate(raw).scope
-    else:
-        data = dict(raw)
-        if data.get("scope") is None and data.get("skill") is not None:
-            data["scope"] = data["skill"]
-        if data.get("skill") is None and data.get("scope") is not None:
-            data["skill"] = data["scope"]
-        scope = DeployResponseDto.model_validate(data).scope
-    return SkillDto.model_validate(scope.model_dump(by_alias=True))
+    """Validate deploy envelope; return the published scope."""
+    return DeployResponseDto.model_validate(raw).scope
 
 
 def _scopes_list_params(
@@ -218,7 +204,7 @@ class ScopesResource:
         )
         return build_aip_page_mapped(
             data,
-            resolve_list_items_key(data, "scopes", "skills"),
+            "scopes",
             _parse_scope,
             lambda cur: self._list_page(page_size, cur, search, view, manager_id),
         )
@@ -537,7 +523,7 @@ class AsyncScopesResource:
         )
         return build_async_aip_page_mapped(
             data,
-            resolve_list_items_key(data, "scopes", "skills"),
+            "scopes",
             _parse_scope,
             lambda cur: self._list_page(page_size, cur, search, view, manager_id),
         )

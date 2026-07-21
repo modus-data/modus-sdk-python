@@ -6,12 +6,13 @@
 
 ## [Unreleased]
 
+> **Breaking removals below ship in the next major SDK release** (not a `0.2.x`
+> patch). See `distribution/docs/COMPATIBILITY.md`.
+
 ### Deprecated
 
-- **`Skill` / `Agent` type names** — use `Scope` / `Workflow` (and `ScopeStatus` / `WorkflowStatus`, `WorkflowType`, etc.). `Skill` and `Agent` remain as aliases for Release N.
-- **OpenAPI `SkillDto` / `AgentDto`** — prefer generated `ScopeDto` / `WorkflowDto` (same shape; legacy names marked deprecated in the spec).
-- **List/deploy response envelope keys** — list endpoints prefer `scopes` / `workflows`; deploy responses prefer `scope` / `workflow`. Deprecated `skills` / `agents` / `skill` / `agent` keys are still accepted when the canonical key is absent.
-- **`conversation_skill_id()`** — use `conversation_scope_id()`. `client.modus.conversations.list(kind=...)` accepts `scopes` (canonical) or deprecated `skills`.
+- **`Skill` / `Agent` type names** — use `Scope` / `Workflow` (and `ScopeStatus` / `WorkflowStatus`, `WorkflowType`, etc.). `Skill` and `Agent` remain as aliases.
+- **`conversation_skill_id()`** — use `conversation_scope_id()`.
 
 ### Changed
 
@@ -20,6 +21,9 @@
 
 ### Removed
 
+- Dual list/deploy envelopes — responses use `scopes` / `workflows` and `scope` / `workflow` only (no `skills` / `agents` / `skill` / `agent` aliases).
+- Public Python type aliases **`SkillDto` / `AgentDto`** — use `ScopeDto` / `WorkflowDto` (thin `Skill` / `Agent` aliases remain).
+- Conversation `kind=skills` — use `kind=scopes` (`all` | `modus` | `scopes`).
 - `ModusManagement.organization.delete()` — organization deletion is no longer
   part of the public API / PAT surface (SPA-only).
 

@@ -24,11 +24,11 @@ def test_suggestions_list():
         ),
     )
     client = Modus(api_key="modus_test", base_url="https://api.test")
-    page = client.suggestions.list(page_size=5, skill_ids=[7, 42])
+    page = client.suggestions.list(page_size=5, scope_ids=[7, 42])
     assert page.items[0].label == "Revenue"
     params = route.calls[0].request.url.params
     assert params["pageSize"] == "5"
-    assert params["skill_ids"] == "7,42"
+    assert params["scope_ids"] == "7,42"
 
 
 @respx.mock

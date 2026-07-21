@@ -57,14 +57,14 @@ def _assert_dto_covers_schema(openapi, schema_name: str, model_class) -> None:
     )
 
 
-def test_skill_dto_matches_openapi(openapi):
-    from modus.types.skills import Skill
-    _assert_dto_covers_schema(openapi, "SkillDto", Skill)
+def test_scope_dto_matches_openapi(openapi):
+    from modus.types.scopes import Scope
+    _assert_dto_covers_schema(openapi, "ScopeDto", Scope)
 
 
-def test_agent_dto_matches_openapi(openapi):
-    from modus.types.agents import Agent
-    _assert_dto_covers_schema(openapi, "AgentDto", Agent)
+def test_workflow_dto_matches_openapi(openapi):
+    from modus.types.workflows import Workflow
+    _assert_dto_covers_schema(openapi, "WorkflowDto", Workflow)
 
 
 def test_context_item_matches_openapi(openapi):

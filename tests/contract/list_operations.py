@@ -62,7 +62,6 @@ SAMPLE_SUGGESTION: Dict[str, Any] = {
 SAMPLE_CONVERSATION_LIST_ITEM: Dict[str, Any] = {
     "threadId": "thread-0",
     "scopeId": 42,
-    "skillId": 42,
     "firstMessage": "Hello",
     "title": None,
     "messageCount": 5,
@@ -124,7 +123,7 @@ def _connections_invoke(client: Client) -> Any:
 
 
 def _suggestions_invoke(client: Client) -> Any:
-    return client.suggestions.list(page_size=5, page_token="tok_abc", skill_ids=[7, 42])
+    return client.suggestions.list(page_size=5, page_token="tok_abc", scope_ids=[7, 42])
 
 
 def _context_items_invoke(client: Client) -> Any:

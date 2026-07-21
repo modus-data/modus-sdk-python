@@ -6,15 +6,14 @@ from .._generated.models import (
     AccessConfigDto,
     ResourceLifecycleStatus,
     ScopeDto,
-    SkillDto,
     SkillVariationDto,
 )
 
 Scope = ScopeDto
 ScopeStatus = ResourceLifecycleStatus
 ScopeVariation = SkillVariationDto
-# Deprecated twin of ScopeDto (same shape). Prefer Scope.
-Skill = SkillDto
+# Deprecated product name. Prefer Scope.
+Skill = ScopeDto
 
 __all__ = [
     "AccessConfigDto",
@@ -23,5 +22,4 @@ __all__ = [
     "ScopeStatus",
     "ScopeVariation",
     "Skill",
-    "SkillDto",
 ]

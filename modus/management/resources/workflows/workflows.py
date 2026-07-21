@@ -8,8 +8,8 @@ from typing import Any, List, Optional, Union
 from modus._config import ModusConfig
 from modus._generated.models import (
     AgentDeployResponseDto,
-    AgentDto,
     TransferOwnershipDto,
+    WorkflowDto,
 )
 from modus._http import AsyncHttpClient, HttpClient
 from modus._openapi_invoke import invoke_operation, invoke_operation_async
@@ -17,7 +17,6 @@ from modus._pagination import (
     aip_list_params,
     build_aip_page_mapped,
     build_async_aip_page_mapped,
-    resolve_list_items_key,
 )
 from modus._query import update_mask_query
 from modus._retry import async_with_retry, with_retry
@@ -70,23 +69,12 @@ MANAGEMENT_WORKFLOW_OPERATIONS = ManagementWorkflowsOperations(
 
 
 def _parse_workflow(raw: dict) -> Agent:
-    return AgentDto.model_validate(raw)
+    return WorkflowDto.model_validate(raw)
 
 
 def _parse_deploy_workflow(raw: Any) -> Agent:
-    """Validate deploy envelope; mirror canonical/deprecated keys for Release N.
-
-    Prefer ``agent`` (``AgentDto``) so deploy matches this resource's Agent return
-    type; ``workflow`` is the same payload as generated ``WorkflowDto``.
-    """
-    if not isinstance(raw, dict):
-        return AgentDeployResponseDto.model_validate(raw).agent
-    data = dict(raw)
-    if data.get("workflow") is None and data.get("agent") is not None:
-        data["workflow"] = data["agent"]
-    if data.get("agent") is None and data.get("workflow") is not None:
-        data["agent"] = data["workflow"]
-    return AgentDeployResponseDto.model_validate(data).agent
+    """Validate deploy envelope; return the published workflow."""
+    return AgentDeployResponseDto.model_validate(raw).workflow
 
 
 def _workflows_list_params(
@@ -177,7 +165,7 @@ class WorkflowsResource:
         )
         return build_aip_page_mapped(
             data,
-            resolve_list_items_key(data, "workflows", "agents"),
+            "workflows",
             _parse_workflow,
             lambda cur: self._list_page(
                 page_size, cur, search, type, view, include_variation
@@ -457,7 +445,7 @@ class AsyncWorkflowsResource:
         )
         return build_async_aip_page_mapped(
             data,
-            resolve_list_items_key(data, "workflows", "agents"),
+            "workflows",
             _parse_workflow,
             lambda cur: self._list_page(
                 page_size, cur, search, type, view, include_variation

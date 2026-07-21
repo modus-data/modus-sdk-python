@@ -8,6 +8,7 @@ import respx
 from modus.management import ModusManagement
 from modus.management.types.skills import Skill
 from modus.types.json_blob import JsonObject
+from modus.types.scopes import Scope
 
 BASE = "https://api.modus.com"
 
@@ -21,7 +22,7 @@ SKILL_RESP = {
     "canManage": True, "canUse": True, "manageDenial": None,
 }
 
-DEPLOY_RESP = {"skill": {**SKILL_RESP, "status": "active"}, "deployedAt": "2026-01-02T00:00:00Z"}
+DEPLOY_RESP = {"scope": {**SKILL_RESP, "status": "active"}, "deployedAt": "2026-01-02T00:00:00Z"}
 
 
 def _client():
@@ -199,6 +200,7 @@ def test_skills_deploy():
         return_value=httpx.Response(200, json=DEPLOY_RESP)
     )
     skill = _client().scopes.deploy(1)
+    assert isinstance(skill, Scope)
     assert isinstance(skill, Skill)
     assert skill.status == "active"
 
