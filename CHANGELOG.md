@@ -1,6 +1,6 @@
 # Changelog
 
-**Current release:** [`0.2.2`](https://pypi.org/project/modus-sdk/0.2.2/).
+**Current release:** [`0.2.3`](https://pypi.org/project/modus-sdk/0.2.3/).
 
 
 ## [Unreleased]
