@@ -9,6 +9,17 @@
 
 ## [0.2.2] — 2026-07-20
 
+### Fixed
+
+- Streaming always sends `sessionId` (thread id or generated UUID) on agent-host runs.
+- Optional `organization_id` / `MODUS_ORGANIZATION_ID` for stream bodies; agent-service accepts omitted org and uses the PAT principal.
+- Default API/agent hosts are `*.getmodus.com` (no longer `*.modus.com`).
+- `base_urls['agent-service']` drives the streaming agent-host client (parity with TypeScript).
+
+### Added
+
+- Create responses expose `.uid` as an alias of `context_item_id`.
+
 ## [0.2.0] — 2026-07-20
 
 ### Added
