@@ -33,7 +33,6 @@ SDK_LIST_OPS_EXCLUDED: frozenset[str] = frozenset(
     {
         "MemberGroupsController_list",
         "OrgMembersController_list",
-        "WorkflowInterfacesController_list",
     }
 )
 

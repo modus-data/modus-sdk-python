@@ -39,9 +39,9 @@ def _list_params(
     if page_token is not None:
         params["pageToken"] = page_token
     if scope_id is not None:
-        params["scope_id"] = scope_id
+        params["scopeId"] = scope_id
     if scope_ids is not None:
-        params["scope_ids"] = ",".join(str(item) for item in scope_ids)
+        params["scopeIds"] = ",".join(str(item) for item in scope_ids)
     return params
 
 
@@ -53,13 +53,13 @@ def _event_body(
     thread_id: Optional[str],
     metadata: Optional[Mapping[str, Any]],
 ) -> dict:
-    body: dict[str, Any] = {"event_type": _enum_value(event_type)}
+    body: dict[str, Any] = {"eventType": _enum_value(event_type)}
     if source is not None:
         body["source"] = _enum_value(source)
     if skill_id is not None:
-        body["skill_id"] = skill_id
+        body["skillId"] = skill_id
     if thread_id is not None:
-        body["thread_id"] = thread_id
+        body["threadId"] = thread_id
     if metadata is not None:
         body["metadata"] = dict(metadata)
     return body

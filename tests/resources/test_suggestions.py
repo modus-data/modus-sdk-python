@@ -9,7 +9,7 @@ from modus import Modus, SuggestionEventSource, SuggestionEventType
 
 SAMPLE_SUGGESTION = {
     "id": "predefined:q1",
-    "skill_id": 42,
+    "skillId": 42,
     "label": "Revenue",
     "prompt": "Show me revenue",
 }
@@ -28,7 +28,7 @@ def test_suggestions_list():
     assert page.items[0].label == "Revenue"
     params = route.calls[0].request.url.params
     assert params["pageSize"] == "5"
-    assert params["scope_ids"] == "7,42"
+    assert params["scopeIds"] == "7,42"
 
 
 @respx.mock
@@ -46,9 +46,9 @@ def test_suggestions_record_event():
         metadata={"placement": "home"},
     )
     assert json.loads(route.calls[0].request.content) == {
-        "event_type": "clicked",
+        "eventType": "clicked",
         "source": "home",
-        "skill_id": 42,
-        "thread_id": "thread-1",
+        "skillId": 42,
+        "threadId": "thread-1",
         "metadata": {"placement": "home"},
     }

@@ -57,7 +57,7 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "ModusChatController_chat": _model_wire_fields(ModusChatRequestDto),
     "ModusContextController_compose": _model_wire_fields(ModusContextRequestDto),
     "SuggestionsController_recordEvent": {
-        "event_type", "source", "skill_id", "thread_id", "metadata",
+        "eventType", "source", "skillId", "threadId", "metadata",
     },
     "ModusRunsController_create": _model_wire_fields(ModusRunDto),
     "ResumeRunsController_create": _model_wire_fields(ResumeRunDto),

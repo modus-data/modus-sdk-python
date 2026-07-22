@@ -1327,7 +1327,7 @@ class SuggestionQuestionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(..., description='Stable suggestion id.')
     skill_id: float | None = Field(
-        None, description='Numeric scope id this suggestion is scoped to.'
+        None, alias='skillId', description='Numeric scope id this suggestion is scoped to.'
     )
     label: str = Field(..., description='Short Home button label.')
     prompt: str = Field(..., description='Prompt sent when the suggestion is selected.')
@@ -2041,11 +2041,6 @@ class ListAgentInterfacesResponseDto(BaseModel):
     interfaces: list[AgentInterfaceDto] = Field(
         ..., description='All interfaces attached to the workflow (in creation order).'
     )
-    next_page_token: str | None = Field(
-        ...,
-        alias='nextPageToken',
-        description='Token for the next page, or null when there are no more results.',
-    )
 
 
 class ListEvaluationRunsResponseDto(BaseModel):
@@ -2141,14 +2136,21 @@ class PatchSkillMcpConfigResponseDto(BaseModel):
 class RecordSuggestionEventDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     event_type: SuggestionEventType = Field(
-        ..., description='First-party Home suggestion interaction.', examples=['clicked']
+        ...,
+        alias='eventType',
+        description='First-party Home suggestion interaction.',
+        examples=['clicked'],
     )
     source: SuggestionEventSource | None = Field(
         None, description='Product surface that emitted the event.', examples=['home']
     )
-    skill_id: float | None = Field(None, description='Selected Home scope id when known.')
+    skill_id: float | None = Field(
+        None, alias='skillId', description='Selected Home scope id when known.'
+    )
     thread_id: str | None = Field(
-        None, description='Conversation thread id when the event is tied to a chat.'
+        None,
+        alias='threadId',
+        description='Conversation thread id when the event is tied to a chat.',
     )
     metadata: dict[str, Any] | None = Field(None, description='Event metadata.')
 
