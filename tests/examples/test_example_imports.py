@@ -82,8 +82,8 @@ def test_list_skills_uses_management_for_detail() -> None:
     if not path.exists():
         pytest.skip("list_skills.py not present")
     assert _imports_modus_management(path)
-    assert _has_attr_chain(path, ("mgmt", "skills", "get"))
-    assert _has_attr_chain(path, ("client", "skills", "get"))
+    assert _has_attr_chain(path, ("mgmt", "scopes", "get"))
+    assert _has_attr_chain(path, ("client", "scopes", "get"))
 
 
 def test_list_agents_uses_both_clients_for_detail() -> None:
@@ -91,8 +91,8 @@ def test_list_agents_uses_both_clients_for_detail() -> None:
     if not path.exists():
         pytest.skip("list_agents.py not present")
     assert _imports_modus_management(path)
-    assert _has_attr_chain(path, ("mgmt", "agents", "get"))
-    assert _has_attr_chain(path, ("client", "agents", "get"))
+    assert _has_attr_chain(path, ("mgmt", "workflows", "get"))
+    assert _has_attr_chain(path, ("client", "workflows", "get"))
 
 
 def test_context_lookup_demo_covers_lookup_and_values() -> None:

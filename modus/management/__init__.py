@@ -3,7 +3,7 @@ modus.management — configuration surface for the Modus SDK.
 
     from modus.management import ModusManagement
     mgmt = ModusManagement(api_key="modus_...")
-    mgmt.skills.create(name="Analyst", model="gpt-4o")
+    mgmt.scopes.create(name="Analyst", model="gpt-4o")
 
 Errors are the shared modus.* hierarchy (modus.NotFoundError, etc.).
 """
@@ -33,11 +33,18 @@ from .types import (
     Message,
     Page,
     ScheduleTrigger,
+    Scope,
+    ScopeStatus,
+    ScopeVariation,
     Skill,
     SkillStatus,
     Toolset,
     TriggerSchedule,
+    Workflow,
     WorkflowGraph,
+    WorkflowStatus,
+    WorkflowType,
+    WorkflowVariation,
 )
 
 __all__ = [
@@ -66,9 +73,16 @@ __all__ = [
     "ModusManagement",
     "Page",
     "ScheduleTrigger",
+    "Scope",
+    "ScopeStatus",
+    "ScopeVariation",
     "Skill",
     "SkillStatus",
     "Toolset",
     "TriggerSchedule",
+    "Workflow",
     "WorkflowGraph",
+    "WorkflowStatus",
+    "WorkflowType",
+    "WorkflowVariation",
 ]

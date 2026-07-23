@@ -11,8 +11,16 @@ from .._generated.models import (
 
 ContextItem = ContextItemDto
 ContextItemLookupRow = LookupContextItemRowDto
-CreatedContextItem = CreatedContextItemResponseDto
 ContextItemDeletion = DeleteContextItemResponseDto
+
+
+class CreatedContextItem(CreatedContextItemResponseDto):
+    """Create response with ``uid`` aliased to ``context_item_id`` for list/get parity."""
+
+    @property
+    def uid(self) -> str:
+        return self.context_item_id
+
 
 # OpenAPI context_type is a string; keep a loose alias for annotations in user code.
 ContextType = str

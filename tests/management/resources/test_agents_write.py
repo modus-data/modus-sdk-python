@@ -149,12 +149,13 @@ def test_agents_deploy():
         return_value=httpx.Response(
             200,
             json={
-                "agent": {**AGENT_RESP, "status": "active"},
+                "workflow": {**AGENT_RESP, "status": "active"},
                 "deployedAt": "2026-01-02T00:00:00Z",
             },
         )
     )
     agent = _client().workflows.deploy(1)
+    assert isinstance(agent, Agent)
     assert agent.status == "active"
 
 

@@ -8,7 +8,7 @@ from modus.management import AsyncModusManagement, ModusManagement
 def test_client_instantiates(monkeypatch):
     monkeypatch.delenv("MODUS_BASE_URL", raising=False)
     client = ModusManagement(api_key="modus_test_key")
-    assert repr(client) == "ModusManagement(base_url='https://api.modus.com')"
+    assert repr(client) == "ModusManagement(base_url='https://api.getmodus.com')"
 
 
 def test_client_has_skills_resource():
@@ -76,4 +76,4 @@ def test_client_raises_on_bad_key_format():
 def test_async_client_instantiates(monkeypatch):
     monkeypatch.delenv("MODUS_BASE_URL", raising=False)
     client = AsyncModusManagement(api_key="modus_test_key")
-    assert repr(client) == "AsyncModusManagement(base_url='https://api.modus.com')"
+    assert repr(client) == "AsyncModusManagement(base_url='https://api.getmodus.com')"

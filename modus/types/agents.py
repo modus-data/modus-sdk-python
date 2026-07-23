@@ -1,17 +1,23 @@
-"""Agent read types — re-exported from OpenAPI DTOs."""
+"""Agent read types — deprecated aliases of Workflow."""
 
 from __future__ import annotations
 
-from .._generated.models import AgentDto, AgentType, AgentVariationDto, ResourceLifecycleStatus
+from .workflows import (
+    Agent,
+    WorkflowDto,
+    WorkflowStatus,
+    WorkflowType,
+    WorkflowVariation,
+)
 
-Agent = AgentDto
-AgentStatus = ResourceLifecycleStatus
-AgentVariation = AgentVariationDto
+AgentStatus = WorkflowStatus
+AgentType = WorkflowType
+AgentVariation = WorkflowVariation
 
 __all__ = [
     "Agent",
-    "AgentDto",
     "AgentStatus",
     "AgentType",
     "AgentVariation",
+    "WorkflowDto",
 ]

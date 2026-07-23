@@ -40,7 +40,10 @@ def _list_response_array_keys(openapi: dict, schema_name: str) -> Set[str]:
     array_keys = {
         name
         for name, prop in props.items()
-        if prop.get("type") == "array" and name in required
+        # Release N dual envelopes mark the old plural deprecated; SDK items_key is canonical.
+        if prop.get("type") == "array"
+        and name in required
+        and prop.get("deprecated") is not True
     }
     return array_keys
 

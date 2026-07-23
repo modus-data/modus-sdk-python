@@ -13,8 +13,9 @@ from typing import Mapping, Optional, Union
 
 import httpx
 
-# Defaults — override via Modus(base_url=..., timeout=..., max_retries=...)
-DEFAULT_BASE_URL = "https://api.modus.com"
+# Defaults — override via Modus(base_url=..., agent_host=..., timeout=..., max_retries=...)
+DEFAULT_BASE_URL = "https://api.getmodus.com"
+DEFAULT_AGENT_HOST = "https://agent.getmodus.com"
 
 
 def _default_timeout() -> httpx.Timeout:
@@ -48,6 +49,7 @@ class ModusConfig:
     timeout: Union[float, httpx.Timeout] = field(default_factory=_default_timeout)
     max_retries: int = DEFAULT_MAX_RETRIES
     agent_host: Optional[str] = None
+    organization_id: Optional[str] = None
     base_urls: Mapping[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -62,6 +64,8 @@ class ModusConfig:
         object.__setattr__(self, "base_url", _normalize_base_url(self.base_url))
         if self.agent_host is not None:
             object.__setattr__(self, "agent_host", _normalize_base_url(self.agent_host))
+        if self.organization_id is not None:
+            object.__setattr__(self, "organization_id", self.organization_id.strip() or None)
         object.__setattr__(self, "base_urls", _normalize_base_urls(self.base_urls))
 
     def __repr__(self) -> str:

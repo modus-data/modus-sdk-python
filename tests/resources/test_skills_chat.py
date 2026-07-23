@@ -76,7 +76,9 @@ def test_skills_chat_invalid_model(client):
 def test_skills_chat_stream(client):
     def fake_stream_post(path: str, *, json=None):
         assert path == "/agent/v1/scopes/42/runs"
-        assert json == {"message": "Stream me", "config": {"model": MODEL}}
+        assert json["message"] == "Stream me"
+        assert json["config"] == {"model": MODEL}
+        assert "sessionId" in json
         yield 'data: {"type":"token","content":"Hi"}'
         yield 'data: {"type":"token","content":" there"}'
         yield ('data: {"type":"done","runId":"run-s1","threadId":"thread-s1"}')

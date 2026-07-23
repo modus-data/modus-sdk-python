@@ -12,7 +12,7 @@ BASE = "https://api.modus.com"
 @respx.mock
 def test_agents_list(client, sample_agent):
     respx.get(f"{BASE}/api/v1/workflows").mock(
-        return_value=httpx.Response(200, json={"agents": [sample_agent], "nextPageToken": None})
+        return_value=httpx.Response(200, json={"workflows": [sample_agent], "nextPageToken": None})
     )
     page = client.workflows.list()
     assert len(page) == 1
@@ -25,7 +25,7 @@ def test_agents_list(client, sample_agent):
 @respx.mock
 def test_agents_list_no_next_page(client, sample_agent):
     respx.get(f"{BASE}/api/v1/workflows").mock(
-        return_value=httpx.Response(200, json={"agents": [sample_agent], "nextPageToken": None})
+        return_value=httpx.Response(200, json={"workflows": [sample_agent], "nextPageToken": None})
     )
     page = client.workflows.list()
     assert page.has_next_page() is False

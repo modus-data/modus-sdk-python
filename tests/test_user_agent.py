@@ -8,7 +8,7 @@ BASE = "https://api.modus.com"
 @respx.mock
 def test_user_agent_header_present_on_get():
     route = respx.get(f"{BASE}/api/v1/scopes").mock(
-        return_value=httpx.Response(200, json={"skills": [], "nextPageToken": None})
+        return_value=httpx.Response(200, json={"scopes": [], "nextPageToken": None})
     )
     Modus(api_key="modus_test", base_url=BASE).scopes.list()
     ua = route.calls[0].request.headers.get("user-agent", "")
@@ -18,7 +18,7 @@ def test_user_agent_header_present_on_get():
 @respx.mock
 def test_user_agent_contains_python_version():
     route = respx.get(f"{BASE}/api/v1/scopes").mock(
-        return_value=httpx.Response(200, json={"skills": [], "nextPageToken": None})
+        return_value=httpx.Response(200, json={"scopes": [], "nextPageToken": None})
     )
     Modus(api_key="modus_test", base_url=BASE).scopes.list()
     ua = route.calls[0].request.headers.get("user-agent", "")

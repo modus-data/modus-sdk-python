@@ -3,17 +3,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 from modus._config import ModusConfig
 from modus._generated.models import (
     AgentDeployResponseDto,
-    AgentDto,
     TransferOwnershipDto,
+    WorkflowDto,
 )
 from modus._http import AsyncHttpClient, HttpClient
 from modus._openapi_invoke import invoke_operation, invoke_operation_async
-from modus._pagination import aip_list_params, build_aip_page_mapped, build_async_aip_page_mapped
+from modus._pagination import (
+    aip_list_params,
+    build_aip_page_mapped,
+    build_async_aip_page_mapped,
+)
 from modus._query import update_mask_query
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_id, validate_page_size
@@ -65,7 +69,12 @@ MANAGEMENT_WORKFLOW_OPERATIONS = ManagementWorkflowsOperations(
 
 
 def _parse_workflow(raw: dict) -> Agent:
-    return AgentDto.model_validate(raw)
+    return WorkflowDto.model_validate(raw)
+
+
+def _parse_deploy_workflow(raw: Any) -> Agent:
+    """Validate deploy envelope; return the published workflow."""
+    return AgentDeployResponseDto.model_validate(raw).workflow
 
 
 def _workflows_list_params(
@@ -156,7 +165,7 @@ class WorkflowsResource:
         )
         return build_aip_page_mapped(
             data,
-            "agents",
+            "workflows",
             _parse_workflow,
             lambda cur: self._list_page(
                 page_size, cur, search, type, view, include_variation
@@ -294,7 +303,7 @@ class WorkflowsResource:
             self._config.max_retries,
             retry_not_found_on_deploy=True,
         )
-        return AgentDeployResponseDto.model_validate(raw).agent
+        return _parse_deploy_workflow(raw)
 
     def toggle(self, workflow_id: Union[int, str], *, active: bool) -> Agent:
         """Enable or disable a workflow."""
@@ -436,7 +445,7 @@ class AsyncWorkflowsResource:
         )
         return build_async_aip_page_mapped(
             data,
-            "agents",
+            "workflows",
             _parse_workflow,
             lambda cur: self._list_page(
                 page_size, cur, search, type, view, include_variation
@@ -564,7 +573,7 @@ class AsyncWorkflowsResource:
             self._config.max_retries,
             retry_not_found_on_deploy=True,
         )
-        return AgentDeployResponseDto.model_validate(raw).agent
+        return _parse_deploy_workflow(raw)
 
     async def toggle(self, workflow_id: Union[int, str], *, active: bool) -> Agent:
         validate_id(workflow_id, name="workflow_id")

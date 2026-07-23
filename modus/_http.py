@@ -174,6 +174,34 @@ async def _raise_for_status_async(response: httpx.Response) -> None:
     _raise_for_status_with_body(response, body)
 
 
+def _ensure_sse_content_type(response: httpx.Response, body_preview: str = "") -> None:
+    """Reject non-SSE responses so empty streams never look like success."""
+    ct = (response.headers.get("content-type") or "").lower()
+    if "text/event-stream" in ct:
+        return
+    preview = body_preview[:200]
+    raise ModusError(
+        f"Unexpected stream response: expected Content-Type text/event-stream, "
+        f"got {response.headers.get('content-type')!r}. "
+        f"Body preview: {preview}",
+        status_code=response.status_code,
+        body=preview or None,
+    )
+
+
+def _sse_body_preview_from_lines(lines: Iterator[str], limit: int = 200) -> str:
+    """Accumulate at most ``limit`` characters from an iterator of lines."""
+    preview = ""
+    for line in lines:
+        remaining = limit - len(preview)
+        if remaining <= 0:
+            break
+        preview += line[:remaining]
+        if len(preview) >= limit:
+            break
+    return preview
+
+
 # ---------------------------------------------------------------------------
 # Sync client
 # ---------------------------------------------------------------------------
@@ -307,8 +335,19 @@ class HttpClient:
         """Make a streaming request and yield raw SSE lines."""
         effective_base_url = base_url or self._config.base_url
         try:
-            with self._client.stream(method, _request_url(path, base_url), json=json) as response:
+            # Override client default Accept: application/json — agent-service
+            # negotiates SSE vs JSON polling on Accept.
+            with self._client.stream(
+                method,
+                _request_url(path, base_url),
+                json=json,
+                headers={"Accept": "text/event-stream"},
+            ) as response:
                 _raise_for_status(response)
+                ct = (response.headers.get("content-type") or "").lower()
+                if "text/event-stream" not in ct:
+                    preview = _sse_body_preview_from_lines(response.iter_lines())
+                    _ensure_sse_content_type(response, preview)
                 for line in response.iter_lines():
                     if line.strip():
                         yield line
@@ -453,8 +492,27 @@ class AsyncHttpClient:
         """Streaming request — yields raw SSE lines."""
         effective_base_url = base_url or self._config.base_url
         try:
-            async with self._client.stream(method, _request_url(path, base_url), json=json) as response:
+            async with self._client.stream(
+                method,
+                _request_url(path, base_url),
+                json=json,
+                headers={"Accept": "text/event-stream"},
+            ) as response:
                 await _raise_for_status_async(response)
+                ct = (response.headers.get("content-type") or "").lower()
+                if "text/event-stream" not in ct:
+                    chunks: list[str] = []
+                    size = 0
+                    async for line in response.aiter_lines():
+                        remaining = 200 - size
+                        if remaining <= 0:
+                            break
+                        piece = line[:remaining]
+                        chunks.append(piece)
+                        size += len(piece)
+                        if size >= 200:
+                            break
+                    _ensure_sse_content_type(response, "".join(chunks))
                 async for line in response.aiter_lines():
                     if line.strip():
                         yield line

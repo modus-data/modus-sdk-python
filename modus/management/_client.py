@@ -15,13 +15,11 @@ from modus._http import AsyncHttpClient, HttpClient
 
 from .resources import (
     AsyncContextResource,
-    AsyncOrganizationResource,
     AsyncScopesResource,
     AsyncUsageResource,
     AsyncUsersResource,
     AsyncWorkflowsResource,
     ContextResource,
-    OrganizationResource,
     ScopesResource,
     UsageResource,
     UsersResource,
@@ -39,7 +37,7 @@ class ModusManagement:
         api_key:     Your Modus API key (requires scopes:write + workflows:write scopes).
                      Falls back to MODUS_API_KEY env var.
         base_url:    API origin without a path suffix (default
-                     https://api.modus.com).
+                     https://api.getmodus.com).
         timeout:     Request timeout as seconds or httpx.Timeout. Default is
                      5s connect and 300s read.
         max_retries: Retries on 429/5xx (default 2).
@@ -86,7 +84,6 @@ class ModusManagement:
         self.context: ContextResource = ContextResource(self._http, self._config)
         self.usage: UsageResource = UsageResource(self._http, self._config)
         self.users: UsersResource = UsersResource(self._http, self._config)
-        self.organization: OrganizationResource = OrganizationResource(self._http, self._config)
 
     def close(self) -> None:
         """Close the underlying HTTP connection pool."""
@@ -109,7 +106,7 @@ class AsyncModusManagement:
     Args:
         api_key:     Modus API key with write scopes. Falls back to MODUS_API_KEY.
         base_url:    API origin without a path suffix (default
-                     https://api.modus.com).
+                     https://api.getmodus.com).
         timeout:     Request timeout as seconds or httpx.Timeout. Default is
                      5s connect and 300s read.
         max_retries: Retries on 429/5xx (default 2).
@@ -150,9 +147,6 @@ class AsyncModusManagement:
         self.context: AsyncContextResource = AsyncContextResource(self._http, self._config)
         self.usage: AsyncUsageResource = AsyncUsageResource(self._http, self._config)
         self.users: AsyncUsersResource = AsyncUsersResource(self._http, self._config)
-        self.organization: AsyncOrganizationResource = AsyncOrganizationResource(
-            self._http, self._config
-        )
 
     async def aclose(self) -> None:
         """Close the underlying async HTTP connection pool."""

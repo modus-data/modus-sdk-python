@@ -36,11 +36,6 @@ class AccessPolicyDto(BaseModel):
     )
 
 
-class ManageDenial(str, Enum):
-    not_owner = 'not_owner'
-    needs_group_manage = 'needs_group_manage'
-
-
 class AgentGroupPermissionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     use: bool = Field(
@@ -385,9 +380,9 @@ class ConversationListItemDto(BaseModel):
     thread_id: str = Field(
         ..., alias='threadId', description='Opaque thread id.', examples=['agent_42_abc-xyz']
     )
-    skill_id: float | None = Field(
+    scope_id: float = Field(
         ...,
-        alias='skillId',
+        alias='scopeId',
         description='Numeric scope id returned by the list adapter. This is not conversation ownership.',
         examples=[42],
     )
@@ -873,7 +868,6 @@ class ListConnectionsResponseDto(BaseModel):
         ...,
         alias='nextPageToken',
         description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
-        examples=['eyJjcmVhdGVkQXQiOiIyMDI2'],
     )
 
 
@@ -1226,6 +1220,11 @@ class ResourceLifecycleStatus(str, Enum):
     deleted = 'deleted'
 
 
+class ManageDenial(str, Enum):
+    not_owner = 'not_owner'
+    needs_group_manage = 'needs_group_manage'
+
+
 class SearchMemoriesRequestDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     query: str = Field(
@@ -1328,7 +1327,7 @@ class SuggestionQuestionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(..., description='Stable suggestion id.')
     skill_id: float | None = Field(
-        None, description='Numeric scope id this suggestion is scoped to.'
+        None, alias='skillId', description='Numeric scope id this suggestion is scoped to.'
     )
     label: str = Field(..., description='Short Home button label.')
     prompt: str = Field(..., description='Prompt sent when the suggestion is selected.')
@@ -1593,6 +1592,33 @@ class UsageTotalsDto(BaseModel):
     )
 
 
+class WorkflowEdgeDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(..., description='Stable edge id, unique within the graph.', examples=['e1'])
+    source: str = Field(..., description='Source node id.', examples=['1'])
+    target: str = Field(..., description='Target node id.', examples=['2'])
+    source_handle: str | None = Field(
+        None,
+        alias='sourceHandle',
+        description='Source port handle (e.g. a condition branch). Omit for a single-output node.',
+        examples=['branch_0'],
+    )
+
+
+class WorkflowNodePositionDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    x: float = Field(..., examples=[0])
+    y: float = Field(..., examples=[50])
+
+
+class WorkflowNodeType(str, Enum):
+    start = 'start'
+    action = 'action'
+    condition = 'condition'
+    agent = 'agent'
+    human_approval = 'humanApproval'
+
+
 class ActiveConversationRunStatus(str, Enum):
     queued = 'queued'
     pending = 'pending'
@@ -1776,120 +1802,6 @@ class AgentAccessConfigDto(BaseModel):
         alias='ownerEmail',
         description='Lowercased email of the workflow owner. Used by private-workflow ACL when owner email matches.',
         examples=['alice@example.com'],
-    )
-
-
-class AgentDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    id: float = Field(
-        ...,
-        description='Numeric workflow id (stable per-org; not reused after delete).',
-        examples=[42],
-    )
-    slug: str = Field(
-        ...,
-        description='URL-safe slug used in human-readable links. Unique per org.',
-        examples=['customer-churn-agent-a3f'],
-    )
-    name: str | None = Field(
-        ...,
-        description='Display name of the workflow. Shown in the builder and in run logs.',
-        examples=['Customer Churn Analyzer'],
-    )
-    description: str | None = Field(
-        None,
-        description='Optional one-paragraph description of what this workflow does.',
-        examples=['Predicts churn risk for a customer given a 90-day usage window.'],
-    )
-    status: ResourceLifecycleStatus = Field(
-        ...,
-        description='Lifecycle status. `draft` = never deployed. `active` = deployed. `deleted` = soft-deleted.',
-        examples=['active'],
-    )
-    type: AgentType | None = Field(
-        ...,
-        description='Type of workflow. `task` = single-step scope orchestration; `workflow` = multi-step graph.',
-        examples=['task'],
-    )
-    org_uuid: str = Field(
-        ...,
-        alias='orgUuid',
-        description='Org UUID this workflow belongs to. Matches the caller’s principal.',
-        examples=['00000000-0000-0000-0000-000000000001'],
-    )
-    active_variation_id: str | None = Field(
-        None,
-        alias='activeVariationId',
-        description='Active (deployed) variation id. Null until the workflow is first deployed.',
-        examples=['00000000-0000-4000-a000-000000000100'],
-    )
-    draft_variation_id: str | None = Field(
-        None,
-        alias='draftVariationId',
-        description='Most recent draft variation id. Null when there is no draft pending.',
-        examples=['00000000-0000-4000-a000-000000000101'],
-    )
-    has_unpublished_changes: bool = Field(
-        ...,
-        alias='hasUnpublishedChanges',
-        description='True when the draft variation differs from the active variation (deploy would publish changes).',
-        examples=[False],
-    )
-    is_enabled: bool = Field(
-        ...,
-        alias='isEnabled',
-        description='Whether the workflow’s schedule is currently active. Toggle via the workflow schedule API.',
-        examples=[True],
-    )
-    access_config: AgentAccessConfigDto = Field(
-        ...,
-        alias='accessConfig',
-        description='Access configuration — who in the org can use / manage this workflow.',
-    )
-    pending_ownership_transfer: (
-        PendingOwnershipTransferDto | None
-    ) = (
-        Field(None, alias='pendingOwnershipTransfer', description='Pending ownership transfer awaiting recipient acceptance. Absent when no request is in flight.')
-    )
-    variation: AgentVariationDto | None = Field(
-        None,
-        description='Variation-detail payload (`trigger`, `workflowStructure`, `agentSelection`) for the requested view. Present on detail responses; absent on list rows.',
-    )
-    created_at: str = Field(
-        ...,
-        alias='createdAt',
-        description='Creation timestamp.',
-        examples=['2026-05-01T10:00:00.000Z'],
-    )
-    updated_at: str = Field(
-        ...,
-        alias='updatedAt',
-        description='Most recent update timestamp.',
-        examples=['2026-05-11T10:00:00.000Z'],
-    )
-    deleted_at: str | None = Field(
-        None,
-        alias='deletedAt',
-        description='Soft-delete timestamp. Null for active workflows.',
-        examples=[None],
-    )
-    can_manage: bool = Field(
-        ...,
-        alias='canManage',
-        description='Whether the requesting principal can manage (edit/delete/deploy/toggle) this workflow. Derived server-side from the principal + accessConfig. Always present on every Workflow response.',
-        examples=[True],
-    )
-    can_use: bool = Field(
-        ...,
-        alias='canUse',
-        description='Whether the requesting principal can use (run, view history of) this workflow. Derived server-side from the principal + accessConfig. Always present on every Workflow response.',
-        examples=[True],
-    )
-    manage_denial: ManageDenial | None = Field(
-        ...,
-        alias='manageDenial',
-        description='Why `canManage` is false, for client-facing guidance: `needs_group_manage` (shared, but no group you belong to grants Manage) or `not_owner` (private, and you are not the owner). `null` when `canManage` is true. Derived server-side from the principal + accessConfig.',
-        examples=['needs_group_manage'],
     )
 
 
@@ -2129,32 +2041,15 @@ class ListAgentInterfacesResponseDto(BaseModel):
     interfaces: list[AgentInterfaceDto] = Field(
         ..., description='All interfaces attached to the workflow (in creation order).'
     )
-    next_page_token: str | None = Field(
-        ...,
-        alias='nextPageToken',
-        description='Token for the next page, or null when there are no more results.',
-    )
-
-
-class ListAgentsResponseDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    agents: list[AgentDto] = Field(
-        ...,
-        description='Page of workflows the caller can at least `use`. Workflows the caller cannot see are filtered out (not enumerated).',
-    )
-    next_page_token: str | None = Field(
-        ...,
-        alias='nextPageToken',
-        description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
-        examples=['eyJsYXN0SWQiOjQyfQ'],
-    )
 
 
 class ListEvaluationRunsResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     runs: list[EvaluationRunDto]
     next_page_token: str | None = Field(
-        None, alias='nextPageToken', description='Token for next page'
+        ...,
+        alias='nextPageToken',
+        description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
     )
 
 
@@ -2241,14 +2136,21 @@ class PatchSkillMcpConfigResponseDto(BaseModel):
 class RecordSuggestionEventDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     event_type: SuggestionEventType = Field(
-        ..., description='First-party Home suggestion interaction.', examples=['clicked']
+        ...,
+        alias='eventType',
+        description='First-party Home suggestion interaction.',
+        examples=['clicked'],
     )
     source: SuggestionEventSource | None = Field(
         None, description='Product surface that emitted the event.', examples=['home']
     )
-    skill_id: float | None = Field(None, description='Selected Home scope id when known.')
+    skill_id: float | None = Field(
+        None, alias='skillId', description='Selected Home scope id when known.'
+    )
     thread_id: str | None = Field(
-        None, description='Conversation thread id when the event is tied to a chat.'
+        None,
+        alias='threadId',
+        description='Conversation thread id when the event is tied to a chat.',
     )
     metadata: dict[str, Any] | None = Field(None, description='Event metadata.')
 
@@ -2378,6 +2280,148 @@ class UpdateEvaluationConfigDto(BaseModel):
     )
     notifications: EvaluationNotificationsDto | None = Field(
         None, description='Regression notification settings'
+    )
+
+
+class WorkflowDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: float = Field(
+        ...,
+        description='Numeric workflow id (stable per-org; not reused after delete).',
+        examples=[42],
+    )
+    slug: str = Field(
+        ...,
+        description='URL-safe slug used in human-readable links. Unique per org.',
+        examples=['customer-churn-agent-a3f'],
+    )
+    name: str | None = Field(
+        ...,
+        description='Display name of the workflow. Shown in the builder and in run logs.',
+        examples=['Customer Churn Analyzer'],
+    )
+    description: str | None = Field(
+        None,
+        description='Optional one-paragraph description of what this workflow does.',
+        examples=['Predicts churn risk for a customer given a 90-day usage window.'],
+    )
+    status: ResourceLifecycleStatus = Field(
+        ...,
+        description='Lifecycle status. `draft` = never deployed. `active` = deployed. `deleted` = soft-deleted.',
+        examples=['active'],
+    )
+    type: AgentType | None = Field(
+        ...,
+        description='Type of workflow. `task` = single-step scope orchestration; `workflow` = multi-step graph.',
+        examples=['task'],
+    )
+    org_uuid: str = Field(
+        ...,
+        alias='orgUuid',
+        description='Org UUID this workflow belongs to. Matches the caller’s principal.',
+        examples=['00000000-0000-0000-0000-000000000001'],
+    )
+    active_variation_id: str | None = Field(
+        None,
+        alias='activeVariationId',
+        description='Active (deployed) variation id. Null until the workflow is first deployed.',
+        examples=['00000000-0000-4000-a000-000000000100'],
+    )
+    draft_variation_id: str | None = Field(
+        None,
+        alias='draftVariationId',
+        description='Most recent draft variation id. Null when there is no draft pending.',
+        examples=['00000000-0000-4000-a000-000000000101'],
+    )
+    has_unpublished_changes: bool = Field(
+        ...,
+        alias='hasUnpublishedChanges',
+        description='True when the draft variation differs from the active variation (deploy would publish changes).',
+        examples=[False],
+    )
+    is_enabled: bool = Field(
+        ...,
+        alias='isEnabled',
+        description='Whether the workflow’s schedule is currently active. Toggle via the workflow schedule API.',
+        examples=[True],
+    )
+    access_config: AgentAccessConfigDto = Field(
+        ...,
+        alias='accessConfig',
+        description='Access configuration — who in the org can use / manage this workflow.',
+    )
+    pending_ownership_transfer: (
+        PendingOwnershipTransferDto | None
+    ) = (
+        Field(None, alias='pendingOwnershipTransfer', description='Pending ownership transfer awaiting recipient acceptance. Absent when no request is in flight.')
+    )
+    variation: AgentVariationDto | None = Field(
+        None,
+        description='Variation-detail payload (`trigger`, `workflowStructure`, `agentSelection`) for the requested view. Present on detail responses; absent on list rows.',
+    )
+    created_at: str = Field(
+        ...,
+        alias='createdAt',
+        description='Creation timestamp.',
+        examples=['2026-05-01T10:00:00.000Z'],
+    )
+    updated_at: str = Field(
+        ...,
+        alias='updatedAt',
+        description='Most recent update timestamp.',
+        examples=['2026-05-11T10:00:00.000Z'],
+    )
+    deleted_at: str | None = Field(
+        None,
+        alias='deletedAt',
+        description='Soft-delete timestamp. Null for active workflows.',
+        examples=[None],
+    )
+    can_manage: bool = Field(
+        ...,
+        alias='canManage',
+        description='Whether the requesting principal can manage (edit/delete/deploy/toggle) this workflow. Derived server-side from the principal + accessConfig. Always present on every Workflow response.',
+        examples=[True],
+    )
+    can_use: bool = Field(
+        ...,
+        alias='canUse',
+        description='Whether the requesting principal can use (run, view history of) this workflow. Derived server-side from the principal + accessConfig. Always present on every Workflow response.',
+        examples=[True],
+    )
+    manage_denial: ManageDenial | None = Field(
+        ...,
+        alias='manageDenial',
+        description='Why `canManage` is false, for client-facing guidance: `needs_group_manage` (shared, but no group you belong to grants Manage) or `not_owner` (private, and you are not the owner). `null` when `canManage` is true. Derived server-side from the principal + accessConfig.',
+        examples=['needs_group_manage'],
+    )
+
+
+class WorkflowNodeDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(..., description='Stable node id, unique within the graph.', examples=['1'])
+    type: WorkflowNodeType | None = Field(
+        ...,
+        description='Node kind. Determines how the runtime interprets `data`.',
+        examples=['start'],
+    )
+    position: WorkflowNodePositionDto | None = Field(
+        None, description='Canvas position. Optional — preserved for builder layout when present.'
+    )
+    data: dict[str, Any] | None = Field(
+        None,
+        description='Node-type-specific payload (intentionally open — shape varies by `type`). Defaults to `{}`.',
+        examples=[{}],
+    )
+
+
+class WorkflowStructureDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    nodes: list[WorkflowNodeDto] | None = Field(
+        None, description='Workflow nodes. Defaults to `[]`.'
+    )
+    edges: list[WorkflowEdgeDto] | None = Field(
+        None, description='Directed edges connecting the nodes. Defaults to `[]`.'
     )
 
 
@@ -2514,7 +2558,7 @@ class AccessConfigDto(BaseModel):
 
 class AgentDeployResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    agent: AgentDto = Field(
+    workflow: WorkflowDto = Field(
         ...,
         description='The workflow after the deploy. `hasUnpublishedChanges` is false and `activeVariationId` matches the newly-published variation.',
     )
@@ -2555,9 +2599,9 @@ class ConversationDto(BaseModel):
         description='Opaque thread/checkpoint id. It is not owned by a single scope; a conversation can span multiple workflows.',
         examples=['agent_42_abc-xyz'],
     )
-    skill_id: float | None = Field(
+    scope_id: float = Field(
         ...,
-        alias='skillId',
+        alias='scopeId',
         description='Numeric scope id returned by the list/detail adapter. This is not conversation ownership.',
         examples=[42],
     )
@@ -2611,11 +2655,10 @@ class CreateAgentDto(BaseModel):
         alias='agentSelection',
         description='Workflow selection (for task workflows): ordered scopes plus per-scope instructions.',
     )
-    workflow_structure: dict[str, Any] | None = Field(
+    workflow_structure: WorkflowStructureDto | None = Field(
         None,
         alias='workflowStructure',
-        description='Workflow graph (nodes + edges) when `type` is `workflow`. Free-form JSONB.',
-        examples=[{'nodes': [], 'edges': []}],
+        description='Workflow graph (nodes + edges) when `type` is `workflow`. Unknown node/edge keys and out-of-enum node types are rejected with a 422.',
     )
     access_config: AgentAccessConfigDto | None = Field(
         None,
@@ -2705,7 +2748,20 @@ class EvaluationConfigDto(BaseModel):
     )
 
 
-class SkillDto(BaseModel):
+class ListAgentsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    workflows: list[WorkflowDto] = Field(
+        ...,
+        description='Page of workflows the caller can at least `use`. Workflows the caller cannot see are filtered out (not enumerated).',
+    )
+    next_page_token: str | None = Field(
+        ...,
+        alias='nextPageToken',
+        description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
+    )
+
+
+class ScopeDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: float = Field(
         ...,
@@ -2832,11 +2888,10 @@ class UpdateAgentDto(BaseModel):
     agent_selection: AgentSelectionDto | None = Field(
         None, alias='agentSelection', description='Updated workflow selection.'
     )
-    workflow_structure: dict[str, Any] | None = Field(
+    workflow_structure: WorkflowStructureDto | None = Field(
         None,
         alias='workflowStructure',
-        description='Updated workflow graph (nodes + edges).',
-        examples=[{'nodes': [], 'edges': []}],
+        description='Updated workflow graph (nodes + edges). Unknown node/edge keys and out-of-enum node types are rejected with a 422.',
     )
     access_config: AgentAccessConfigDto | None = Field(
         None,
@@ -2991,7 +3046,7 @@ class SkillRunDto(BaseModel):
 
 class DeployResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    skill: SkillDto = Field(
+    scope: ScopeDto = Field(
         ...,
         description='The scope after the deploy. `hasUnpublishedChanges` is false and `activeVariationId` matches the newly-published variation.',
     )
@@ -3005,7 +3060,7 @@ class DeployResponseDto(BaseModel):
 
 class ListSkillsResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    skills: list[SkillDto] = Field(
+    scopes: list[ScopeDto] = Field(
         ...,
         description='Page of scopes the caller can at least `use`. Scopes the caller cannot see are filtered out (not enumerated).',
     )
@@ -3013,7 +3068,6 @@ class ListSkillsResponseDto(BaseModel):
         ...,
         alias='nextPageToken',
         description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
-        examples=['eyJsYXN0SWQiOjQyfQ'],
     )
 
 

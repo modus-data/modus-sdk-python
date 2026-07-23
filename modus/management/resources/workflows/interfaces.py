@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Any, Mapping, Optional, Union
 
 from modus._config import ModusConfig
 from modus._generated.models import (
@@ -18,6 +18,15 @@ from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_id
 
 
+def _add_interface_body(interface: Union[AddAgentInterfaceDto, Mapping[str, Any]]) -> dict[str, Any]:
+    """Accept a DTO or plain mapping (TS parity)."""
+    if isinstance(interface, AddAgentInterfaceDto):
+        model = interface
+    else:
+        model = AddAgentInterfaceDto.model_validate(interface)
+    return model.model_dump(by_alias=True, exclude_none=True)
+
+
 class WorkflowInterfacesResource:
     def __init__(self, http: HttpClient, config: ModusConfig, workflow_id: Union[int, str]) -> None:
         self._http, self._config, self._workflow_id = http, config, workflow_id
@@ -30,12 +39,16 @@ class WorkflowInterfacesResource:
         ), self._config.max_retries)
         return ListAgentInterfacesResponseDto.model_validate(raw).interfaces
 
-    def create(self, interface: AddAgentInterfaceDto) -> AgentInterfaceDto:
-        """Add an interface to this workflow."""
+    def create(self, interface: Union[AddAgentInterfaceDto, Mapping[str, Any]]) -> AgentInterfaceDto:
+        """Add an interface to this workflow.
+
+        Args:
+            interface: Interface configuration to attach, as a DTO or plain mapping.
+        """
         validate_id(self._workflow_id, name="workflow_id")
         raw = with_retry(lambda: invoke_operation(
             self._http, "WorkflowInterfacesController_add", path_params={"id": self._workflow_id},
-            json_body=interface.model_dump(by_alias=True, exclude_none=True),
+            json_body=_add_interface_body(interface),
         ), self._config.max_retries)
         return AgentInterfaceDto.model_validate(raw)
 
@@ -82,16 +95,16 @@ class AsyncWorkflowInterfacesResource:
         ), self._config.max_retries)
         return ListAgentInterfacesResponseDto.model_validate(raw).interfaces
 
-    async def create(self, interface: AddAgentInterfaceDto) -> AgentInterfaceDto:
+    async def create(self, interface: Union[AddAgentInterfaceDto, Mapping[str, Any]]) -> AgentInterfaceDto:
         """Add an interface to this workflow.
 
         Args:
-            interface: Interface configuration to attach.
+            interface: Interface configuration to attach, as a DTO or plain mapping.
         """
         validate_id(self._workflow_id, name="workflow_id")
         raw = await async_with_retry(lambda: invoke_operation_async(
             self._http, "WorkflowInterfacesController_add", path_params={"id": self._workflow_id},
-            json_body=interface.model_dump(by_alias=True, exclude_none=True),
+            json_body=_add_interface_body(interface),
         ), self._config.max_retries)
         return AgentInterfaceDto.model_validate(raw)
 

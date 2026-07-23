@@ -9,13 +9,17 @@ from modus._config import ModusConfig
 from modus._generated.models import (
     DeployResponseDto,
     PatchSkillMcpConfigDto,
-    SkillDto,
+    ScopeDto,
     SkillMcpInterfaceConfigDto,
     TransferOwnershipDto,
 )
 from modus._http import AsyncHttpClient, HttpClient
 from modus._openapi_invoke import invoke_operation, invoke_operation_async
-from modus._pagination import aip_list_params, build_aip_page_mapped, build_async_aip_page_mapped
+from modus._pagination import (
+    aip_list_params,
+    build_aip_page_mapped,
+    build_async_aip_page_mapped,
+)
 from modus._query import update_mask_query
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_id, validate_page_size
@@ -96,7 +100,12 @@ MANAGEMENT_SCOPE_OPERATIONS = ManagementScopesOperations(
 
 
 def _parse_scope(raw: dict) -> Skill:
-    return SkillDto.model_validate(raw)
+    return ScopeDto.model_validate(raw)
+
+
+def _parse_deploy_scope(raw: Any) -> Skill:
+    """Validate deploy envelope; return the published scope."""
+    return DeployResponseDto.model_validate(raw).scope
 
 
 def _scopes_list_params(
@@ -195,7 +204,7 @@ class ScopesResource:
         )
         return build_aip_page_mapped(
             data,
-            "skills",
+            "scopes",
             _parse_scope,
             lambda cur: self._list_page(page_size, cur, search, view, manager_id),
         )
@@ -346,7 +355,7 @@ class ScopesResource:
             self._config.max_retries,
             retry_not_found_on_deploy=True,
         )
-        return DeployResponseDto.model_validate(raw).skill
+        return _parse_deploy_scope(raw)
 
     def delete(self, scope_id: Union[int, str]) -> None:
         """Delete a Modus scope."""
@@ -514,7 +523,7 @@ class AsyncScopesResource:
         )
         return build_async_aip_page_mapped(
             data,
-            "skills",
+            "scopes",
             _parse_scope,
             lambda cur: self._list_page(page_size, cur, search, view, manager_id),
         )
@@ -658,7 +667,7 @@ class AsyncScopesResource:
             self._config.max_retries,
             retry_not_found_on_deploy=True,
         )
-        return DeployResponseDto.model_validate(raw).skill
+        return _parse_deploy_scope(raw)
 
     async def delete(self, scope_id: Union[int, str]) -> None:
         validate_id(scope_id, name="scope_id")

@@ -14,7 +14,7 @@ Build a toolset with the factory methods and combine several with
         Toolset.sql_runner(["SELECT:conn-123:analytics:public"]),
         Toolset.memory(),
     )
-    mgmt.skills.create(name="Analyst", model="gpt-4o", toolset=toolset)
+    mgmt.scopes.create(name="Analyst", model="gpt-4o", toolset=toolset)
 """
 from __future__ import annotations
 

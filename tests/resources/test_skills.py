@@ -12,7 +12,7 @@ BASE = "https://api.modus.com"
 @respx.mock
 def test_skills_list(client, sample_skill):
     respx.get(f"{BASE}/api/v1/scopes").mock(
-        return_value=httpx.Response(200, json={"skills": [sample_skill], "nextPageToken": None})
+        return_value=httpx.Response(200, json={"scopes": [sample_skill], "nextPageToken": None})
     )
     page = client.scopes.list()
     assert len(page) == 1
@@ -26,7 +26,7 @@ def test_skills_list(client, sample_skill):
 @respx.mock
 def test_skills_list_default_page_size_in_params(client):
     route = respx.get(f"{BASE}/api/v1/scopes").mock(
-        return_value=httpx.Response(200, json={"skills": [], "nextPageToken": None})
+        return_value=httpx.Response(200, json={"scopes": [], "nextPageToken": None})
     )
     client.scopes.list()
     assert route.called
@@ -36,7 +36,7 @@ def test_skills_list_default_page_size_in_params(client):
 @respx.mock
 def test_skills_list_custom_page_size(client):
     route = respx.get(f"{BASE}/api/v1/scopes").mock(
-        return_value=httpx.Response(200, json={"skills": [], "nextPageToken": None})
+        return_value=httpx.Response(200, json={"scopes": [], "nextPageToken": None})
     )
     client.scopes.list(page_size=5)
     assert route.calls[0].request.url.params["pageSize"] == "5"
@@ -47,8 +47,8 @@ def test_skills_list_pagination(client, sample_skill):
     skill2 = {**sample_skill, "id": 43, "slug": "churn-analysis", "name": "Churn Analysis"}
 
     route = respx.get(f"{BASE}/api/v1/scopes").mock(side_effect=[
-        httpx.Response(200, json={"skills": [sample_skill], "nextPageToken": "tok_page_2"}),
-        httpx.Response(200, json={"skills": [skill2], "nextPageToken": None}),
+        httpx.Response(200, json={"scopes": [sample_skill], "nextPageToken": "tok_page_2"}),
+        httpx.Response(200, json={"scopes": [skill2], "nextPageToken": None}),
     ])
 
     page = client.scopes.list()
@@ -66,7 +66,7 @@ def test_skills_list_pagination(client, sample_skill):
 def test_skills_list_iter_current_page_only(client, sample_skill):
     respx.get(f"{BASE}/api/v1/scopes").mock(
         return_value=httpx.Response(
-            200, json={"skills": [sample_skill], "nextPageToken": "has_more"}
+            200, json={"scopes": [sample_skill], "nextPageToken": "has_more"}
         )
     )
     page = client.scopes.list()

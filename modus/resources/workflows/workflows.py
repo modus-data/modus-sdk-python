@@ -13,7 +13,7 @@ from ..._chat import (
     workflow_stream_session_async,
 )
 from ..._config import ModusConfig
-from ..._generated.models import AgentDto
+from ..._generated.models import WorkflowDto
 from ..._http import AsyncHttpClient, HttpClient
 from ..._openapi_invoke import invoke_operation, invoke_operation_async
 from ..._pagination import (
@@ -59,7 +59,7 @@ WORKFLOW_OPERATIONS = WorkflowsOperations(
 
 
 def _parse_workflow(raw: dict) -> Agent:
-    return AgentDto.model_validate(raw)
+    return WorkflowDto.model_validate(raw)
 
 
 def _workflows_list_params(
@@ -152,7 +152,7 @@ class WorkflowsResource:
         )
         return build_aip_page_mapped(
             data,
-            "agents",
+            "workflows",
             _parse_workflow,
             lambda cur: self._list_page(
                 page_size, cur, search, type, view, include_variation
@@ -290,7 +290,7 @@ class AsyncWorkflowsResource:
         )
         return build_async_aip_page_mapped(
             data,
-            "agents",
+            "workflows",
             _parse_workflow,
             lambda cur: self._list_page(
                 page_size, cur, search, type, view, include_variation

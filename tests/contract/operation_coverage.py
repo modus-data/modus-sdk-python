@@ -101,8 +101,7 @@ OPERATIONS: dict[str, str] = {
     "SuggestionsController_recordEvent": "client.suggestions.record_event()",
     # --- Usage ---
     "UsageController_list": "mgmt.usage.list()",
-    # --- Organization ---
-    "OrganizationController_deleteOrganization": "mgmt.organization.delete()",
+    # --- Users ---
     "MemberGroupsController_list": "mgmt.users.list_member_groups()",
     "OrgMembersController_list": "mgmt.users.list_org_members()",
 }

@@ -1,4 +1,4 @@
-"""Tests for client.scopes.conversations(skill_id).list() and .get()."""
+"""Tests for client.scopes.conversations(scope_id).list() and .get()."""
 
 import httpx
 import pytest
@@ -14,7 +14,7 @@ def make_list_item(i: int = 0) -> dict:
     """Matches the real ConversationListItem shape from the API list endpoint."""
     return {
         "threadId": f"thread-{i}",
-        "skillId": 42,
+        "scopeId": 42,
         "firstMessage": f"Hello from thread {i}",
         "title": None,
         "messageCount": 5,
@@ -28,7 +28,7 @@ def make_conversation() -> dict:
     """Matches the real Conversation shape from the API get endpoint."""
     return {
         "threadId": "thread-abc",
-        "skillId": 42,
+        "scopeId": 42,
         "messages": [
             {"type": "human", "content": "Hello"},
             {"type": "ai", "content": "Hi there!", "toolCalls": []},
@@ -210,9 +210,9 @@ def test_conversations_get_rejects_before_index_without_limit(client):
 def test_conversations_get_with_tool_calls(client):
     """Messages with toolCalls are parsed correctly."""
     respx.get(f"{BASE}/api/v1/scopes/42/conversations/thread-tools").mock(
-        return_value=httpx.Response(200, json={
-            "threadId": "thread-tools",
-            "skillId": 42,
+            return_value=httpx.Response(200, json={
+                "threadId": "thread-tools",
+                "scopeId": 42,
             "messages": [
                 {"type": "human", "content": "Run a query"},
                 {

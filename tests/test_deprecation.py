@@ -13,9 +13,9 @@ def test_warn_deprecated_emits_deprecation_warning() -> None:
         warn_deprecated(old="legacy.list", new="scopes.list")
 
 
-def test_warn_deprecated_message_names_next_release() -> None:
+def test_warn_deprecated_message_names_future_major() -> None:
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always", DeprecationWarning)
         warn_deprecated(old="a", new="b")
     assert len(caught) == 1
-    assert "next release" in str(caught[0].message)
+    assert "future MAJOR release" in str(caught[0].message)

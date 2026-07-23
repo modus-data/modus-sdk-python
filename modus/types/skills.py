@@ -1,16 +1,22 @@
-"""Skill read types — re-exported from OpenAPI DTOs."""
+"""Skill read types — deprecated aliases of Scope."""
 
 from __future__ import annotations
 
-from .._generated.models import (
+from .scopes import (
     AccessConfigDto,
-    ResourceLifecycleStatus,
-    SkillDto,
-    SkillVariationDto,
+    ScopeDto,
+    ScopeStatus,
+    ScopeVariation,
+    Skill,
 )
 
-Skill = SkillDto
-SkillStatus = ResourceLifecycleStatus
-SkillVariation = SkillVariationDto
+SkillStatus = ScopeStatus
+SkillVariation = ScopeVariation
 
-__all__ = ["AccessConfigDto", "Skill", "SkillStatus", "SkillVariation", "SkillDto"]
+__all__ = [
+    "AccessConfigDto",
+    "Skill",
+    "SkillStatus",
+    "SkillVariation",
+    "ScopeDto",
+]

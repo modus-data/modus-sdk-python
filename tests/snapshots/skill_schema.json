@@ -2,13 +2,6 @@
   "$defs": {
     "AccessConfigDto": {
       "properties": {
-        "visibility": {
-          "$ref": "#/$defs/Visibility",
-          "description": "Visibility tier. `shared` applies the group-permission map; `private` ignores groups and uses owner + sharedWith for access.",
-          "examples": [
-            "shared"
-          ]
-        },
         "groupPermissions": {
           "additionalProperties": {
             "$ref": "#/$defs/GroupPermissionDto"
@@ -36,16 +29,21 @@
           "title": "Guardrails",
           "type": "array"
         },
-        "sharedWith": {
-          "description": "Per-user share entries used for private-visibility scopes.",
-          "examples": [
-            []
+        "ownerEmail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
           ],
-          "items": {
-            "$ref": "#/$defs/SharedUserDto"
-          },
-          "title": "Sharedwith",
-          "type": "array"
+          "default": null,
+          "description": "Lowercased email of the scope owner. Used by private-scope ACL when owner email matches.",
+          "examples": [
+            "alice@example.com"
+          ],
+          "title": "Owneremail"
         },
         "ownerUserId": {
           "anyOf": [
@@ -63,21 +61,23 @@
           ],
           "title": "Owneruserid"
         },
-        "ownerEmail": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Lowercased email of the scope owner. Used by private-scope ACL when owner email matches.",
+        "sharedWith": {
+          "description": "Per-user share entries used for private-visibility scopes.",
           "examples": [
-            "alice@example.com"
+            []
           ],
-          "title": "Owneremail"
+          "items": {
+            "$ref": "#/$defs/SharedUserDto"
+          },
+          "title": "Sharedwith",
+          "type": "array"
+        },
+        "visibility": {
+          "$ref": "#/$defs/Visibility",
+          "description": "Visibility tier. `shared` applies the group-permission map; `private` ignores groups and uses owner + sharedWith for access.",
+          "examples": [
+            "shared"
+          ]
         }
       },
       "required": [
@@ -91,20 +91,20 @@
     },
     "GroupPermissionDto": {
       "properties": {
-        "use": {
-          "description": "Whether members of this group may use (run / invoke) the scope.",
-          "examples": [
-            true
-          ],
-          "title": "Use",
-          "type": "boolean"
-        },
         "manage": {
           "description": "Whether members of this group may manage (edit / deploy / delete) the scope.",
           "examples": [
             false
           ],
           "title": "Manage",
+          "type": "boolean"
+        },
+        "use": {
+          "description": "Whether members of this group may use (run / invoke) the scope.",
+          "examples": [
+            true
+          ],
+          "title": "Use",
           "type": "boolean"
         }
       },
@@ -125,18 +125,6 @@
     },
     "ModelSettingsDto": {
       "properties": {
-        "reasoningEffort": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ReasoningEffort"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Optional reasoning effort for models that support it."
-        },
         "contextWindow": {
           "anyOf": [
             {
@@ -150,6 +138,18 @@
           "default": null,
           "description": "Selected model context window in tokens.",
           "title": "Contextwindow"
+        },
+        "reasoningEffort": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReasoningEffort"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional reasoning effort for models that support it."
         }
       },
       "title": "ModelSettingsDto",
@@ -157,14 +157,6 @@
     },
     "PendingOwnershipTransferDto": {
       "properties": {
-        "pendingOwnerUserId": {
-          "description": "Clerk user id of the org member who will become owner once they accept.",
-          "examples": [
-            "user_2abc123def456"
-          ],
-          "title": "Pendingowneruserid",
-          "type": "string"
-        },
         "pendingOwnerEmail": {
           "anyOf": [
             {
@@ -181,12 +173,12 @@
           ],
           "title": "Pendingowneremail"
         },
-        "requestedByUserId": {
-          "description": "Clerk user id of the member who requested the transfer (the current owner).",
+        "pendingOwnerUserId": {
+          "description": "Clerk user id of the org member who will become owner once they accept.",
           "examples": [
-            "user_2xyz789ghi012"
+            "user_2abc123def456"
           ],
-          "title": "Requestedbyuserid",
+          "title": "Pendingowneruserid",
           "type": "string"
         },
         "requestedAt": {
@@ -195,6 +187,14 @@
             "2026-06-05T12:00:00.000Z"
           ],
           "title": "Requestedat",
+          "type": "string"
+        },
+        "requestedByUserId": {
+          "description": "Clerk user id of the member who requested the transfer (the current owner).",
+          "examples": [
+            "user_2xyz789ghi012"
+          ],
+          "title": "Requestedbyuserid",
           "type": "string"
         }
       },
@@ -230,14 +230,6 @@
     },
     "SharedUserDto": {
       "properties": {
-        "email": {
-          "description": "Lowercased email of a user explicitly granted access to a private scope.",
-          "examples": [
-            "alice@example.com"
-          ],
-          "title": "Email",
-          "type": "string"
-        },
         "addedAt": {
           "anyOf": [
             {
@@ -270,21 +262,13 @@
           ],
           "title": "Addedby"
         },
-        "userId": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Clerk user id of the invited user. Stored for display; access checks use email.",
+        "email": {
+          "description": "Lowercased email of a user explicitly granted access to a private scope.",
           "examples": [
-            "user_2xyz"
+            "alice@example.com"
           ],
-          "title": "Userid"
+          "title": "Email",
+          "type": "string"
         },
         "permission": {
           "anyOf": [
@@ -300,6 +284,22 @@
           "examples": [
             "use"
           ]
+        },
+        "userId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Clerk user id of the invited user. Stored for display; access checks use email.",
+          "examples": [
+            "user_2xyz"
+          ],
+          "title": "Userid"
         }
       },
       "required": [
@@ -318,6 +318,33 @@
     },
     "SkillVariationDto": {
       "properties": {
+        "connectionSet": {
+          "description": "Connection selections (DBs, integrations) attached to the variation. Each entry is a builder-managed object; opaque here.",
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Connectionset",
+          "type": "array"
+        },
+        "contextSelections": {
+          "description": "Context selections attached to the variation. Free-form builder objects.",
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Contextselections",
+          "type": "array"
+        },
+        "evaluations": {
+          "description": "Evaluation entries (task + expected-output pairs) saved for this variation.",
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Evaluations",
+          "type": "array"
+        },
         "expectedOutput": {
           "description": "Free-form expected-output prompt that constrains the scope\u2019s reply.",
           "examples": [
@@ -338,6 +365,15 @@
             "type": "string"
           },
           "title": "Instructions",
+          "type": "array"
+        },
+        "interfaces": {
+          "description": "Interface entries attached to the variation (chat, slack, webhook, etc.). Each is a builder-managed object.",
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Interfaces",
           "type": "array"
         },
         "model": {
@@ -367,57 +403,19 @@
           "default": null,
           "description": "Model-specific runtime controls such as reasoning effort and context window."
         },
-        "toolset": {
-          "additionalProperties": true,
-          "description": "Builder-managed toolset descriptor. Map of `{toolName: config}`; opaque to the API surface.",
+        "supervisionSubordinateDescriptions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Map of subordinateId -> manager-provided description blurb.",
           "examples": [
             {
-              "calculator": {
-                "enabled": true
-              },
-              "web_search": {
-                "enabled": true
-              }
+              "12": "Reads warehouse facts",
+              "17": "Drafts the report"
             }
           ],
-          "title": "Toolset",
+          "title": "Supervisionsubordinatedescriptions",
           "type": "object"
-        },
-        "connectionSet": {
-          "description": "Connection selections (DBs, integrations) attached to the variation. Each entry is a builder-managed object; opaque here.",
-          "items": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "title": "Connectionset",
-          "type": "array"
-        },
-        "contextSelections": {
-          "description": "Context selections attached to the variation. Free-form builder objects.",
-          "items": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "title": "Contextselections",
-          "type": "array"
-        },
-        "evaluations": {
-          "description": "Evaluation entries (task + expected-output pairs) saved for this variation.",
-          "items": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "title": "Evaluations",
-          "type": "array"
-        },
-        "interfaces": {
-          "description": "Interface entries attached to the variation (chat, slack, webhook, etc.). Each is a builder-managed object.",
-          "items": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "title": "Interfaces",
-          "type": "array"
         },
         "supervisionSubordinateIds": {
           "description": "IDs of scopes supervised by this scope (when it is a manager). Stringified for wire stability.",
@@ -433,18 +431,20 @@
           "title": "Supervisionsubordinateids",
           "type": "array"
         },
-        "supervisionSubordinateDescriptions": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "description": "Map of subordinateId -> manager-provided description blurb.",
+        "toolset": {
+          "additionalProperties": true,
+          "description": "Builder-managed toolset descriptor. Map of `{toolName: config}`; opaque to the API surface.",
           "examples": [
             {
-              "12": "Reads warehouse facts",
-              "17": "Drafts the report"
+              "calculator": {
+                "enabled": true
+              },
+              "web_search": {
+                "enabled": true
+              }
             }
           ],
-          "title": "Supervisionsubordinatedescriptions",
+          "title": "Toolset",
           "type": "object"
         }
       },
@@ -473,67 +473,9 @@
     }
   },
   "properties": {
-    "id": {
-      "description": "Numeric scope id (stable per-org; not reused after delete).",
-      "examples": [
-        42
-      ],
-      "title": "Id",
-      "type": "number"
-    },
-    "slug": {
-      "description": "URL-safe slug used in human-readable links. Unique per org.",
-      "examples": [
-        "customer-churn-analyzer-a3f"
-      ],
-      "title": "Slug",
-      "type": "string"
-    },
-    "name": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "description": "Display name of the scope. Shown in the builder and in run logs.",
-      "examples": [
-        "Customer Churn Analyzer"
-      ],
-      "title": "Name"
-    },
-    "description": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Optional one-paragraph description of what this scope does.",
-      "examples": [
-        "Predicts churn risk for a customer given a 90-day usage window."
-      ],
-      "title": "Description"
-    },
-    "status": {
-      "$ref": "#/$defs/ResourceLifecycleStatus",
-      "description": "Lifecycle status. `draft` = never deployed. `active` = deployed. `deleted` = soft-deleted.",
-      "examples": [
-        "active"
-      ]
-    },
-    "orgUuid": {
-      "description": "Org UUID this scope belongs to. Matches the caller\u2019s principal.",
-      "examples": [
-        "00000000-0000-0000-0000-000000000001"
-      ],
-      "title": "Orguuid",
-      "type": "string"
+    "accessConfig": {
+      "$ref": "#/$defs/AccessConfigDto",
+      "description": "Access configuration \u2014 who in the org can use / manage this scope."
     },
     "activeVariationId": {
       "anyOf": [
@@ -550,6 +492,62 @@
         "00000000-0000-4000-a000-000000000100"
       ],
       "title": "Activevariationid"
+    },
+    "canManage": {
+      "description": "Whether the requesting principal can manage (edit/delete/deploy) this scope. Derived server-side from the principal + accessConfig. Present on every Scope response.",
+      "examples": [
+        true
+      ],
+      "title": "Canmanage",
+      "type": "boolean"
+    },
+    "canUse": {
+      "description": "Whether the requesting principal can use (run, view history of) this scope. Derived server-side from the principal + accessConfig.",
+      "examples": [
+        true
+      ],
+      "title": "Canuse",
+      "type": "boolean"
+    },
+    "createdAt": {
+      "description": "Creation timestamp.",
+      "examples": [
+        "2026-05-01T10:00:00.000Z"
+      ],
+      "title": "Createdat",
+      "type": "string"
+    },
+    "deletedAt": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Soft-delete timestamp. Null for active scopes.",
+      "examples": [
+        null
+      ],
+      "title": "Deletedat"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional one-paragraph description of what this scope does.",
+      "examples": [
+        "Predicts churn risk for a customer given a 90-day usage window."
+      ],
+      "title": "Description"
     },
     "draftVariationId": {
       "anyOf": [
@@ -575,81 +573,13 @@
       "title": "Hasunpublishedchanges",
       "type": "boolean"
     },
-    "accessConfig": {
-      "$ref": "#/$defs/AccessConfigDto",
-      "description": "Access configuration \u2014 who in the org can use / manage this scope."
-    },
-    "pendingOwnershipTransfer": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/PendingOwnershipTransferDto"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Pending ownership transfer awaiting recipient acceptance. Absent when no request is in flight."
-    },
-    "variation": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/SkillVariationDto"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Variation-detail payload (`toolset`, `instructions`, `model`, etc.) for the requested view. Present on detail responses; absent on list rows."
-    },
-    "createdAt": {
-      "description": "Creation timestamp.",
+    "id": {
+      "description": "Numeric scope id (stable per-org; not reused after delete).",
       "examples": [
-        "2026-05-01T10:00:00.000Z"
+        42
       ],
-      "title": "Createdat",
-      "type": "string"
-    },
-    "updatedAt": {
-      "description": "Most recent update timestamp.",
-      "examples": [
-        "2026-05-11T10:00:00.000Z"
-      ],
-      "title": "Updatedat",
-      "type": "string"
-    },
-    "deletedAt": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Soft-delete timestamp. Null for active scopes.",
-      "examples": [
-        null
-      ],
-      "title": "Deletedat"
-    },
-    "canManage": {
-      "description": "Whether the requesting principal can manage (edit/delete/deploy) this scope. Derived server-side from the principal + accessConfig. Present on every Scope response.",
-      "examples": [
-        true
-      ],
-      "title": "Canmanage",
-      "type": "boolean"
-    },
-    "canUse": {
-      "description": "Whether the requesting principal can use (run, view history of) this scope. Derived server-side from the principal + accessConfig.",
-      "examples": [
-        true
-      ],
-      "title": "Canuse",
-      "type": "boolean"
+      "title": "Id",
+      "type": "number"
     },
     "manageDenial": {
       "anyOf": [
@@ -664,6 +594,76 @@
       "examples": [
         "needs_group_manage"
       ]
+    },
+    "name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Display name of the scope. Shown in the builder and in run logs.",
+      "examples": [
+        "Customer Churn Analyzer"
+      ],
+      "title": "Name"
+    },
+    "orgUuid": {
+      "description": "Org UUID this scope belongs to. Matches the caller\u2019s principal.",
+      "examples": [
+        "00000000-0000-0000-0000-000000000001"
+      ],
+      "title": "Orguuid",
+      "type": "string"
+    },
+    "pendingOwnershipTransfer": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PendingOwnershipTransferDto"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Pending ownership transfer awaiting recipient acceptance. Absent when no request is in flight."
+    },
+    "slug": {
+      "description": "URL-safe slug used in human-readable links. Unique per org.",
+      "examples": [
+        "customer-churn-analyzer-a3f"
+      ],
+      "title": "Slug",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/ResourceLifecycleStatus",
+      "description": "Lifecycle status. `draft` = never deployed. `active` = deployed. `deleted` = soft-deleted.",
+      "examples": [
+        "active"
+      ]
+    },
+    "updatedAt": {
+      "description": "Most recent update timestamp.",
+      "examples": [
+        "2026-05-11T10:00:00.000Z"
+      ],
+      "title": "Updatedat",
+      "type": "string"
+    },
+    "variation": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SkillVariationDto"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Variation-detail payload (`toolset`, `instructions`, `model`, etc.) for the requested view. Present on detail responses; absent on list rows."
     }
   },
   "required": [
@@ -680,6 +680,6 @@
     "canUse",
     "manageDenial"
   ],
-  "title": "SkillDto",
+  "title": "ScopeDto",
   "type": "object"
 }

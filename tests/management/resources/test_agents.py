@@ -14,7 +14,7 @@ BASE = "https://api.modus.com"
 @respx.mock
 def test_agents_list_row_has_none_variation_fields(client, agent_list_row):
     respx.get(f"{BASE}/api/v1/workflows").mock(
-        return_value=httpx.Response(200, json={"agents": [agent_list_row], "nextPageToken": None})
+        return_value=httpx.Response(200, json={"workflows": [agent_list_row], "nextPageToken": None})
     )
     agent = client.workflows.list().items[0]
     assert isinstance(agent, Agent)
@@ -24,7 +24,7 @@ def test_agents_list_row_has_none_variation_fields(client, agent_list_row):
 @respx.mock
 def test_agents_list_forwards_search_and_type(client, agent_list_row):
     route = respx.get(f"{BASE}/api/v1/workflows").mock(
-        return_value=httpx.Response(200, json={"agents": [agent_list_row], "nextPageToken": None})
+        return_value=httpx.Response(200, json={"workflows": [agent_list_row], "nextPageToken": None})
     )
     client.workflows.list(search="sales", type="workflow")
     params = route.calls[0].request.url.params
@@ -35,7 +35,7 @@ def test_agents_list_forwards_search_and_type(client, agent_list_row):
 @respx.mock
 def test_agents_list_omits_filters_when_not_set(client, agent_list_row):
     route = respx.get(f"{BASE}/api/v1/workflows").mock(
-        return_value=httpx.Response(200, json={"agents": [agent_list_row], "nextPageToken": None})
+        return_value=httpx.Response(200, json={"workflows": [agent_list_row], "nextPageToken": None})
     )
     client.workflows.list()
     params = route.calls[0].request.url.params
