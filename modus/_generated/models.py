@@ -2056,7 +2056,6 @@ class ListEvaluationRunsResponseDto(BaseModel):
 class ListMemberGroupsResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     groups: list[MemberGroupDto]
-    next_page_token: str | None = Field(..., alias='nextPageToken')
 
 
 class ListMemoriesResponseDto(BaseModel):
@@ -2073,7 +2072,6 @@ class ListMemoriesResponseDto(BaseModel):
 class ListOrgMembersResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     members: list[OrgMemberDto]
-    next_page_token: str | None = Field(..., alias='nextPageToken')
 
 
 class ListSuggestionQuestionsResponseDto(BaseModel):
