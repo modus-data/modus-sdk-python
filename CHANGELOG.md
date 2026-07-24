@@ -26,6 +26,11 @@
 - Conversation `kind=skills` — use `kind=scopes` (`all` | `modus` | `scopes`).
 - `ModusManagement.organization.delete()` — organization deletion is no longer
   part of the public API / PAT surface (SPA-only).
+- `GET /api/v1/users/member-groups` and `/org-members` no longer advertise `pageSize` /
+  `pageToken` query params or an always-`None` `next_page_token` response field (OpenAPI /
+  Management MCP surface — `ModusManagement.users.list_member_groups()` /
+  `list_org_members()` never exposed either). Both endpoints return the full org-bounded
+  roster; pagination was never honored server-side.
 
 ## [0.2.3] — 2026-07-20
 
