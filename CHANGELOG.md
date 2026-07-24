@@ -32,6 +32,11 @@
   `list_org_members()` never exposed either). Both endpoints return the full org-bounded
   roster; pagination was never honored server-side.
 
+### Fixed
+
+- `examples/apps/modus_skill_chat/app.py` called the removed `client.skills` accessor
+  (raised `AttributeError`); switched to `client.scopes.chat()` / `chat_stream()`.
+
 ## [0.2.3] — 2026-07-20
 
 ### Fixed
