@@ -9,6 +9,11 @@
 > **Breaking removals below ship in the next major SDK release** (not a `0.2.x`
 > patch). See `distribution/docs/COMPATIBILITY.md`.
 
+### Added
+
+- `mgmt.usage.list()` / `list_async()` gain an optional `user_email` filter (repeated query param).
+- `mgmt.usage.list_users(since, until)` (sync + async) — distinct acting-user emails observed in the window.
+
 ### Deprecated
 
 - **`Skill` / `Agent` type names** — use `Scope` / `Workflow` (and `ScopeStatus` / `WorkflowStatus`, `WorkflowType`, etc.). `Skill` and `Agent` remain as aliases.

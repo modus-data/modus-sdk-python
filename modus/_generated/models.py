@@ -1592,6 +1592,15 @@ class UsageTotalsDto(BaseModel):
     )
 
 
+class UsageUserDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    email: str = Field(
+        ...,
+        description='Acting-user email present in usage over the window.',
+        examples=['jane@acme.com'],
+    )
+
+
 class WorkflowEdgeDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(..., description='Stable edge id, unique within the graph.', examples=['e1'])
@@ -1737,7 +1746,9 @@ class SupplementalContextSource(str, Enum):
 
 class UserContextDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    email: str | None = Field(None, description='End-user email for personalization.')
+    email: str | None = Field(
+        None, description='End-user email for personalization; also used for usage attribution.'
+    )
     name: str | None = Field(None, description='End-user display name.')
     timezone: str | None = Field(None, description='IANA timezone, e.g. America/New_York.')
     user_id: str | None = Field(
@@ -2094,6 +2105,11 @@ class ListUsageResponseDto(BaseModel):
     group_by: GroupBy = Field(..., description='Dimension that was grouped by in this response.')
     buckets: list[UsageBucketDto]
     totals: UsageTotalsDto
+
+
+class ListUsageUsersResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    users: list[UsageUserDto] = Field(..., description='Distinct acting-user emails in the window.')
 
 
 class LookupContextItemResponseDto(BaseModel):
