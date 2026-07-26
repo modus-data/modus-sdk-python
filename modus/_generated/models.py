@@ -1705,7 +1705,19 @@ class StreamProtocolVersion(float, Enum):
 
 class CancelRunDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    pass
+    organization_id: str | None = Field(
+        None,
+        alias='organizationId',
+        description="Organization the run belongs to. Omit for PAT/SDK callers — falls back to the authenticated principal's org.",
+    )
+    reason: str | None = Field(
+        None, description='Human-readable reason for the cancel, logged server-side only.'
+    )
+    last_seen_event_id: str | None = Field(
+        None,
+        alias='lastSeenEventId',
+        description='Redis Stream id of the last SSE frame the client rendered, so the persisted partial message matches what the client saw. Falls back to the server-side accumulator when absent.',
+    )
 
 
 class DocumentAttachmentDto(BaseModel):
@@ -1719,11 +1731,6 @@ class DocumentAttachmentDto(BaseModel):
     raw_content_s3_key: str | None = Field(None, alias='rawContentS3Key')
     size_bytes: float | None = Field(None, alias='sizeBytes')
     summary: str | None = None
-
-
-class EditQueuedRunDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    pass
 
 
 class ErrorEnvelopeDto1(BaseModel):
@@ -1751,11 +1758,6 @@ class ImageAttachmentDto(BaseModel):
     name: str | None = None
     s3_key: str | None = Field(None, alias='s3Key')
     upload_id: str | None = Field(None, alias='uploadId')
-
-
-class InterruptRunDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    pass
 
 
 class Decision(str, Enum):
@@ -2556,10 +2558,10 @@ class SupplementalContextDto(BaseModel):
 
 class WorkflowActionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    organization_id: str = Field(
-        ...,
+    organization_id: str | None = Field(
+        None,
         alias='organizationId',
-        description="Organization ID the run belongs to. Must match the authenticated principal's org.",
+        description="Organization the run belongs to. Omit for PAT/SDK callers — falls back to the authenticated principal's org.",
     )
     session_id: str = Field(
         ..., alias='sessionId', description='Client-generated session identifier.'
@@ -3184,6 +3186,64 @@ class AgentRunDto(BaseModel):
     debug: bool | None = None
 
 
+class FollowUpRunDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    message: str = Field(..., description='The user message to send.')
+    session_id: str = Field(
+        ...,
+        alias='sessionId',
+        description='Opaque client-generated conversation token for continuity. The server NEVER derives the run target identity (scope/workflow/modus) from this string — target identity comes only from the request path and DTO (see RunTarget). It is used solely to thread successive turns of the same conversation together.',
+    )
+    organization_id: str | None = Field(
+        None,
+        alias='organizationId',
+        description="Organization id. Ignored for authenticated callers — the server uses the principal's org.",
+    )
+    version: Version | None = Field(
+        None, description='Saved version to run (scope/workflow; ignored for Modus).'
+    )
+    file_thread_id: str | None = Field(
+        None, alias='fileThreadId', description='Document-scoped conversation thread id.'
+    )
+    config: RunConfigDto | None = None
+    attachments: AttachmentsDto | None = None
+    user_context: UserContextDto | None = Field(None, alias='userContext')
+    supplemental_context: SupplementalContextDto | None = Field(None, alias='supplementalContext')
+    source: RunSource | None = Field(None, description='Origin of the run.')
+    run_id: str | None = Field(
+        None, alias='runId', description='Client-supplied run id (Idempotency-Key header wins).'
+    )
+    stream_protocol_version: StreamProtocolVersion | None = Field(
+        None,
+        alias='streamProtocolVersion',
+        description='Streaming protocol version. Version 2 supports assistant-content replacement events.',
+    )
+    experimental_features: bool | None = Field(None, alias='experimentalFeatures')
+    debug: bool | None = None
+    subordinate_skill_ids: list[float] | None = Field(
+        None,
+        alias='subordinateSkillIds',
+        description='Saved scope ids to subordinate under this Modus run.',
+    )
+
+
+class InterruptRunDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    organization_id: str | None = Field(
+        None,
+        alias='organizationId',
+        description="Organization the run belongs to. Omit for PAT/SDK callers — falls back to the authenticated principal's org.",
+    )
+    last_seen_event_id: str | None = Field(
+        None,
+        alias='lastSeenEventId',
+        description='Redis Stream id of the last SSE frame the client rendered (see CancelRunDto).',
+    )
+    next_run: FollowUpRunDto = Field(
+        ..., alias='nextRun', description='Follow-up message that supersedes the current turn.'
+    )
+
+
 class ModusRunDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     message: str = Field(..., description='The user message to send.')
@@ -3258,3 +3318,15 @@ class ResumeRunDto(BaseModel):
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
     debug: bool | None = None
     decision: Decision = Field(..., description='Decision that resumes the interrupted run.')
+
+
+class EditQueuedRunDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    organization_id: str | None = Field(
+        None,
+        alias='organizationId',
+        description="Organization the run belongs to. Omit for PAT/SDK callers — falls back to the authenticated principal's org.",
+    )
+    next_run: FollowUpRunDto = Field(
+        ..., alias='nextRun', description='New payload replacing the queued run.'
+    )
