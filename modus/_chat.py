@@ -150,12 +150,14 @@ class ChatStream:
 
     @property
     def text_stream(self) -> Iterator[str]:
+        """Yield assistant reply text as it arrives, one token at a time."""
         for event in self._event_stream_impl(supports_reset=False):
             if isinstance(event, TokenEvent):
                 yield event.content
 
     @property
     def event_stream(self) -> Iterator[RunEvent]:
+        """Yield typed stream events (tokens, tool calls, done, errors)."""
         return self._event_stream_impl(supports_reset=True)
 
     def _event_stream_impl(self, *, supports_reset: bool) -> Iterator[RunEvent]:
@@ -181,6 +183,11 @@ class ChatStream:
                 yield event
 
     def get_final_result(self) -> ChatResult:
+        """Return the assembled reply after the stream finishes.
+
+        Raises:
+            ModusError: if called before the stream emits a done event.
+        """
         if self._final is None:
             raise ModusError(
                 "Stream ended without a done event; call get_final_result() only after "
@@ -212,6 +219,7 @@ class AsyncChatStream:
 
     @property
     def text_stream(self) -> AsyncIterator[str]:
+        """Yield assistant reply text as it arrives. See sync ``text_stream`` for details."""
         return self._text_stream_impl()
 
     async def _text_stream_impl(self) -> AsyncIterator[str]:
@@ -221,6 +229,7 @@ class AsyncChatStream:
 
     @property
     def event_stream(self) -> AsyncIterator[RunEvent]:
+        """Yield typed stream events as they arrive. See sync ``event_stream`` for details."""
         return self._event_stream_impl(supports_reset=True)
 
     async def _event_stream_impl(self, *, supports_reset: bool) -> AsyncIterator[RunEvent]:
@@ -246,6 +255,7 @@ class AsyncChatStream:
                 yield event
 
     def get_final_result(self) -> ChatResult:
+        """Return the assembled reply after the stream finishes. See sync ``get_final_result``."""
         if self._final is None:
             raise ModusError(
                 "Stream ended without a done event; call get_final_result() only after "

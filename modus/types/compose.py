@@ -18,4 +18,5 @@ class ContextComposeItem(BaseModel):
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> ContextComposeItem:
+        """Build a compose item from a plain dict."""
         return cls.model_validate(data)

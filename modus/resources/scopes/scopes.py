@@ -354,6 +354,7 @@ class AsyncScopesResource:
         *,
         view: Optional[VariationView] = None,
     ) -> Skill:
+        """Retrieve a scope by ID or slug. See the sync ``get`` for argument details."""
         validate_id(scope_id, name="scope_id")
         query = {} if view is None else {"view": view}
         data = await async_with_retry(
@@ -375,6 +376,7 @@ class AsyncScopesResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> ChatResult:
+        """Send a message to a scope and get the complete reply. See the sync ``chat`` for argument details."""
         return await chat_buffered_async(
             self._http,
             self._ops.resource,
@@ -393,6 +395,7 @@ class AsyncScopesResource:
         thread_id: Optional[str] = None,
         version: Optional[RunVersion] = None,
     ) -> AsyncChatStream:
+        """Stream a scope reply token by token. See the sync ``chat_stream`` for argument details."""
         return self._ops.stream_session_async(
             self._agent_http,
             scope_id,

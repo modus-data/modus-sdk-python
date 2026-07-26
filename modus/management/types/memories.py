@@ -53,6 +53,11 @@ class MemoryUpdate(BaseModel):
 
     @classmethod
     def text_only(cls, memory: str) -> MemoryUpdate:
+        """Update only the memory text, leaving metadata unchanged.
+
+        Args:
+            memory: Replacement memory text.
+        """
         return cls(memory=memory)
 
 

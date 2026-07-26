@@ -195,6 +195,7 @@ class AsyncScopeMemoriesResource:
         page_token: Optional[str] = None,
         user_id: Optional[str] = None,
     ) -> AsyncPage[Memory]:
+        """List memories stored for this scope. See the sync ``list`` for argument details."""
         validate_page_size(page_size)
         return await self._list_page(page_size, page_token, user_id)
 
@@ -225,6 +226,7 @@ class AsyncScopeMemoriesResource:
         )
 
     async def search(self, request: MemorySearchRequest) -> MemorySearchResult:
+        """Search this scope's memories by natural-language query. See the sync ``search`` for argument details."""
         validate_id(self._scope_id, name="scope_id")
         body = request.model_dump(by_alias=True, exclude_none=True)
         raw = await async_with_retry(
@@ -245,6 +247,7 @@ class AsyncScopeMemoriesResource:
         *,
         update_mask: Optional[str] = None,
     ) -> Memory:
+        """Update one memory. See the sync ``update`` for argument details."""
         _validate_memory_id(memory_id)
         validate_id(self._scope_id, name="scope_id")
         body = update.model_dump(by_alias=True, exclude_none=True)
@@ -261,6 +264,7 @@ class AsyncScopeMemoriesResource:
         return _map_memory(raw)
 
     async def delete(self, memory_id: str) -> None:
+        """Delete one memory (idempotent). See the sync ``delete`` for argument details."""
         _validate_memory_id(memory_id)
         validate_id(self._scope_id, name="scope_id")
         await async_with_retry(

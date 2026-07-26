@@ -207,3 +207,7 @@ Runnable scripts ship with the package:
 - `examples/scripts/manage_skill.py` — create and deploy a scope (`ModusManagement`, `--write` optional)
 
 Optional Streamlit demo: `examples/apps/modus_skill_chat/` (streaming vs buffered scope chat side by side).
+
+## Docs
+
+Full guides: [docs.getmodus.com/guides/sdk](https://docs.getmodus.com/guides/sdk) (Python page: [sdk-python](https://docs.getmodus.com/guides/sdk-python)).

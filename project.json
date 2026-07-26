@@ -71,7 +71,7 @@
     "check-docstrings": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "bash -c 'bash ../scripts/check-sdk-public-docstrings.sh && python3 ../scripts/check-generated-model-names.py'",
+        "command": "bash -c 'bash ../scripts/check-sdk-public-docstrings.sh && python3 ../scripts/check-generated-model-names.py && python3 ../scripts/check-sdk-docs-coverage.py'",
         "cwd": "{projectRoot}"
       },
       "cache": true,
@@ -79,7 +79,8 @@
         "{projectRoot}/modus/**/*.py",
         "{projectRoot}/modus/_generated/models.py",
         "{workspaceRoot}/distribution/clients/python/scripts/check-sdk-public-docstrings.sh",
-        "{workspaceRoot}/distribution/clients/python/scripts/check-generated-model-names.py"
+        "{workspaceRoot}/distribution/clients/python/scripts/check-generated-model-names.py",
+        "{workspaceRoot}/distribution/clients/python/scripts/check-sdk-docs-coverage.py"
       ]
     },
     "requirements-drift": {

@@ -18,4 +18,5 @@ class ContextValueRow(BaseModel):
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> ContextValueRow:
+        """Build a value row from a plain dict."""
         return cls.model_validate(data)

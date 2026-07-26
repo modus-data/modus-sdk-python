@@ -37,10 +37,22 @@ class AgentSelection(BaseModel):
 
     @classmethod
     def single(cls, agent_id: int, *, model: Optional[str] = None) -> AgentSelection:
+        """Select one scope for a task workflow.
+
+        Args:
+            agent_id: Scope id to invoke.
+            model:    Optional override model for this run.
+        """
         return cls(agents=[AgentSelectionEntry(agent_id=agent_id, priority_order=1)], model=model)
 
     @classmethod
     def ordered(cls, agents: List[AgentSelectionEntry], *, model: Optional[str] = None) -> AgentSelection:
+        """Select multiple scopes in priority order for a task workflow.
+
+        Args:
+            agents: Ordered scope entries with priority.
+            model:  Optional override model for this run.
+        """
         return cls(agents=agents, model=model)
 
 

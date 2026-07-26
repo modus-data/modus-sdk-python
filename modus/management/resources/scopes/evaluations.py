@@ -61,6 +61,7 @@ class ScopeEvaluationsResource:
         self._ops = ops
 
     def get_config(self) -> EvaluationConfig:
+        """Return the evaluation configuration for this scope."""
         validate_id(self._scope_id, name="scope_id")
         data = with_retry(
             lambda: invoke_operation(
@@ -73,6 +74,14 @@ class ScopeEvaluationsResource:
         return _map_config(data)
 
     def update_config(self, update: UpdateEvaluationConfig) -> EvaluationConfig:
+        """Update evaluation settings for this scope.
+
+        Args:
+            update: Fields to change (schedule, test cases, etc.).
+
+        Returns:
+            The updated evaluation configuration.
+        """
         validate_id(self._scope_id, name="scope_id")
         data = with_retry(
             lambda: invoke_operation(
@@ -86,6 +95,11 @@ class ScopeEvaluationsResource:
         return _map_config(data)
 
     def trigger_run(self) -> TriggerEvaluationRunResponse:
+        """Start an on-demand evaluation run for this scope.
+
+        Returns:
+            Response with the new run id.
+        """
         validate_id(self._scope_id, name="scope_id")
         data = with_retry(
             lambda: invoke_operation(
@@ -103,6 +117,16 @@ class ScopeEvaluationsResource:
         page_size: int = 25,
         page_token: Optional[str] = None,
     ) -> Page[EvaluationRun]:
+        """
+        List evaluation runs for this scope.
+
+        Args:
+            page_size:  Items per page (default 25).
+            page_token: Token from a previous page's ``next_page_token``.
+
+        Returns:
+            Page of evaluation runs.
+        """
         validate_page_size(page_size)
         return self._list_runs_page(page_size, page_token)
 
@@ -129,6 +153,15 @@ class ScopeEvaluationsResource:
         )
 
     def get_run(self, run_id: str) -> EvaluationRunWithResults:
+        """
+        Retrieve one evaluation run with full results.
+
+        Args:
+            run_id: Id from ``list_runs`` or ``trigger_run``.
+
+        Returns:
+            Run metadata and per-test-case results.
+        """
         validate_id(self._scope_id, name="scope_id")
         validate_id(run_id, name="run_id")
         data = with_retry(

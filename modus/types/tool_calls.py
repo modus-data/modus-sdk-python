@@ -23,6 +23,7 @@ class ToolCall(BaseModel):
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> ToolCall:
+        """Build a tool call from a plain dict."""
         return cls.model_validate(data)
 
 

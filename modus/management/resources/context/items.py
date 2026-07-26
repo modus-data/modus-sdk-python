@@ -48,6 +48,17 @@ class ContextItemsResource:
         page_token: Optional[str] = None,
         context_type: Optional[str] = None,
     ) -> Page[ContextItem]:
+        """
+        List context items in the knowledge base.
+
+        Args:
+            page_size:    Items per page (default 25).
+            page_token:   Opaque token from a previous page's ``next_page_token``.
+            context_type: Filter by type, e.g. ``"note"``, ``"link"``, ``"saved_query"``.
+
+        Returns:
+            Page of context items.
+        """
         validate_page_size(page_size)
         return self._list_page(page_size, page_token, context_type)
 
@@ -72,6 +83,18 @@ class ContextItemsResource:
         )
 
     def get(self, uid: str) -> ContextItem:
+        """
+        Retrieve a context item by its UID.
+
+        Args:
+            uid: The item's UUID.
+
+        Returns:
+            The context item.
+
+        Raises:
+            NotFoundError: if no item with this UID exists.
+        """
         data = with_retry(
             lambda: invoke_operation(
                 self._http,
@@ -131,6 +154,15 @@ class ContextItemsResource:
         return self.get(uid)
 
     def delete(self, uid: str) -> ContextItemDeletion:
+        """
+        Delete a context item from the knowledge base.
+
+        Args:
+            uid: The item's UUID.
+
+        Returns:
+            Deletion confirmation with the removed item's UID.
+        """
         raw = with_retry(
             lambda: invoke_operation(
                 self._http,
@@ -154,6 +186,7 @@ class AsyncContextItemsResource:
         page_token: Optional[str] = None,
         context_type: Optional[str] = None,
     ) -> AsyncPage[ContextItem]:
+        """List context items in the knowledge base. See the sync ``list`` for argument details."""
         validate_page_size(page_size)
         return await self._list_page(page_size, page_token, context_type)
 
@@ -178,6 +211,7 @@ class AsyncContextItemsResource:
         )
 
     async def get(self, uid: str) -> ContextItem:
+        """Retrieve a context item by its UID. See the sync ``get`` for argument details."""
         data = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,
@@ -223,6 +257,7 @@ class AsyncContextItemsResource:
         return await self.get(uid)
 
     async def delete(self, uid: str) -> ContextItemDeletion:
+        """Delete a context item from the knowledge base. See the sync ``delete`` for argument details."""
         raw = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,

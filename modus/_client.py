@@ -55,33 +55,9 @@ class Modus:
                      MODUS_API_KEY environment variable.
         base_url:    API origin without a path suffix (default
                      https://api.getmodus.com).
-        agent_host:  Agent host origin for streaming runs (default
-                     https://agent.getmodus.com). Override via argument or
-                     MODUS_AGENT_HOST.
-        organization_id: Optional Clerk org id for agent-host run bodies.
-                     Usually omit — agent-service uses the PAT principal org.
-                     Override via MODUS_ORGANIZATION_ID when needed.
-        base_urls:   Optional service-specific API origins.
         timeout:     Request timeout as seconds or httpx.Timeout. Default is
                      5s connect and 300s read.
         max_retries: Number of automatic retries on 429/5xx (default 2).
-
-    Example:
-        import modus
-
-        client = modus.Modus(api_key="modus_xxx")
-
-        for scope in client.scopes.list():
-            print(scope.name)
-
-        # Write operations use the management client in the same package:
-        from modus.management import ModusManagement
-
-        mgmt = ModusManagement(api_key="modus_xxx")
-        mgmt.context.create_note(
-            title="Fiscal Year",
-            content="Runs Feb 1 – Jan 31.",
-        )
     """
 
     def __init__(
@@ -163,25 +139,9 @@ class AsyncModus:
         api_key:     Your Modus API key. If omitted, reads from MODUS_API_KEY.
         base_url:    API origin without a path suffix (default
                      https://api.getmodus.com).
-        agent_host:  Agent host origin for streaming runs (default
-                     https://agent.getmodus.com). Override via argument or
-                     MODUS_AGENT_HOST.
-        organization_id: Optional Clerk org id for agent-host run bodies.
-        base_urls:   Optional service-specific API origins.
         timeout:     Request timeout as seconds or httpx.Timeout. Default is
                      5s connect and 300s read.
         max_retries: Retries on 429/5xx (default 2).
-
-    Example:
-        import modus
-
-        client = modus.AsyncModus(api_key="modus_xxx")
-
-        async def main():
-            page = await client.scopes.list()
-            for scope in page:
-                print(scope.name)
-            await client.aclose()
     """
 
     def __init__(
