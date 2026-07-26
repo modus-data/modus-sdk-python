@@ -1,13 +1,12 @@
 # Changelog
 
-**Current release:** [`0.2.3`](https://pypi.org/project/modus-sdk/0.2.3/).
+**Current release:** [`0.3.0`](https://pypi.org/project/modus-sdk/0.3.0/).
 
 
 
-## [Unreleased]
+## [0.3.0] — 2026-07-26
 
-> **Breaking removals below ship in the next major SDK release** (not a `0.2.x`
-> patch). See `distribution/docs/COMPATIBILITY.md`.
+> Breaking surface vs `0.2.x` (pre-1.0 minor bump). See `distribution/docs/COMPATIBILITY.md`.
 
 ### Added
 
@@ -41,6 +40,8 @@
 
 - `examples/apps/modus_skill_chat/app.py` called the removed `client.skills` accessor
   (raised `AttributeError`); switched to `client.scopes.chat()` / `chat_stream()`.
+
+## [Unreleased]
 
 ## [0.2.3] — 2026-07-20
 
