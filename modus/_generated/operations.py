@@ -658,6 +658,16 @@ OPERATIONS: dict[str, OperationSpec] = {
         "request_schema": 'RecordSuggestionEventDto',
         "response_schema": None,
     },
+    "ToolsController_list": {
+        "method": "GET",
+        "path": '/api/v1/tools',
+        "service": 'modus-api',
+        "server_url": 'https://api.getmodus.com',
+        "path_params": (),
+        "query_params": ('pageToken', 'pageSize'),
+        "request_schema": None,
+        "response_schema": 'ListToolsResponseDto',
+    },
     "UsageController_list": {
         "method": "GET",
         "path": '/api/v1/usage',

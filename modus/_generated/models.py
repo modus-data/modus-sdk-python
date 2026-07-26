@@ -1362,6 +1362,46 @@ class ToggleAgentDto(BaseModel):
     )
 
 
+class ToolCatalogActionDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    name: str | None = Field(..., description='Stable action name.', examples=['run_query'])
+    description: str | None = Field(
+        ...,
+        description='What this action does.',
+        examples=['Runs a read-only SQL query against the connected database.'],
+    )
+
+
+class ToolCatalogEntryDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(
+        ...,
+        description='Stable id — use as the key in a toolset object, e.g. `{ [id]: { enabled: true } }`.',
+        examples=['sql_runner'],
+    )
+    display_name: str = Field(
+        ...,
+        alias='displayName',
+        description='Human-readable name for display.',
+        examples=['SQL Runner'],
+    )
+    category: str | None = Field(
+        None,
+        description='Grouping category, e.g. "data", "messaging", "general".',
+        examples=['data'],
+    )
+    requires_connection: bool = Field(
+        ...,
+        alias='requiresConnection',
+        description='True if this tool requires a connected integration/account before it can be used.',
+        examples=[False],
+    )
+    actions: list[ToolCatalogActionDto] | None = Field(
+        None,
+        description='Fixed set of actions this tool exposes. Present only when the action list does not depend on a live connection (built-in tools). Connected integrations expose connection-specific actions not listed here.',
+    )
+
+
 class ToolsetToolDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(
@@ -2093,6 +2133,19 @@ class ListSuggestionQuestionsResponseDto(BaseModel):
         alias='nextPageToken',
         description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
         examples=['eyJvZmZzZXQiOjUsInBhZ2VTaXplIjo1fQ'],
+    )
+
+
+class ListToolsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    tools: list[ToolCatalogEntryDto] = Field(
+        ..., description='Known tool/integration surfaces a scope can select in its toolset.'
+    )
+    next_page_token: str | None = Field(
+        ...,
+        alias='nextPageToken',
+        description='Opaque token for the next page; null when this was the last page. Pass as `pageToken` on the next request.',
+        examples=[None],
     )
 
 

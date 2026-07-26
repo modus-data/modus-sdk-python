@@ -16,11 +16,13 @@ from modus._http import AsyncHttpClient, HttpClient
 from .resources import (
     AsyncContextResource,
     AsyncScopesResource,
+    AsyncToolsResource,
     AsyncUsageResource,
     AsyncUsersResource,
     AsyncWorkflowsResource,
     ContextResource,
     ScopesResource,
+    ToolsResource,
     UsageResource,
     UsersResource,
     WorkflowsResource,
@@ -83,6 +85,7 @@ class ModusManagement:
         self.workflows: WorkflowsResource = WorkflowsResource(self._http, self._config)
         self.context: ContextResource = ContextResource(self._http, self._config)
         self.usage: UsageResource = UsageResource(self._http, self._config)
+        self.tools: ToolsResource = ToolsResource(self._http, self._config)
         self.users: UsersResource = UsersResource(self._http, self._config)
 
     def close(self) -> None:
@@ -146,6 +149,7 @@ class AsyncModusManagement:
         self.workflows: AsyncWorkflowsResource = AsyncWorkflowsResource(self._http, self._config)
         self.context: AsyncContextResource = AsyncContextResource(self._http, self._config)
         self.usage: AsyncUsageResource = AsyncUsageResource(self._http, self._config)
+        self.tools: AsyncToolsResource = AsyncToolsResource(self._http, self._config)
         self.users: AsyncUsersResource = AsyncUsersResource(self._http, self._config)
 
     async def aclose(self) -> None:
