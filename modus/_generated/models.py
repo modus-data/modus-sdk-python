@@ -1364,11 +1364,21 @@ class ToggleAgentDto(BaseModel):
 
 class ToolCatalogActionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    name: str | None = Field(..., description='Stable action name.', examples=['run_query'])
+    name: str | None = Field(
+        ...,
+        description='Stable action id — the exact string to put in `toolset.<id>.actions`.',
+        examples=['list_dags'],
+    )
+    display_name: str = Field(
+        ...,
+        alias='displayName',
+        description='Human-readable label for display.',
+        examples=['List DAGs'],
+    )
     description: str | None = Field(
         ...,
         description='What this action does.',
-        examples=['Runs a read-only SQL query against the connected database.'],
+        examples=['List the selected DAGs with their schedule, owners, tags, and paused state.'],
     )
 
 
