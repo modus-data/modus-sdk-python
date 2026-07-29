@@ -347,6 +347,27 @@ def test_agent_host_from_env(monkeypatch):
     assert client._config.agent_host == "https://agent.staging.getmodus.com"
 
 
+def test_agent_host_derived_from_staging_base_url(monkeypatch):
+    """api.staging… base_url alone should select agent.staging… (no MODUS_AGENT_HOST)."""
+    monkeypatch.delenv("MODUS_AGENT_HOST", raising=False)
+    client = Modus(
+        api_key="modus_test_key_abc123",
+        base_url="https://api.staging.getmodus.com",
+    )
+    assert client._config.agent_host == "https://agent.staging.getmodus.com"
+    assert client._agent_http.config.base_url == "https://agent.staging.getmodus.com"
+
+
+def test_agent_host_not_derived_from_custom_api_host(monkeypatch):
+    """Custom api.* origins must not auto-derive an agent host."""
+    monkeypatch.delenv("MODUS_AGENT_HOST", raising=False)
+    client = Modus(
+        api_key="modus_test_key_abc123",
+        base_url="https://api.attacker.example",
+    )
+    assert client._config.agent_host == DEFAULT_AGENT_HOST
+
+
 def test_explicit_agent_host_overrides_env(monkeypatch):
     monkeypatch.setenv("MODUS_AGENT_HOST", "https://agent.staging.getmodus.com")
     client = Modus(api_key="modus_test_key_abc123", agent_host="https://agent.custom.com")

@@ -12,6 +12,7 @@ from typing import Mapping, Optional, Union
 import httpx
 
 from ._auth import (
+    derive_agent_host_from_base_url,
     resolve_agent_host,
     resolve_api_key,
     resolve_base_url,
@@ -74,9 +75,11 @@ class Modus:
         resolved_key = resolve_api_key(api_key)
         resolved_url = resolve_base_url(base_url) or DEFAULT_BASE_URL
         # Same precedence as TS: base_urls['agent-service'] drives streaming too.
+        # Derive agent.<rest> from api.<rest> so staging works with only the API origin.
         resolved_agent_host = (
             (base_urls or {}).get("agent-service")
             or resolve_agent_host(agent_host)
+            or derive_agent_host_from_base_url(resolved_url)
             or DEFAULT_AGENT_HOST
         )
         resolved_org = resolve_organization_id(organization_id)
@@ -158,9 +161,11 @@ class AsyncModus:
         resolved_key = resolve_api_key(api_key)
         resolved_url = resolve_base_url(base_url) or DEFAULT_BASE_URL
         # Same precedence as TS: base_urls['agent-service'] drives streaming too.
+        # Derive agent.<rest> from api.<rest> so staging works with only the API origin.
         resolved_agent_host = (
             (base_urls or {}).get("agent-service")
             or resolve_agent_host(agent_host)
+            or derive_agent_host_from_base_url(resolved_url)
             or DEFAULT_AGENT_HOST
         )
         resolved_org = resolve_organization_id(organization_id)

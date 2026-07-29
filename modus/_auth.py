@@ -68,6 +68,32 @@ def resolve_agent_host(agent_host: Optional[str]) -> Optional[str]:
     return agent_host or os.environ.get(_AGENT_HOST_ENV_VAR) or None
 
 
+def _is_modus_api_hostname(hostname: str) -> bool:
+    """Modus-owned API hosts only: ``api.getmodus.com`` or ``api.<env>.getmodus.com``."""
+    import re
+
+    if hostname == "api.getmodus.com":
+        return True
+    return re.fullmatch(r"api\.[a-z0-9-]+\.getmodus\.com", hostname, flags=re.IGNORECASE) is not None
+
+
+def derive_agent_host_from_base_url(base_url: str) -> Optional[str]:
+    """
+    Map ``https://api.<env>.getmodus.com`` → ``https://agent.<env>.getmodus.com``
+    (and prod ``api.getmodus.com`` → ``agent.getmodus.com``). Returns ``None``
+    for localhost / custom / non-Modus origins so callers set agent host explicitly.
+    """
+    from urllib.parse import urlsplit, urlunsplit
+
+    parts = urlsplit(base_url)
+    host = parts.hostname
+    if not host or not _is_modus_api_hostname(host):
+        return None
+    agent_host = f"agent.{host[len('api.') :]}"
+    netloc = f"{agent_host}:{parts.port}" if parts.port is not None else agent_host
+    return urlunsplit((parts.scheme, netloc, "", "", ""))
+
+
 def resolve_organization_id(organization_id: Optional[str]) -> Optional[str]:
     """
     Resolve an optional Clerk organization id for agent-host run bodies.
