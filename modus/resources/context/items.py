@@ -251,6 +251,7 @@ class AsyncContextItemsResource:
         page_token: Optional[str] = None,
         context_type: Optional[str] = None,
     ) -> AsyncPage[ContextItem]:
+        """List context items in the knowledge base. See the sync ``list`` for argument details."""
         validate_page_size(page_size)
         return await self._list_page(page_size, page_token, context_type)
 
@@ -275,6 +276,7 @@ class AsyncContextItemsResource:
         )
 
     async def get(self, uid: str) -> ContextItem:
+        """Retrieve a context item by its UID. See the sync ``get`` for argument details."""
         data = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,

@@ -106,6 +106,7 @@ class AsyncModusConversationsResource:
         page_token: Optional[str] = None,
         kind: Optional[ConversationKind] = None,
     ) -> AsyncPage[ConversationListItem]:
+        """List conversations across Modus and scopes. See the sync ``list`` for argument details."""
         validate_page_size(page_size)
         return await self._list_page(page_size, page_token, kind)
 
@@ -132,6 +133,7 @@ class AsyncModusConversationsResource:
         )
 
     async def get(self, thread_id: str) -> Conversation:
+        """Retrieve a conversation thread with full message history. See the sync ``get`` for argument details."""
         validate_id(thread_id, name="thread_id")
         data = await async_with_retry(
             lambda: invoke_operation_async(

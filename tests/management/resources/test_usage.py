@@ -4,7 +4,7 @@ import httpx
 import pytest
 import respx
 from modus.management import AsyncModusManagement, ModusManagement
-from modus.management.types.usage import UsageReport
+from modus.management.types.usage import UsageReport, UsageUsersReport
 
 BASE = "https://api.modus.com"
 
@@ -116,3 +116,48 @@ def test_usage_list_skill_grouping_omits_model():
     bucket = report.buckets[0]
     assert bucket.model is None
     assert bucket.group_value == "42"
+
+
+@respx.mock
+def test_usage_list_forwards_repeated_user_email_params():
+    route = respx.get(f"{BASE}/api/v1/usage").mock(
+        return_value=httpx.Response(200, json=USAGE_RESP)
+    )
+    _client().usage.list(
+        since="2026-05-01T00:00:00.000Z",
+        until="2026-05-08T00:00:00.000Z",
+        rollup="hour",
+        user_email=["jane@acme.com", "john@acme.com"],
+    )
+    params = route.calls[0].request.url.params
+    assert params.get_list("user_email") == ["jane@acme.com", "john@acme.com"]
+
+
+@respx.mock
+def test_usage_list_users():
+    route = respx.get(f"{BASE}/api/v1/usage/users").mock(
+        return_value=httpx.Response(200, json={"users": [{"email": "jane@acme.com"}]})
+    )
+    report = _client().usage.list_users(
+        since="2026-05-01T00:00:00.000Z",
+        until="2026-05-08T00:00:00.000Z",
+    )
+    assert isinstance(report, UsageUsersReport)
+    assert report.users[0].email == "jane@acme.com"
+    params = dict(route.calls[0].request.url.params)
+    assert params["since"] == "2026-05-01T00:00:00.000Z"
+    assert params["until"] == "2026-05-08T00:00:00.000Z"
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_usage_list_users_async():
+    respx.get(f"{BASE}/api/v1/usage/users").mock(
+        return_value=httpx.Response(200, json={"users": [{"email": "jane@acme.com"}]})
+    )
+    async with AsyncModusManagement(api_key="modus_test_key", base_url=BASE) as client:
+        report = await client.usage.list_users(
+            since="2026-05-01T00:00:00.000Z",
+            until="2026-05-08T00:00:00.000Z",
+        )
+    assert report.users[0].email == "jane@acme.com"

@@ -291,7 +291,14 @@ class WorkflowsResource:
         return _parse_workflow(raw)
 
     def deploy(self, workflow_id: Union[int, str]) -> Agent:
-        """Publish the current draft of a Modus workflow."""
+        """Publish the current draft of a Modus workflow.
+
+        Args:
+            workflow_id: Workflow to publish.
+
+        Returns:
+            The workflow with its newly published configuration.
+        """
         validate_id(workflow_id, name="workflow_id")
         raw = with_retry(
             lambda: invoke_operation(
@@ -318,7 +325,11 @@ class WorkflowsResource:
         return _parse_workflow(raw)
 
     def delete(self, workflow_id: Union[int, str]) -> None:
-        """Delete a Modus workflow."""
+        """Delete a Modus workflow.
+
+        Args:
+            workflow_id: Workflow to remove.
+        """
         validate_id(workflow_id, name="workflow_id")
         with_retry(
             lambda: invoke_operation(
@@ -562,6 +573,7 @@ class AsyncWorkflowsResource:
         return _parse_workflow(raw)
 
     async def deploy(self, workflow_id: Union[int, str]) -> Agent:
+        """Publish the current draft of a Modus workflow. See the sync ``deploy`` for argument details."""
         validate_id(workflow_id, name="workflow_id")
         raw = await async_with_retry(
             lambda: invoke_operation_async(
@@ -576,6 +588,7 @@ class AsyncWorkflowsResource:
         return _parse_deploy_workflow(raw)
 
     async def toggle(self, workflow_id: Union[int, str], *, active: bool) -> Agent:
+        """Enable or disable a workflow. See the sync ``toggle`` for argument details."""
         validate_id(workflow_id, name="workflow_id")
         raw = await async_with_retry(
             lambda: invoke_operation_async(
@@ -587,6 +600,7 @@ class AsyncWorkflowsResource:
         return _parse_workflow(raw)
 
     async def delete(self, workflow_id: Union[int, str]) -> None:
+        """Delete a Modus workflow. See the sync ``delete`` for argument details."""
         validate_id(workflow_id, name="workflow_id")
         await async_with_retry(
             lambda: invoke_operation_async(

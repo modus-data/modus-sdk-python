@@ -198,22 +198,32 @@ class AgentTrigger:
 
     @classmethod
     def manual(cls) -> ManualTrigger:
+        """Run the workflow only when started manually."""
         return ManualTrigger()
 
     @classmethod
     def webhook(cls) -> WebhookTrigger:
+        """Run the workflow when an external webhook fires."""
         return WebhookTrigger()
 
     @classmethod
     def api(cls) -> ApiTrigger:
+        """Run the workflow when invoked through the public API."""
         return ApiTrigger()
 
     @classmethod
     def slack(cls) -> SlackTrigger:
+        """Run the workflow when triggered from Slack."""
         return SlackTrigger()
 
     @classmethod
     def schedule_daily(cls, *, time: str, timezone: str) -> ScheduleTrigger:
+        """Run the workflow once per day at a fixed local time.
+
+        Args:
+            time:     24-hour ``HH:MM`` in the given timezone.
+            timezone: IANA timezone name, e.g. ``"America/New_York"``.
+        """
         return ScheduleTrigger(
             schedule=TriggerSchedule(
                 frequency="daily",
@@ -230,6 +240,13 @@ class AgentTrigger:
         timezone: str,
         weekdays: List[Weekday],
     ) -> ScheduleTrigger:
+        """Run the workflow on selected weekdays at a fixed local time.
+
+        Args:
+            time:     24-hour ``HH:MM`` in the given timezone.
+            timezone: IANA timezone name, e.g. ``"America/New_York"``.
+            weekdays: One or more weekdays when the run should fire.
+        """
         return ScheduleTrigger(
             schedule=TriggerSchedule(
                 frequency="weekly",
@@ -247,6 +264,13 @@ class AgentTrigger:
         timezone: str,
         day_of_month: int,
     ) -> ScheduleTrigger:
+        """Run the workflow once per month on a given day at a fixed local time.
+
+        Args:
+            time:         24-hour ``HH:MM`` in the given timezone.
+            timezone:     IANA timezone name, e.g. ``"America/New_York"``.
+            day_of_month: Day of the month (1–31) when the run should fire.
+        """
         return ScheduleTrigger(
             schedule=TriggerSchedule(
                 frequency="monthly",
@@ -258,6 +282,12 @@ class AgentTrigger:
 
     @classmethod
     def schedule_hourly(cls, *, time: str, timezone: str) -> ScheduleTrigger:
+        """Run the workflow every hour at a fixed minute offset.
+
+        Args:
+            time:     ``HH:MM`` where the minute selects the offset within each hour.
+            timezone: IANA timezone name, e.g. ``"America/New_York"``.
+        """
         return ScheduleTrigger(
             schedule=TriggerSchedule(
                 frequency="hourly",
@@ -274,6 +304,13 @@ class AgentTrigger:
         timezone: str,
         cron_description: str,
     ) -> ScheduleTrigger:
+        """Run the workflow on a custom cron schedule.
+
+        Args:
+            cron_expressions: One or more cron expressions.
+            timezone:         IANA timezone name for the schedule.
+            cron_description: Human-readable summary shown in the UI.
+        """
         return ScheduleTrigger(
             schedule=TriggerSchedule(
                 frequency="custom",

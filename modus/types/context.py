@@ -19,6 +19,7 @@ class CreatedContextItem(CreatedContextItemResponseDto):
 
     @property
     def uid(self) -> str:
+        """Context item UUID — same value as ``context_item_id`` on create responses."""
         return self.context_item_id
 
 

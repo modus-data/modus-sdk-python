@@ -1362,6 +1362,56 @@ class ToggleAgentDto(BaseModel):
     )
 
 
+class ToolCatalogActionDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    name: str | None = Field(
+        ...,
+        description='Stable action id — the exact string to put in `toolset.<id>.actions`.',
+        examples=['list_dags'],
+    )
+    display_name: str = Field(
+        ...,
+        alias='displayName',
+        description='Human-readable label for display.',
+        examples=['List DAGs'],
+    )
+    description: str | None = Field(
+        ...,
+        description='What this action does.',
+        examples=['List the selected DAGs with their schedule, owners, tags, and paused state.'],
+    )
+
+
+class ToolCatalogEntryDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(
+        ...,
+        description='Stable id — use as the key in a toolset object, e.g. `{ [id]: { enabled: true } }`.',
+        examples=['sql_runner'],
+    )
+    display_name: str = Field(
+        ...,
+        alias='displayName',
+        description='Human-readable name for display.',
+        examples=['SQL Runner'],
+    )
+    category: str | None = Field(
+        None,
+        description='Grouping category, e.g. "data", "messaging", "general".',
+        examples=['data'],
+    )
+    requires_connection: bool = Field(
+        ...,
+        alias='requiresConnection',
+        description='True if this tool requires a connected integration/account before it can be used.',
+        examples=[False],
+    )
+    actions: list[ToolCatalogActionDto] | None = Field(
+        None,
+        description='Fixed set of actions this tool exposes. Present only when the action list does not depend on a live connection (built-in tools). Connected integrations expose connection-specific actions not listed here.',
+    )
+
+
 class ToolsetToolDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(
@@ -1592,6 +1642,15 @@ class UsageTotalsDto(BaseModel):
     )
 
 
+class UsageUserDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    email: str = Field(
+        ...,
+        description='Acting-user email present in usage over the window.',
+        examples=['jane@acme.com'],
+    )
+
+
 class WorkflowEdgeDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(..., description='Stable edge id, unique within the graph.', examples=['e1'])
@@ -1646,7 +1705,19 @@ class StreamProtocolVersion(float, Enum):
 
 class CancelRunDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    pass
+    organization_id: str | None = Field(
+        None,
+        alias='organizationId',
+        description="Organization the run belongs to. Omit for PAT/SDK callers — falls back to the authenticated principal's org.",
+    )
+    reason: str | None = Field(
+        None, description='Human-readable reason for the cancel, logged server-side only.'
+    )
+    last_seen_event_id: str | None = Field(
+        None,
+        alias='lastSeenEventId',
+        description='Redis Stream id of the last SSE frame the client rendered, so the persisted partial message matches what the client saw. Falls back to the server-side accumulator when absent.',
+    )
 
 
 class DocumentAttachmentDto(BaseModel):
@@ -1660,11 +1731,6 @@ class DocumentAttachmentDto(BaseModel):
     raw_content_s3_key: str | None = Field(None, alias='rawContentS3Key')
     size_bytes: float | None = Field(None, alias='sizeBytes')
     summary: str | None = None
-
-
-class EditQueuedRunDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    pass
 
 
 class ErrorEnvelopeDto1(BaseModel):
@@ -1692,11 +1758,6 @@ class ImageAttachmentDto(BaseModel):
     name: str | None = None
     s3_key: str | None = Field(None, alias='s3Key')
     upload_id: str | None = Field(None, alias='uploadId')
-
-
-class InterruptRunDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    pass
 
 
 class Decision(str, Enum):
@@ -1737,7 +1798,9 @@ class SupplementalContextSource(str, Enum):
 
 class UserContextDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    email: str | None = Field(None, description='End-user email for personalization.')
+    email: str | None = Field(
+        None, description='End-user email for personalization; also used for usage attribution.'
+    )
     name: str | None = Field(None, description='End-user display name.')
     timezone: str | None = Field(None, description='IANA timezone, e.g. America/New_York.')
     user_id: str | None = Field(
@@ -2056,7 +2119,6 @@ class ListEvaluationRunsResponseDto(BaseModel):
 class ListMemberGroupsResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     groups: list[MemberGroupDto]
-    next_page_token: str | None = Field(..., alias='nextPageToken')
 
 
 class ListMemoriesResponseDto(BaseModel):
@@ -2073,7 +2135,6 @@ class ListMemoriesResponseDto(BaseModel):
 class ListOrgMembersResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     members: list[OrgMemberDto]
-    next_page_token: str | None = Field(..., alias='nextPageToken')
 
 
 class ListSuggestionQuestionsResponseDto(BaseModel):
@@ -2087,6 +2148,19 @@ class ListSuggestionQuestionsResponseDto(BaseModel):
     )
 
 
+class ListToolsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    tools: list[ToolCatalogEntryDto] = Field(
+        ..., description='Known tool/integration surfaces a scope can select in its toolset.'
+    )
+    next_page_token: str | None = Field(
+        ...,
+        alias='nextPageToken',
+        description='Opaque token for the next page; null when this was the last page. Pass as `pageToken` on the next request.',
+        examples=[None],
+    )
+
+
 class ListUsageResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     org_id: str = Field(..., description='Organization id (`org_xxx`) the result is scoped to.')
@@ -2096,6 +2170,11 @@ class ListUsageResponseDto(BaseModel):
     group_by: GroupBy = Field(..., description='Dimension that was grouped by in this response.')
     buckets: list[UsageBucketDto]
     totals: UsageTotalsDto
+
+
+class ListUsageUsersResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    users: list[UsageUserDto] = Field(..., description='Distinct acting-user emails in the window.')
 
 
 class LookupContextItemResponseDto(BaseModel):
@@ -2479,10 +2558,10 @@ class SupplementalContextDto(BaseModel):
 
 class WorkflowActionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    organization_id: str = Field(
-        ...,
+    organization_id: str | None = Field(
+        None,
         alias='organizationId',
-        description="Organization ID the run belongs to. Must match the authenticated principal's org.",
+        description="Organization the run belongs to. Omit for PAT/SDK callers — falls back to the authenticated principal's org.",
     )
     session_id: str = Field(
         ..., alias='sessionId', description='Client-generated session identifier.'
@@ -3107,6 +3186,64 @@ class AgentRunDto(BaseModel):
     debug: bool | None = None
 
 
+class FollowUpRunDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    message: str = Field(..., description='The user message to send.')
+    session_id: str = Field(
+        ...,
+        alias='sessionId',
+        description='Opaque client-generated conversation token for continuity. The server NEVER derives the run target identity (scope/workflow/modus) from this string — target identity comes only from the request path and DTO (see RunTarget). It is used solely to thread successive turns of the same conversation together.',
+    )
+    organization_id: str | None = Field(
+        None,
+        alias='organizationId',
+        description="Organization id. Ignored for authenticated callers — the server uses the principal's org.",
+    )
+    version: Version | None = Field(
+        None, description='Saved version to run (scope/workflow; ignored for Modus).'
+    )
+    file_thread_id: str | None = Field(
+        None, alias='fileThreadId', description='Document-scoped conversation thread id.'
+    )
+    config: RunConfigDto | None = None
+    attachments: AttachmentsDto | None = None
+    user_context: UserContextDto | None = Field(None, alias='userContext')
+    supplemental_context: SupplementalContextDto | None = Field(None, alias='supplementalContext')
+    source: RunSource | None = Field(None, description='Origin of the run.')
+    run_id: str | None = Field(
+        None, alias='runId', description='Client-supplied run id (Idempotency-Key header wins).'
+    )
+    stream_protocol_version: StreamProtocolVersion | None = Field(
+        None,
+        alias='streamProtocolVersion',
+        description='Streaming protocol version. Version 2 supports assistant-content replacement events.',
+    )
+    experimental_features: bool | None = Field(None, alias='experimentalFeatures')
+    debug: bool | None = None
+    subordinate_skill_ids: list[float] | None = Field(
+        None,
+        alias='subordinateSkillIds',
+        description='Saved scope ids to subordinate under this Modus run.',
+    )
+
+
+class InterruptRunDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    organization_id: str | None = Field(
+        None,
+        alias='organizationId',
+        description="Organization the run belongs to. Omit for PAT/SDK callers — falls back to the authenticated principal's org.",
+    )
+    last_seen_event_id: str | None = Field(
+        None,
+        alias='lastSeenEventId',
+        description='Redis Stream id of the last SSE frame the client rendered (see CancelRunDto).',
+    )
+    next_run: FollowUpRunDto = Field(
+        ..., alias='nextRun', description='Follow-up message that supersedes the current turn.'
+    )
+
+
 class ModusRunDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     message: str = Field(..., description='The user message to send.')
@@ -3181,3 +3318,15 @@ class ResumeRunDto(BaseModel):
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
     debug: bool | None = None
     decision: Decision = Field(..., description='Decision that resumes the interrupted run.')
+
+
+class EditQueuedRunDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    organization_id: str | None = Field(
+        None,
+        alias='organizationId',
+        description="Organization the run belongs to. Omit for PAT/SDK callers — falls back to the authenticated principal's org.",
+    )
+    next_run: FollowUpRunDto = Field(
+        ..., alias='nextRun', description='New payload replacing the queued run.'
+    )

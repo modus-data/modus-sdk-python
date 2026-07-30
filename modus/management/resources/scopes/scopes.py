@@ -129,14 +129,14 @@ class ScopesResource:
     """
     Full CRUD access to Modus scopes.
 
-    mgmt.scopes.list()                              → Page[Skill]
-    mgmt.scopes.get(scope_id)                       → Skill (with variation fields)
-    mgmt.scopes.create(name, *, ...)                → Skill
-    mgmt.scopes.update(scope_id, *, ...)            → Skill
-    mgmt.scopes.deploy(scope_id)                    → Skill
-    mgmt.scopes.delete(scope_id)                    → None
-    mgmt.scopes.conversations(scope_id).list()      → Page[ConversationListItem]
-    mgmt.scopes.conversations(scope_id).get(tid)    → Conversation
+    ``mgmt.scopes.list()`` → page of scopes
+    ``mgmt.scopes.get(scope_id)`` → scope (with variation fields)
+    ``mgmt.scopes.create(name, ...)`` → scope
+    ``mgmt.scopes.update(scope_id, ...)`` → scope
+    ``mgmt.scopes.deploy(scope_id)`` → scope
+    ``mgmt.scopes.delete(scope_id)`` → None
+    ``mgmt.scopes.conversations(scope_id).list()`` → page of conversations
+    ``mgmt.scopes.conversations(scope_id).get(tid)`` → conversation
     """
 
     def __init__(
@@ -343,7 +343,14 @@ class ScopesResource:
         return _parse_scope(raw)
 
     def deploy(self, scope_id: Union[int, str]) -> Skill:
-        """Publish the current draft of a Modus scope."""
+        """Publish the current draft of a Modus scope.
+
+        Args:
+            scope_id: Scope to publish.
+
+        Returns:
+            The scope with its newly published configuration.
+        """
         validate_id(scope_id, name="scope_id")
         raw = with_retry(
             lambda: invoke_operation(
@@ -358,7 +365,11 @@ class ScopesResource:
         return _parse_deploy_scope(raw)
 
     def delete(self, scope_id: Union[int, str]) -> None:
-        """Delete a Modus scope."""
+        """Delete a Modus scope.
+
+        Args:
+            scope_id: Scope to remove.
+        """
         validate_id(scope_id, name="scope_id")
         with_retry(
             lambda: invoke_operation(
@@ -478,6 +489,7 @@ class AsyncScopesResource:
         return AsyncScopeConversationsResource(self._http, self._config, scope_id, self._ops.conversations)
 
     def memories(self, scope_id: Union[int, str]) -> AsyncScopeMemoriesResource:
+        """Return the memories sub-resource scoped to ``scope_id``."""
         return AsyncScopeMemoriesResource(self._http, self._config, scope_id, self._ops.memories)
 
     def supervision(self, scope_id: Union[int, str]) -> AsyncScopeSupervisionResource:
@@ -656,6 +668,7 @@ class AsyncScopesResource:
         return _parse_scope(raw)
 
     async def deploy(self, scope_id: Union[int, str]) -> Skill:
+        """Publish the current draft of a Modus scope. See the sync ``deploy`` for argument details."""
         validate_id(scope_id, name="scope_id")
         raw = await async_with_retry(
             lambda: invoke_operation_async(
@@ -670,6 +683,7 @@ class AsyncScopesResource:
         return _parse_deploy_scope(raw)
 
     async def delete(self, scope_id: Union[int, str]) -> None:
+        """Delete a Modus scope. See the sync ``delete`` for argument details."""
         validate_id(scope_id, name="scope_id")
         await async_with_retry(
             lambda: invoke_operation_async(

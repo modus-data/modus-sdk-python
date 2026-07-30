@@ -105,6 +105,7 @@ class AsyncModusResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> ChatResult:
+        """Send a message to Modus and get the complete reply. See the sync ``chat`` for argument details."""
         return await modus_chat_buffered_async(
             self._http, message, model=model, thread_id=thread_id
         )
@@ -116,6 +117,7 @@ class AsyncModusResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> AsyncChatStream:
+        """Stream a Modus reply token by token. See the sync ``chat_stream`` for argument details."""
         return modus_stream_session_async(
             self._agent_http, message, model=model, thread_id=thread_id
         )
@@ -126,6 +128,7 @@ class AsyncModusResource:
         *,
         limit: Optional[int] = None,
     ) -> SkillContextComposition:
+        """Return composed full-environment context for an intent. See the sync ``get_context`` for argument details."""
         body = ModusContextRequestDto(message=message, limit=limit)
         data = await async_with_retry(
             lambda: invoke_operation_async(

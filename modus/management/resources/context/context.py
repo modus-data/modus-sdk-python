@@ -60,7 +60,15 @@ class ContextResource:
         return CreatedContextItem.model_validate(data)
 
     def create_note(self, title: str, content: str) -> CreatedContextItem:
-        """Add a free-form text note to the Modus knowledge base."""
+        """Add a free-form text note to the Modus knowledge base.
+
+        Args:
+            title:   Display title for the note.
+            content: Markdown body text.
+
+        Returns:
+            Created item with its new ``uid``.
+        """
         body = CreateNoteDto(title=title, content=content)
         return self._create(
             "ContextCreatorsController_createNote",
@@ -103,7 +111,18 @@ class ContextResource:
         self, name: str, query: Optional[str] = None, *, connection_id: str,
         description: Optional[str] = None, path: Optional[List[str]] = None,
     ) -> CreatedContextItem:
-        """Save a SQL query to the Modus knowledge base."""
+        """Save a SQL query to the Modus knowledge base.
+
+        Args:
+            name:          Display name for the saved query.
+            query:         SQL text (optional at create if you set it later).
+            connection_id: Data connection the query runs against.
+            description:   Optional human-readable description.
+            path:          Optional hierarchical path segments for organisation.
+
+        Returns:
+            Created item with its new ``uid``.
+        """
         body = CreateSavedQueryDto(
             name=name,
             query=query,
@@ -155,7 +174,17 @@ class ContextResource:
         self, url: str, *, title: Optional[str] = None,
         is_crawl: Optional[bool] = None, page_limit: Optional[int] = None,
     ) -> CreatedContextItem:
-        """Add a URL to the Modus knowledge base."""
+        """Add a URL to the Modus knowledge base.
+
+        Args:
+            url:        Link target URL.
+            title:      Optional display title.
+            is_crawl:   When ``True``, fetch and index page content.
+            page_limit: Maximum pages to crawl when ``is_crawl`` is ``True``.
+
+        Returns:
+            Created item with its new ``uid``.
+        """
         body = CreateLinkDto(
             url=url,
             title=title,
@@ -263,6 +292,7 @@ class AsyncContextResource:
         self, name: str, query: Optional[str] = None, *, connection_id: str,
         description: Optional[str] = None, path: Optional[List[str]] = None,
     ) -> CreatedContextItem:
+        """Save a SQL query to the Modus knowledge base. See the sync ``create_saved_query`` for argument details."""
         body = CreateSavedQueryDto(
             name=name,
             query=query,
@@ -314,6 +344,7 @@ class AsyncContextResource:
         self, url: str, *, title: Optional[str] = None,
         is_crawl: Optional[bool] = None, page_limit: Optional[int] = None,
     ) -> CreatedContextItem:
+        """Add a URL to the Modus knowledge base. See the sync ``create_link`` for argument details."""
         body = CreateLinkDto(
             url=url,
             title=title,

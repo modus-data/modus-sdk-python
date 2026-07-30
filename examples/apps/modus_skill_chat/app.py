@@ -105,7 +105,7 @@ def _run_buffered_chat(
     thread_id: str | None,
 ) -> ChatResult | BaseException:
     try:
-        return get_buffered_client().skills.chat(
+        return get_buffered_client().scopes.chat(
             skill_id,
             message,
             model=model,
@@ -178,7 +178,7 @@ def _handle_parallel_send(
                 stream_placeholder = st.empty()
                 accumulated = ""
                 try:
-                    with get_stream_client().skills.chat_stream(
+                    with get_stream_client().scopes.chat_stream(
                         skill_id,
                         prompt,
                         model=model,

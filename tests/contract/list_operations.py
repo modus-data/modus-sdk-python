@@ -29,12 +29,7 @@ REJECTED_LIST_RESPONSE_BODY: Dict[str, Any] = {
 
 # OpenAPI GET operations with pageSize not yet exposed on the Python SDK.
 # Thin envelopes today: SDK returns unwrapped arrays and always receives nextPageToken=null.
-SDK_LIST_OPS_EXCLUDED: frozenset[str] = frozenset(
-    {
-        "MemberGroupsController_list",
-        "OrgMembersController_list",
-    }
-)
+SDK_LIST_OPS_EXCLUDED: frozenset[str] = frozenset()
 
 FORBIDDEN_RESPONSE_KEYS = frozenset({"items", "data", "results"})
 
@@ -157,6 +152,11 @@ def _workflows_invoke(client: Client) -> Any:
     return client.workflows.list(page_size=25, page_token="tok_abc")
 
 
+def _tools_invoke(client: Client) -> Any:
+    assert isinstance(client, ModusManagement)
+    return client.tools.list(page_size=25, page_token="tok_abc")
+
+
 def _workflow_runs_invoke(client: Client) -> Any:
     return client.workflows.runs.list(7, page_size=25, page_token="tok_abc")
 
@@ -178,6 +178,12 @@ def _scope_evaluations_invoke(client: Client) -> Any:
     assert isinstance(client, ModusManagement)
     return client.scopes.evaluations(42).list_runs(page_size=25, page_token="tok_abc")
 
+
+SAMPLE_TOOL_CATALOG_ENTRY: Dict[str, Any] = {
+    "id": "web_search",
+    "displayName": "Web Search",
+    "requiresConnection": False,
+}
 
 SAMPLE_EVAL_RUN: Dict[str, Any] = {
     "id": "run-1",
@@ -332,6 +338,16 @@ SDK_AIP_LIST_OPERATIONS: List[ListOperationSpec] = [
         invoke=_workflow_runs_invoke,
         bad_body_raises_pydantic=True,
         extra_success_fields={"counts": {}},
+    ),
+    # --- Tools (/api/v1/tools) ---
+    ListOperationSpec(
+        operation_id="ToolsController_list",
+        mock_url_suffix="/api/v1/tools",
+        items_key="tools",
+        wrong_items_key="scopes",
+        sample_item=SAMPLE_TOOL_CATALOG_ENTRY,
+        client_kind="management",
+        invoke=_tools_invoke,
     ),
     ListOperationSpec(
         operation_id="RunLifecycleController_active",

@@ -30,6 +30,14 @@ class WorkflowGraph(BaseModel):
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> WorkflowGraph:
+        """Build a workflow graph from a plain dict.
+
+        Args:
+            data: Dict with ``nodes`` and ``edges`` keys (plus optional extras).
+
+        Returns:
+            Validated ``WorkflowGraph`` instance.
+        """
         return cls.model_validate(data)
 
 

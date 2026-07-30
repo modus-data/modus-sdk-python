@@ -15,6 +15,7 @@ class JsonObject(BaseModel):
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> JsonObject:
+        """Build an open-ended JSON object from a plain dict."""
         return cls.model_validate(data)
 
 
