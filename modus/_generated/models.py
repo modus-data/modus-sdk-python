@@ -334,13 +334,13 @@ class ContextItemDto(BaseModel):
     connection_id: str | None = Field(
         None,
         alias='connectionId',
-        description='Originating integration connection id for integration-derived items. Null for user-created items.',
+        description='Originating integration connection id, or a virtual connection id such as `custom` or `files` for org-owned context.',
         examples=['00000000-0000-4000-a000-000000000111'],
     )
     selection_id: str | None = Field(
         None,
         alias='selectionId',
-        description='Originating selection id (datamap-scoped) for integration-derived items.',
+        description='Datamap selection id. For custom context, this is the customer-defined source id.',
         examples=['00000000-0000-4000-a000-000000000222'],
     )
     data_path: list[str] = Field(
@@ -586,8 +586,8 @@ class CreatedCustomContextItemResponseDto(BaseModel):
     data_path: list[str] = Field(
         ...,
         alias='dataPath',
-        description='Hierarchical path used to group custom context.',
-        examples=[['billing-db', 'contracts', 'contract-123']],
+        description='Canonical hierarchy path rooted at the virtual `custom` connection and the customer-defined source.',
+        examples=[['custom', 'billing-db', 'contracts', 'contract-123']],
     )
     title: str | None = Field(
         ..., description='Display title resolved for the item.', examples=['Acme renewal contract']
