@@ -397,6 +397,11 @@ class ConversationListItemDto(BaseModel):
         description='User-managed display title. Null until the user renames the conversation.',
         examples=['Q3 Revenue Analysis'],
     )
+    source: str | None = Field(
+        None,
+        description='UI surface the conversation was started from (e.g. `context_chat`, `home`). Not constrained to the `RunSource` enum: historical rows carry legacy values. Null when unknown, absent on responses that predate the field.',
+        examples=['context_chat'],
+    )
     message_count: float = Field(
         ...,
         alias='messageCount',
@@ -803,7 +808,7 @@ class GetAutomationRunResponseDto(BaseModel):
         alias='statusReason',
         description='Display-only signal that the workflow closed for a non-success reason.',
     )
-    source: AutomationRunSource = Field(
+    source: AutomationRunSource | None = Field(
         ...,
         description='Where the payload was read from. `live-query` = the run is still in progress; `history` = a completed run.',
     )
@@ -1655,7 +1660,7 @@ class UsageUserDto(BaseModel):
 class WorkflowEdgeDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(..., description='Stable edge id, unique within the graph.', examples=['e1'])
-    source: str = Field(..., description='Source node id.', examples=['1'])
+    source: str | None = Field(..., description='Source node id.', examples=['1'])
     target: str = Field(..., description='Target node id.', examples=['2'])
     source_handle: str | None = Field(
         None,
@@ -2552,7 +2557,7 @@ class SupplementalContextDto(BaseModel):
         ...,
         description='Background context (e.g. Slack/Teams thread + channel history) to prepend to the system prompt.',
     )
-    source: SupplementalContextSource = Field(
+    source: SupplementalContextSource | None = Field(
         ..., description='Producer that supplied the supplemental context.'
     )
 
