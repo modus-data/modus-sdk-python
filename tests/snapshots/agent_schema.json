@@ -2,6 +2,13 @@
   "$defs": {
     "AgentAccessConfigDto": {
       "properties": {
+        "visibility": {
+          "$ref": "#/$defs/Visibility",
+          "description": "Visibility tier. `shared` applies the group-permission map; `private` ignores groups and uses owner + sharedWith for access.",
+          "examples": [
+            "shared"
+          ]
+        },
         "groupPermissions": {
           "additionalProperties": {
             "$ref": "#/$defs/AgentGroupPermissionDto"
@@ -18,21 +25,16 @@
           "title": "Grouppermissions",
           "type": "object"
         },
-        "ownerEmail": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Lowercased email of the workflow owner. Used by private-workflow ACL when owner email matches.",
+        "sharedWith": {
+          "description": "Per-user share entries used for private-visibility workflows.",
           "examples": [
-            "alice@example.com"
+            []
           ],
-          "title": "Owneremail"
+          "items": {
+            "$ref": "#/$defs/AgentSharedUserDto"
+          },
+          "title": "Sharedwith",
+          "type": "array"
         },
         "ownerUserId": {
           "anyOf": [
@@ -50,23 +52,21 @@
           ],
           "title": "Owneruserid"
         },
-        "sharedWith": {
-          "description": "Per-user share entries used for private-visibility workflows.",
-          "examples": [
-            []
+        "ownerEmail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
           ],
-          "items": {
-            "$ref": "#/$defs/AgentSharedUserDto"
-          },
-          "title": "Sharedwith",
-          "type": "array"
-        },
-        "visibility": {
-          "$ref": "#/$defs/Visibility",
-          "description": "Visibility tier. `shared` applies the group-permission map; `private` ignores groups and uses owner + sharedWith for access.",
+          "default": null,
+          "description": "Lowercased email of the workflow owner. Used by private-workflow ACL when owner email matches.",
           "examples": [
-            "shared"
-          ]
+            "alice@example.com"
+          ],
+          "title": "Owneremail"
         }
       },
       "required": [
@@ -79,20 +79,20 @@
     },
     "AgentGroupPermissionDto": {
       "properties": {
-        "manage": {
-          "description": "Whether members of this group may manage (edit / deploy / delete) the workflow.",
-          "examples": [
-            false
-          ],
-          "title": "Manage",
-          "type": "boolean"
-        },
         "use": {
           "description": "Whether members of this group may use (run / invoke) the workflow.",
           "examples": [
             true
           ],
           "title": "Use",
+          "type": "boolean"
+        },
+        "manage": {
+          "description": "Whether members of this group may manage (edit / deploy / delete) the workflow.",
+          "examples": [
+            false
+          ],
+          "title": "Manage",
           "type": "boolean"
         }
       },
@@ -105,6 +105,14 @@
     },
     "AgentSharedUserDto": {
       "properties": {
+        "email": {
+          "description": "Lowercased email of a user explicitly granted access to a private workflow.",
+          "examples": [
+            "alice@example.com"
+          ],
+          "title": "Email",
+          "type": "string"
+        },
         "addedAt": {
           "anyOf": [
             {
@@ -136,14 +144,6 @@
             "user_2abc"
           ],
           "title": "Addedby"
-        },
-        "email": {
-          "description": "Lowercased email of a user explicitly granted access to a private workflow.",
-          "examples": [
-            "alice@example.com"
-          ],
-          "title": "Email",
-          "type": "string"
         },
         "userId": {
           "anyOf": [
@@ -178,20 +178,6 @@
     },
     "AgentVariationDto": {
       "properties": {
-        "agentSelection": {
-          "anyOf": [
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Selected scopes + per-step config (`{agents, model?}`) when `type` is `task`. Null when `type` is `workflow`.",
-          "title": "Agentselection"
-        },
         "trigger": {
           "anyOf": [
             {
@@ -219,6 +205,20 @@
           "default": null,
           "description": "Workflow graph (`{nodes, edges}`) when `type` is `workflow`. Null when `type` is `task`.",
           "title": "Workflowstructure"
+        },
+        "agentSelection": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Selected scopes + per-step config (`{agents, model?}`) when `type` is `task`. Null when `type` is `workflow`.",
+          "title": "Agentselection"
         }
       },
       "title": "AgentVariationDto",
@@ -234,6 +234,14 @@
     },
     "PendingOwnershipTransferDto": {
       "properties": {
+        "pendingOwnerUserId": {
+          "description": "Clerk user id of the org member who will become owner once they accept.",
+          "examples": [
+            "user_2abc123def456"
+          ],
+          "title": "Pendingowneruserid",
+          "type": "string"
+        },
         "pendingOwnerEmail": {
           "anyOf": [
             {
@@ -250,12 +258,12 @@
           ],
           "title": "Pendingowneremail"
         },
-        "pendingOwnerUserId": {
-          "description": "Clerk user id of the org member who will become owner once they accept.",
+        "requestedByUserId": {
+          "description": "Clerk user id of the member who requested the transfer (the current owner).",
           "examples": [
-            "user_2abc123def456"
+            "user_2xyz789ghi012"
           ],
-          "title": "Pendingowneruserid",
+          "title": "Requestedbyuserid",
           "type": "string"
         },
         "requestedAt": {
@@ -264,14 +272,6 @@
             "2026-06-05T12:00:00.000Z"
           ],
           "title": "Requestedat",
-          "type": "string"
-        },
-        "requestedByUserId": {
-          "description": "Clerk user id of the member who requested the transfer (the current owner).",
-          "examples": [
-            "user_2xyz789ghi012"
-          ],
-          "title": "Requestedbyuserid",
           "type": "string"
         }
       },
@@ -302,65 +302,29 @@
     }
   },
   "properties": {
-    "accessConfig": {
-      "$ref": "#/$defs/AgentAccessConfigDto",
-      "description": "Access configuration \u2014 who in the org can use / manage this workflow."
-    },
-    "activeVariationId": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Active (deployed) variation id. Null until the workflow is first deployed.",
+    "id": {
+      "description": "Numeric workflow id (stable per-org; not reused after delete).",
       "examples": [
-        "00000000-0000-4000-a000-000000000100"
+        42
       ],
-      "title": "Activevariationid"
+      "title": "Id",
+      "type": "number"
     },
-    "canManage": {
-      "description": "Whether the requesting principal can manage (edit/delete/deploy/toggle) this workflow. Derived server-side from the principal + accessConfig. Always present on every Workflow response.",
+    "slug": {
+      "description": "URL-safe slug used in human-readable links. Unique per org.",
       "examples": [
-        true
+        "customer-churn-agent-a3f"
       ],
-      "title": "Canmanage",
-      "type": "boolean"
-    },
-    "canUse": {
-      "description": "Whether the requesting principal can use (run, view history of) this workflow. Derived server-side from the principal + accessConfig. Always present on every Workflow response.",
-      "examples": [
-        true
-      ],
-      "title": "Canuse",
-      "type": "boolean"
-    },
-    "createdAt": {
-      "description": "Creation timestamp.",
-      "examples": [
-        "2026-05-01T10:00:00.000Z"
-      ],
-      "title": "Createdat",
+      "title": "Slug",
       "type": "string"
     },
-    "deletedAt": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Soft-delete timestamp. Null for active workflows.",
+    "name": {
+      "description": "Display name of the workflow. Shown in the builder and in run logs.",
       "examples": [
-        null
+        "Customer Churn Analyzer"
       ],
-      "title": "Deletedat"
+      "title": "Name",
+      "type": "string"
     },
     "description": {
       "anyOf": [
@@ -377,6 +341,44 @@
         "Predicts churn risk for a customer given a 90-day usage window."
       ],
       "title": "Description"
+    },
+    "status": {
+      "$ref": "#/$defs/ResourceLifecycleStatus",
+      "description": "Lifecycle status. `draft` = never deployed. `active` = deployed. `deleted` = soft-deleted.",
+      "examples": [
+        "active"
+      ]
+    },
+    "type": {
+      "$ref": "#/$defs/AgentType",
+      "description": "Type of workflow. `task` = single-step scope orchestration; `workflow` = multi-step graph.",
+      "examples": [
+        "task"
+      ]
+    },
+    "orgUuid": {
+      "description": "Org UUID this workflow belongs to. Matches the caller\u2019s principal.",
+      "examples": [
+        "00000000-0000-0000-0000-000000000001"
+      ],
+      "title": "Orguuid",
+      "type": "string"
+    },
+    "activeVariationId": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Active (deployed) variation id. Null until the workflow is first deployed.",
+      "examples": [
+        "00000000-0000-4000-a000-000000000100"
+      ],
+      "title": "Activevariationid"
     },
     "draftVariationId": {
       "anyOf": [
@@ -402,20 +404,88 @@
       "title": "Hasunpublishedchanges",
       "type": "boolean"
     },
-    "id": {
-      "description": "Numeric workflow id (stable per-org; not reused after delete).",
-      "examples": [
-        42
-      ],
-      "title": "Id",
-      "type": "number"
-    },
     "isEnabled": {
       "description": "Whether the workflow\u2019s schedule is currently active. Toggle via the workflow schedule API.",
       "examples": [
         true
       ],
       "title": "Isenabled",
+      "type": "boolean"
+    },
+    "accessConfig": {
+      "$ref": "#/$defs/AgentAccessConfigDto",
+      "description": "Access configuration \u2014 who in the org can use / manage this workflow."
+    },
+    "pendingOwnershipTransfer": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PendingOwnershipTransferDto"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Pending ownership transfer awaiting recipient acceptance. Absent when no request is in flight."
+    },
+    "variation": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AgentVariationDto"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Variation-detail payload (`trigger`, `workflowStructure`, `agentSelection`) for the requested view. Present on detail responses; absent on list rows."
+    },
+    "createdAt": {
+      "description": "Creation timestamp.",
+      "examples": [
+        "2026-05-01T10:00:00.000Z"
+      ],
+      "title": "Createdat",
+      "type": "string"
+    },
+    "updatedAt": {
+      "description": "Most recent update timestamp.",
+      "examples": [
+        "2026-05-11T10:00:00.000Z"
+      ],
+      "title": "Updatedat",
+      "type": "string"
+    },
+    "deletedAt": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Soft-delete timestamp. Null for active workflows.",
+      "examples": [
+        null
+      ],
+      "title": "Deletedat"
+    },
+    "canManage": {
+      "description": "Whether the requesting principal can manage (edit/delete/deploy/toggle) this workflow. Derived server-side from the principal + accessConfig. Always present on every Workflow response.",
+      "examples": [
+        true
+      ],
+      "title": "Canmanage",
+      "type": "boolean"
+    },
+    "canUse": {
+      "description": "Whether the requesting principal can use (run, view history of) this workflow. Derived server-side from the principal + accessConfig. Always present on every Workflow response.",
+      "examples": [
+        true
+      ],
+      "title": "Canuse",
       "type": "boolean"
     },
     "manageDenial": {
@@ -431,90 +501,6 @@
       "examples": [
         "needs_group_manage"
       ]
-    },
-    "name": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "description": "Display name of the workflow. Shown in the builder and in run logs.",
-      "examples": [
-        "Customer Churn Analyzer"
-      ],
-      "title": "Name"
-    },
-    "orgUuid": {
-      "description": "Org UUID this workflow belongs to. Matches the caller\u2019s principal.",
-      "examples": [
-        "00000000-0000-0000-0000-000000000001"
-      ],
-      "title": "Orguuid",
-      "type": "string"
-    },
-    "pendingOwnershipTransfer": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/PendingOwnershipTransferDto"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Pending ownership transfer awaiting recipient acceptance. Absent when no request is in flight."
-    },
-    "slug": {
-      "description": "URL-safe slug used in human-readable links. Unique per org.",
-      "examples": [
-        "customer-churn-agent-a3f"
-      ],
-      "title": "Slug",
-      "type": "string"
-    },
-    "status": {
-      "$ref": "#/$defs/ResourceLifecycleStatus",
-      "description": "Lifecycle status. `draft` = never deployed. `active` = deployed. `deleted` = soft-deleted.",
-      "examples": [
-        "active"
-      ]
-    },
-    "type": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/AgentType"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "description": "Type of workflow. `task` = single-step scope orchestration; `workflow` = multi-step graph.",
-      "examples": [
-        "task"
-      ]
-    },
-    "updatedAt": {
-      "description": "Most recent update timestamp.",
-      "examples": [
-        "2026-05-11T10:00:00.000Z"
-      ],
-      "title": "Updatedat",
-      "type": "string"
-    },
-    "variation": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/AgentVariationDto"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Variation-detail payload (`trigger`, `workflowStructure`, `agentSelection`) for the requested view. Present on detail responses; absent on list rows."
     }
   },
   "required": [

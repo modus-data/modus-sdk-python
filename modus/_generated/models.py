@@ -137,6 +137,7 @@ class ApiErrorCode(str, Enum):
     conflict = 'CONFLICT'
     rate_limited = 'RATE_LIMITED'
     internal_error = 'INTERNAL_ERROR'
+    upstream_error = 'UPSTREAM_ERROR'
 
 
 class ApiErrorStatus(str, Enum):
@@ -147,6 +148,7 @@ class ApiErrorStatus(str, Enum):
     already_exists = 'ALREADY_EXISTS'
     resource_exhausted = 'RESOURCE_EXHAUSTED'
     internal = 'INTERNAL'
+    unavailable = 'UNAVAILABLE'
 
 
 class AutomationRunListItemDto(BaseModel):
@@ -206,6 +208,57 @@ class AutomationRunListItemDto(BaseModel):
 class AutomationRunSource(str, Enum):
     live_query = 'live-query'
     history = 'history'
+
+
+class BulkUploadFromUrlItemDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    url: str | None = Field(
+        None,
+        description='Source URL to fetch.',
+        examples=['https://example.com/reports/Q3-churn-report.pdf'],
+    )
+    file_name: str | None = Field(
+        None,
+        alias='fileName',
+        description='Override file name. Inferred from the URL path when omitted.',
+        examples=['Q3-churn-report.pdf'],
+    )
+
+
+class BulkUploadFromUrlsDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    urls: list[BulkUploadFromUrlItemDto] = Field(
+        ..., description='URLs to fetch and upload. Max 100 per request.'
+    )
+
+
+class BulkUploadUrlItemDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    file_name: str | None = Field(
+        None,
+        alias='fileName',
+        description='Original file name, used to build the S3 object key.',
+        examples=['Q3-churn-report.pdf'],
+    )
+    content_type: str | None = Field(
+        None,
+        alias='contentType',
+        description='MIME type of the file. `application/octet-stream` falls back to an extension-based guess. Allowed categories: PDF, images, text, Office/OpenDocument documents, audio, and video.',
+        examples=['application/pdf'],
+    )
+    file_size: float | None = Field(
+        None,
+        alias='fileSize',
+        description='File size in bytes. Rejected above 50MB.',
+        examples=[1048576],
+    )
+
+
+class BulkUploadUrlsDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    files: list[BulkUploadUrlItemDto] = Field(
+        ..., description='Files to create presigned upload URLs for. Max 100 per request.'
+    )
 
 
 class ComposeSkillContextRequestDto(BaseModel):
@@ -507,7 +560,7 @@ class CreateLinkDto(BaseModel):
 
 class CreateNoteDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    title: str | None = Field(
+    title: str = Field(
         ...,
         description='Display title for the note. Used in the SPA list and as the s3 object filename.',
         examples=['Q3 churn analysis'],
@@ -518,7 +571,7 @@ class CreateNoteDto(BaseModel):
 
 class CreateSavedQueryDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    name: str | None = Field(
+    name: str = Field(
         ..., description='Display name for the saved query.', examples=['Top customers Q3']
     )
     query: str | None = Field(
@@ -526,7 +579,7 @@ class CreateSavedQueryDto(BaseModel):
         description='SQL text. Stored in tenant S3 + context_items. May be omitted or empty when creating a placeholder saved query.',
         examples=['SELECT customer_id, SUM(amount) FROM orders GROUP BY 1 ORDER BY 2 DESC LIMIT 10'],
     )
-    connection_id: str | None = Field(
+    connection_id: str = Field(
         ...,
         alias='connectionId',
         description='Data connection id this query targets. Must reference an existing integration connection in the org.',
@@ -596,7 +649,7 @@ class CreatedCustomContextItemResponseDto(BaseModel):
 
 class CustomAttributeDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    name: str | None = Field(..., description='Attribute name.', examples=['status'])
+    name: str = Field(..., description='Attribute name.', examples=['status'])
     data_type: str | None = Field(
         None, alias='dataType', description='Customer-defined attribute type.', examples=['string']
     )
@@ -712,8 +765,8 @@ class EvaluationRunTrigger(str, Enum):
 class EvaluationRunWithResultsDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(..., description='Run ID')
-    skill_id: float | None = Field(..., alias='skillId', description='Scope ID')
-    trigger: EvaluationRunTrigger | None = Field(..., description='How the run was triggered')
+    skill_id: float = Field(..., alias='skillId', description='Scope ID')
+    trigger: EvaluationRunTrigger = Field(..., description='How the run was triggered')
     status: EvaluationRunStatus = Field(..., description='Run status')
     started_at: str = Field(..., alias='startedAt', description='When the run started')
     finished_at: dict[str, Any] | None = Field(
@@ -745,6 +798,48 @@ class EvaluationSlackChannelDto(BaseModel):
     slack_user_id_by_recipient: dict[str, Any] = Field(
         ..., alias='slackUserIdByRecipient', description='Mapping of Clerk user ID to Slack user ID'
     )
+
+
+class FailedUploadFromUrlDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    index: float = Field(
+        ..., description='Index of the failing entry in the request `urls` array.', examples=[1]
+    )
+    url: str = Field(
+        ...,
+        description='URL from the failing request entry.',
+        examples=['https://internal.example.com/secret'],
+    )
+    error: str = Field(
+        ...,
+        description='Human-readable failure reason (blocked URL, fetch error, oversize, bad MIME, etc).',
+        examples=['HTTP 404: Not Found'],
+    )
+
+
+class FailedUploadUrlDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    index: float = Field(
+        ..., description='Index of the failing entry in the request `files` array.', examples=[2]
+    )
+    file_name: str = Field(
+        ...,
+        alias='fileName',
+        description='File name from the failing request entry.',
+        examples=['malware.exe'],
+    )
+    error: str = Field(
+        ...,
+        description='Human-readable validation failure reason.',
+        examples=['File type "application/x-msdownload" is not allowed. Allowed types: PDF, images, text, and common document formats.'],
+    )
+
+
+class FileUploadResourceStatus(str, Enum):
+    pending = 'pending'
+    processing = 'processing'
+    ready = 'ready'
+    failed = 'failed'
 
 
 class StatusReason(str, Enum):
@@ -808,7 +903,7 @@ class GetAutomationRunResponseDto(BaseModel):
         alias='statusReason',
         description='Display-only signal that the workflow closed for a non-success reason.',
     )
-    source: AutomationRunSource | None = Field(
+    source: AutomationRunSource = Field(
         ...,
         description='Where the payload was read from. `live-query` = the run is still in progress; `history` = a completed run.',
     )
@@ -921,7 +1016,7 @@ class ListConversationsResponseDto(BaseModel):
         description='Opaque token for the next page. `null` when there are no further pages.',
         examples=['eyJwYWdlIjoxLCJwYWdlU2l6ZSI6MTB9'],
     )
-    total_count: float | None = Field(
+    total_count: float = Field(
         ...,
         alias='totalCount',
         description='Total threads visible in the scanned window after filters. Not a global count.',
@@ -1096,7 +1191,7 @@ class ModusChatRequestDto(BaseModel):
         examples=['What were our top revenue drivers last quarter?'],
         min_length=1,
     )
-    model: Model | None = Field(
+    model: Model = Field(
         ...,
         description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-4.6, claude-opus-4.8, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, kimi-k3.',
         examples=['claude-sonnet-4.6'],
@@ -1278,7 +1373,7 @@ class SkillChatRequestDto(BaseModel):
         examples=['Summarize open support tickets from last week.'],
         min_length=1,
     )
-    model: Model | None = Field(
+    model: Model = Field(
         ...,
         description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-4.6, claude-opus-4.8, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, kimi-k3.',
         examples=['claude-sonnet-4.6'],
@@ -1372,7 +1467,7 @@ class ToggleAgentDto(BaseModel):
 
 class ToolCatalogActionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    name: str | None = Field(
+    name: str = Field(
         ...,
         description='Stable action id — the exact string to put in `toolset.<id>.actions`.',
         examples=['list_dags'],
@@ -1383,7 +1478,7 @@ class ToolCatalogActionDto(BaseModel):
         description='Human-readable label for display.',
         examples=['List DAGs'],
     )
-    description: str | None = Field(
+    description: str = Field(
         ...,
         description='What this action does.',
         examples=['List the selected DAGs with their schedule, owners, tags, and paused state.'],
@@ -1622,6 +1717,83 @@ class UpdateMemoryRequestDto(BaseModel):
     )
 
 
+class UploadFromUrlDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    url: str = Field(
+        ...,
+        description='Source URL to fetch. SSRF-guarded; every redirect hop is re-validated.',
+        examples=['https://example.com/reports/Q3-churn-report.pdf'],
+    )
+    file_name: str | None = Field(
+        None,
+        alias='fileName',
+        description='Override file name. Inferred from the URL path when omitted.',
+        examples=['Q3-churn-report.pdf'],
+    )
+
+
+class UploadUrlDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    file_name: str = Field(
+        ...,
+        alias='fileName',
+        description='Original file name, used to build the S3 object key.',
+        examples=['Q3-churn-report.pdf'],
+    )
+    content_type: str = Field(
+        ...,
+        alias='contentType',
+        description='MIME type of the file. `application/octet-stream` falls back to an extension-based guess. Allowed categories: PDF, images, text, Office/OpenDocument documents, audio, and video.',
+        examples=['application/pdf'],
+    )
+    file_size: float = Field(
+        ...,
+        alias='fileSize',
+        description='File size in bytes. Rejected above 50MB.',
+        examples=[1048576],
+    )
+
+
+class UploadUrlResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    upload_id: str = Field(
+        ...,
+        alias='uploadId',
+        description='Server-generated id for this upload. Use it on `GET /context/files/{uploadId}`.',
+        examples=['7a3f9d2c-1111-4000-a000-000000000abc'],
+    )
+    upload_url: str = Field(
+        ...,
+        alias='uploadUrl',
+        description='Presigned S3 URL. PUT the raw file bytes here within 15 minutes.',
+        examples=['https://tenant-bucket.s3.amazonaws.com/context_uploads/...'],
+    )
+    s3_key: str = Field(
+        ...,
+        alias='s3Key',
+        description='Tenant S3 key the file will land at once uploaded.',
+        examples=['context_uploads/7a3f9d2c.../Q3-churn-report.pdf'],
+    )
+    file_name: str = Field(
+        ...,
+        alias='fileName',
+        description='Sanitized file name (non-alphanumeric characters replaced with `_`).',
+        examples=['Q3-churn-report.pdf'],
+    )
+    content_type: str = Field(
+        ...,
+        alias='contentType',
+        description='Resolved content type (extension-inferred when the request sent `application/octet-stream`).',
+        examples=['application/pdf'],
+    )
+    expires_at: str = Field(
+        ...,
+        alias='expiresAt',
+        description='ISO timestamp when the presigned URL expires (15 minutes from creation).',
+        examples=['2026-08-12T14:15:00.000Z'],
+    )
+
+
 class UsageBucketDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     bucket: str = Field(..., description='ISO8601 timestamp at the start of the bucket.')
@@ -1662,7 +1834,7 @@ class UsageUserDto(BaseModel):
 class WorkflowEdgeDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(..., description='Stable edge id, unique within the graph.', examples=['e1'])
-    source: str | None = Field(..., description='Source node id.', examples=['1'])
+    source: str = Field(..., description='Source node id.', examples=['1'])
     target: str = Field(..., description='Target node id.', examples=['2'])
     source_handle: str | None = Field(
         None,
@@ -1824,12 +1996,12 @@ class WorkflowActionSource(str, Enum):
 
 class AddAgentInterfaceDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    type: AgentInterfaceType | None = Field(
+    type: AgentInterfaceType = Field(
         ...,
         description='Interface type. Only `slack`, `mcp`, and `teams` are accepted.',
         examples=['mcp'],
     )
-    name: str | None = Field(
+    name: str = Field(
         ...,
         description='Display name for the interface.',
         examples=['Internal MCP'],
@@ -1884,12 +2056,12 @@ class AgentInterfaceDto(BaseModel):
         examples=['00000000-0000-4000-a000-000000000300'],
     )
     agent_id: float = Field(..., alias='agentId', description='Parent workflow id.', examples=[42])
-    type: AgentInterfaceType | None = Field(
+    type: AgentInterfaceType = Field(
         ...,
         description='Interface type. `slack` and `teams` deliver chat triggers; `mcp` exposes the workflow as an MCP server.',
         examples=['mcp'],
     )
-    name: str | None = Field(
+    name: str = Field(
         ...,
         description='Display name for the interface (shown in the SPA).',
         examples=['Internal MCP'],
@@ -1922,9 +2094,20 @@ class BatchCreateCustomContextItemsResponseDto(BaseModel):
     )
 
 
+class BulkUploadUrlsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    uploaded: list[UploadUrlResponseDto] = Field(
+        ..., description='Presigned upload slots for every file that passed validation.'
+    )
+    failed: list[FailedUploadUrlDto] = Field(
+        ...,
+        description='Per-item failures (bad MIME type, oversize, etc). Empty when every file succeeded.',
+    )
+
+
 class ConversationMessageDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    type: ConversationMessageType | None = Field(
+    type: ConversationMessageType = Field(
         ...,
         description='Message role. `human` and `ai` cover the user-visible turns; `system`, `tool`, and `unknown` are surfaced for completeness.',
         examples=['human'],
@@ -2083,8 +2266,8 @@ class EvaluationNotificationsDto(BaseModel):
 class EvaluationRunDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(..., description='Run ID')
-    skill_id: float | None = Field(..., alias='skillId', description='Scope ID')
-    trigger: EvaluationRunTrigger | None = Field(..., description='How the run was triggered')
+    skill_id: float = Field(..., alias='skillId', description='Scope ID')
+    trigger: EvaluationRunTrigger = Field(..., description='How the run was triggered')
     status: EvaluationRunStatus = Field(..., description='Run status')
     started_at: str = Field(..., alias='startedAt', description='When the run started')
     finished_at: dict[str, Any] | None = Field(
@@ -2107,6 +2290,36 @@ class EvaluationRunDto(BaseModel):
     )
 
 
+class FileUploadResourceDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    upload_id: str = Field(
+        ...,
+        alias='uploadId',
+        description='Upload id — same value returned by `uploadUrl`/`uploadUrls`.',
+        examples=['7a3f9d2c-1111-4000-a000-000000000abc'],
+    )
+    status: FileUploadResourceStatus = Field(
+        ..., description='Current processing status.', examples=['ready']
+    )
+    file_name: str | None = Field(None, alias='fileName', examples=['Q3-churn-report.pdf'])
+    content_type: str | None = Field(None, alias='contentType', examples=['application/pdf'])
+    file_size: float | None = Field(None, alias='fileSize', examples=[1048576])
+    s3_key: str | None = Field(
+        None, alias='s3Key', examples=['context_uploads/7a3f9d2c.../Q3-churn-report.pdf']
+    )
+    created_at: str | None = Field(None, alias='createdAt', examples=['2026-08-12T14:00:00.000Z'])
+    summary: str | None = Field(
+        None, description='Generated summary once parsing completes. Null until then.'
+    )
+    parsed: bool | None = Field(
+        None, description='Whether the file was successfully parsed. Null while pending/processing.'
+    )
+    document_count: float | None = Field(None, alias='documentCount', examples=[1])
+    error_message: str | None = Field(
+        None, alias='errorMessage', description='Populated when `status` is `failed`.'
+    )
+
+
 class ListAgentInterfacesResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     interfaces: list[AgentInterfaceDto] = Field(
@@ -2121,6 +2334,19 @@ class ListEvaluationRunsResponseDto(BaseModel):
         ...,
         alias='nextPageToken',
         description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
+    )
+
+
+class ListFilesResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    files: list[FileUploadResourceDto] = Field(
+        ..., description='Page of durable file uploads. Empty when none match.'
+    )
+    next_page_token: str | None = Field(
+        ...,
+        alias='nextPageToken',
+        description='Opaque token for the next page; `null` when this was the last page.',
+        examples=['eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTAxIiwidWlkIjoiYWJjIn0'],
     )
 
 
@@ -2287,7 +2513,7 @@ class SkillVariationDto(BaseModel):
         description='Ordered list of instruction blocks. Each entry is a free-form string the builder rendered into the system prompt.',
         examples=[['Be concise.', 'Always justify the score.']],
     )
-    model: str | None = Field(
+    model: str = Field(
         ...,
         description='Provider-prefixed model id. The orchestrator routes by prefix.',
         examples=['anthropic/claude-sonnet-4.6'],
@@ -2382,7 +2608,7 @@ class WorkflowDto(BaseModel):
         description='URL-safe slug used in human-readable links. Unique per org.',
         examples=['customer-churn-agent-a3f'],
     )
-    name: str | None = Field(
+    name: str = Field(
         ...,
         description='Display name of the workflow. Shown in the builder and in run logs.',
         examples=['Customer Churn Analyzer'],
@@ -2397,7 +2623,7 @@ class WorkflowDto(BaseModel):
         description='Lifecycle status. `draft` = never deployed. `active` = deployed. `deleted` = soft-deleted.',
         examples=['active'],
     )
-    type: AgentType | None = Field(
+    type: AgentType = Field(
         ...,
         description='Type of workflow. `task` = single-step scope orchestration; `workflow` = multi-step graph.',
         examples=['task'],
@@ -2487,7 +2713,7 @@ class WorkflowDto(BaseModel):
 class WorkflowNodeDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(..., description='Stable node id, unique within the graph.', examples=['1'])
-    type: WorkflowNodeType | None = Field(
+    type: WorkflowNodeType = Field(
         ...,
         description='Node kind. Determines how the runtime interprets `data`.',
         examples=['start'],
@@ -2559,7 +2785,7 @@ class SupplementalContextDto(BaseModel):
         ...,
         description='Background context (e.g. Slack/Teams thread + channel history) to prepend to the system prompt.',
     )
-    source: SupplementalContextSource | None = Field(
+    source: SupplementalContextSource = Field(
         ..., description='Producer that supplied the supplemental context.'
     )
 
@@ -2678,6 +2904,17 @@ class BatchCreateCustomContextItemsDto(BaseModel):
     )
 
 
+class BulkUploadFromUrlsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    uploaded: list[FileUploadResourceDto] = Field(
+        ...,
+        description='File upload resources for every URL that was fetched and landed successfully.',
+    )
+    failed: list[FailedUploadFromUrlDto] = Field(
+        ..., description='Per-item failures. Empty when every URL succeeded.'
+    )
+
+
 class ConversationDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     thread_id: str = Field(
@@ -2716,14 +2953,14 @@ class ConversationDto(BaseModel):
 
 class CreateAgentDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    name: str | None = Field(
+    name: str = Field(
         ...,
         description='Display name for the workflow. Will be slugified into a URL-safe path.',
         examples=['Daily Sales Report'],
         max_length=200,
         min_length=1,
     )
-    type: AgentType | None = Field(
+    type: AgentType = Field(
         ...,
         description='Workflow type. Only `workflow` is supported; `task` is accepted as a deprecated alias and silently upgraded to `workflow`.',
         examples=['workflow'],
@@ -2756,7 +2993,7 @@ class CreateAgentDto(BaseModel):
 
 class CreateSkillDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    name: str | None = Field(
+    name: str = Field(
         ...,
         description='Display name for the scope. Will be slugified into a URL-safe path.',
         examples=['Customer Churn Analyzer'],
@@ -2860,7 +3097,7 @@ class ScopeDto(BaseModel):
         description='URL-safe slug used in human-readable links. Unique per org.',
         examples=['customer-churn-analyzer-a3f'],
     )
-    name: str | None = Field(
+    name: str = Field(
         ...,
         description='Display name of the scope. Shown in the builder and in run logs.',
         examples=['Customer Churn Analyzer'],
