@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import mimetypes
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -43,6 +42,14 @@ _DEFAULT_PUT_TIMEOUT_S = 60.0
 _STATUS_ORDER = {"pending": 0, "processing": 1, "ready": 2}
 _WAIT_UNTIL_VALUES = ("processing", "ready")
 
+# The server owns the extension->MIME table (`EXTENSION_MIME_MAP` in
+# `@modus/file-uploads`) and resolves it whenever a client sends
+# `application/octet-stream`. Sending that instead of guessing locally keeps one
+# source of truth: `mimetypes` results vary by platform and Python version, so a
+# local guess can differ from the TypeScript SDK's for the same file and then be
+# rejected by the server's allow-list.
+DEFER_CONTENT_TYPE_TO_SERVER = "application/octet-stream"
+
 WaitUntil = Literal["processing", "ready"]
 
 _SlotAssignment = Tuple[Path, UploadUrlSlot]
@@ -60,14 +67,11 @@ def _validate_bulk_size(count: int, *, name: str) -> None:
         raise ValueError(f"{name} must have at most {MAX_BULK_UPLOAD_FILES} entries, got {count}")
 
 
-def _guess_content_type(file_name: str) -> str:
-    return mimetypes.guess_type(file_name)[0] or "application/octet-stream"
-
-
 def _slot_content_type(slot: UploadUrlSlot, file_name: str) -> str:
     # `content_type` is required on the wire; the generated type is `str | None`
-    # only due to codegen field-name reuse across DTOs. Guess as a fallback.
-    return slot.content_type or _guess_content_type(file_name)
+    # only due to codegen field-name reuse across DTOs. Fall back to the
+    # defer-to-server sentinel rather than guessing.
+    return slot.content_type or DEFER_CONTENT_TYPE_TO_SERVER
 
 
 def _status_value(item: FileUpload) -> str:
@@ -151,7 +155,7 @@ def _slot_inputs_for_batch(
             inputs.append(
                 UploadUrlInput(
                     file_name=p.name,
-                    content_type=_guess_content_type(p.name),
+                    content_type=DEFER_CONTENT_TYPE_TO_SERVER,
                     file_size=p.stat().st_size,
                 )
             )
@@ -353,7 +357,7 @@ class ContextFilesResource:
             raise ValueError(f"Not a file: {file_path}")
         slot = self.create_upload_url(
             file_name=file_path.name,
-            content_type=_guess_content_type(file_path.name),
+            content_type=DEFER_CONTENT_TYPE_TO_SERVER,
             file_size=file_path.stat().st_size,
         )
         content_type = _slot_content_type(slot, file_path.name)
@@ -542,7 +546,7 @@ class AsyncContextFilesResource:
             raise ValueError(f"Not a file: {file_path}")
         slot = await self.create_upload_url(
             file_name=file_path.name,
-            content_type=_guess_content_type(file_path.name),
+            content_type=DEFER_CONTENT_TYPE_TO_SERVER,
             file_size=file_path.stat().st_size,
         )
         content_type = _slot_content_type(slot, file_path.name)
