@@ -41,6 +41,9 @@ MAX_BULK_UPLOAD_FILES = 100
 
 _DEFAULT_LIST_PAGE_SIZE = 50
 _DEFAULT_PUT_TIMEOUT_S = 60.0
+# `pending` is gone from the public enum: an upload has no resource until it is
+# finalized. Kept at rank 0 so an older server still reporting it is ordered
+# below `processing` rather than treated as unknown.
 _STATUS_ORDER = {"pending": 0, "processing": 1, "ready": 2}
 _WAIT_UNTIL_VALUES = ("processing", "ready")
 

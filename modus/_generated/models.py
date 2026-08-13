@@ -870,7 +870,6 @@ class FailedUploadUrlDto(BaseModel):
 
 
 class FileUploadResourceStatus(str, Enum):
-    pending = 'pending'
     processing = 'processing'
     ready = 'ready'
     failed = 'failed'
