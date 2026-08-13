@@ -12,7 +12,9 @@ import pytest
 import respx
 from modus._exceptions import ModusError
 from modus.management import AsyncModusManagement, ModusManagement
+from modus.management.resources.context.files import MAX_BULK_UPLOAD_FILES
 from modus.management.types.context_files import (
+    FinalizeInput,
     UploadFromUrlInput,
     UploadUrlInput,
 )
@@ -197,16 +199,21 @@ def test_upload_puts_bytes_and_polls_until_processing(tmp_path):
         return_value=httpx.Response(201, json=_slot_json("up-5"))
     )
     put_route = respx.put(S3_URL).mock(return_value=httpx.Response(200))
-    respx.get(f"{BASE}/api/v1/context/files/up-5").mock(
-        side_effect=[
-            httpx.Response(200, json=_file_upload_json("up-5", "pending")),
-            httpx.Response(200, json=_file_upload_json("up-5", "processing")),
-        ]
+    # upload() finalizes after the PUT; finalize already returns `processing`,
+    # so the default wait_until is satisfied without polling.
+    finalize_route = respx.post(f"{BASE}/api/v1/context/files/up-5/finalize").mock(
+        return_value=httpx.Response(201, json=_file_upload_json("up-5", "processing"))
+    )
+    get_route = respx.get(f"{BASE}/api/v1/context/files/up-5").mock(
+        return_value=httpx.Response(200, json=_file_upload_json("up-5", "processing"))
     )
 
     result = _client().context.files.upload(file_path, poll_interval_s=0)
 
     assert result.status.value == "processing"
+    assert finalize_route.called
+    assert json.loads(finalize_route.calls[0].request.read())["fileName"] == "report.pdf"
+    assert not get_route.called
     assert put_route.calls[0].request.read() == b"%PDF-1.4 fake content"
     assert put_route.calls[0].request.headers["content-type"] == "application/pdf"
 
@@ -255,6 +262,28 @@ def _make_tree(tmp_path):
     return sub
 
 
+def _stub_finalize():
+    """Bulk finalize echoes back whatever it was asked to finalize.
+
+    upload_dir now ends each batch with one finalize call instead of a poll per
+    file, so every directory test needs this route.
+    """
+
+    def _respond(request):
+        body = json.loads(request.read())
+        return httpx.Response(
+            200,
+            json={
+                "finalized": [
+                    _file_upload_json(u["uploadId"], "processing") for u in body["uploads"]
+                ],
+                "failed": [],
+            },
+        )
+
+    return respx.post(f"{BASE}/api/v1/context/files/finalize").mock(side_effect=_respond)
+
+
 @respx.mock
 def test_upload_dir_skips_hidden_and_symlinks_recursive(tmp_path):
     _make_tree(tmp_path)
@@ -279,6 +308,7 @@ def test_upload_dir_skips_hidden_and_symlinks_recursive(tmp_path):
         return_value=httpx.Response(200, json=_file_upload_json("up-b", "processing"))
     )
 
+    _stub_finalize()
     result = _client().context.files.upload_dir(tmp_path)
 
     assert len(result.uploaded) == 2
@@ -308,6 +338,7 @@ def test_upload_dir_continue_on_error(tmp_path):
         return_value=httpx.Response(200, json=_file_upload_json("up-good", "processing"))
     )
 
+    _stub_finalize()
     result = _client().context.files.upload_dir(tmp_path)
 
     assert len(result.uploaded) == 1
@@ -339,6 +370,7 @@ def test_upload_dir_continues_when_stat_fails(tmp_path, monkeypatch):
         return_value=httpx.Response(200, json=_file_upload_json("up-good", "processing"))
     )
 
+    _stub_finalize()
     result = _client().context.files.upload_dir(tmp_path)
 
     assert len(result.uploaded) == 1
@@ -362,6 +394,7 @@ def test_upload_dir_records_missing_slots_as_failures(tmp_path):
         return_value=httpx.Response(200, json=_file_upload_json("up-a", "processing"))
     )
 
+    _stub_finalize()
     result = _client().context.files.upload_dir(tmp_path)
 
     assert len(result.uploaded) == 1
@@ -394,6 +427,7 @@ def test_upload_dir_continue_on_error_when_put_fails(tmp_path):
         return_value=httpx.Response(200, json=_file_upload_json("up-a", "processing"))
     )
 
+    _stub_finalize()
     result = _client().context.files.upload_dir(tmp_path)
 
     assert len(result.uploaded) == 1
@@ -424,6 +458,7 @@ def test_upload_dir_pages_create_upload_urls_in_batches_of_100(tmp_path):
     respx.put(SHARED_PUT_URL).mock(return_value=httpx.Response(200))
     respx.get(url__regex=GET_ANY_UPLOAD_ID.pattern).mock(side_effect=_processing_get_side_effect)
 
+    _stub_finalize()
     result = _client().context.files.upload_dir(tmp_path, recursive=False)
 
     assert len(result.uploaded) == total_files
@@ -459,6 +494,7 @@ def test_upload_dir_bounds_concurrency_to_default_10(tmp_path):
     respx.put(SHARED_PUT_URL).mock(side_effect=put_side_effect)
 
     # No explicit concurrency= — this exercises the documented default of 10.
+    _stub_finalize()
     result = _client().context.files.upload_dir(tmp_path, recursive=False)
 
     assert len(result.uploaded) == total_files
@@ -480,6 +516,9 @@ async def test_async_upload_puts_bytes_and_polls(tmp_path):
         return_value=httpx.Response(201, json=_slot_json("up-async"))
     )
     respx.put(S3_URL).mock(return_value=httpx.Response(200))
+    finalize_route = respx.post(f"{BASE}/api/v1/context/files/up-async/finalize").mock(
+        return_value=httpx.Response(201, json=_file_upload_json("up-async", "processing"))
+    )
     respx.get(f"{BASE}/api/v1/context/files/up-async").mock(
         return_value=httpx.Response(200, json=_file_upload_json("up-async", "processing"))
     )
@@ -487,6 +526,7 @@ async def test_async_upload_puts_bytes_and_polls(tmp_path):
     async with AsyncModusManagement(api_key="modus_test_key", base_url=BASE) as client:
         result = await client.context.files.upload(file_path, poll_interval_s=0)
 
+    assert finalize_route.called
     assert result.upload_id == "up-async"
     assert result.status.value == "processing"
 
@@ -516,6 +556,7 @@ async def test_async_upload_dir_uploads_all_files_and_continues_on_error(tmp_pat
     respx.get(url__regex=GET_ANY_UPLOAD_ID.pattern).mock(side_effect=_processing_get_side_effect)
 
     async with AsyncModusManagement(api_key="modus_test_key", base_url=BASE) as client:
+        _stub_finalize()
         result = await client.context.files.upload_dir(tmp_path, concurrency=2)
 
     assert len(result.uploaded) == 2
@@ -523,3 +564,138 @@ async def test_async_upload_dir_uploads_all_files_and_continues_on_error(tmp_pat
     assert len(result.failed) == 1
     assert result.failed[0].path.endswith("bad.txt")
     assert result.failed[0].error == "not allowed"
+
+
+@respx.mock
+def test_finalize_sends_file_name_and_returns_resource():
+    route = respx.post(f"{BASE}/api/v1/context/files/up-9/finalize").mock(
+        return_value=httpx.Response(201, json=_file_upload_json("up-9", "processing"))
+    )
+
+    result = _client().context.files.finalize("up-9", file_name="report.pdf")
+
+    assert result.upload_id == "up-9"
+    assert json.loads(route.calls[0].request.read()) == {"fileName": "report.pdf"}
+
+
+@respx.mock
+def test_finalize_many_serializes_uploads_and_maps_failures():
+    route = respx.post(f"{BASE}/api/v1/context/files/finalize").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "finalized": [_file_upload_json("up-a", "processing")],
+                "failed": [
+                    {"index": 1, "uploadId": "up-b", "error": "The upload has not been received."}
+                ],
+            },
+        )
+    )
+
+    result = _client().context.files.finalize_many(
+        [
+            FinalizeInput(upload_id="up-a", file_name="a.pdf"),
+            FinalizeInput(upload_id="up-b", file_name="b.pdf"),
+        ]
+    )
+
+    # Exact wire shape: camelCase keys, request order preserved.
+    assert json.loads(route.calls[0].request.read()) == {
+        "uploads": [
+            {"uploadId": "up-a", "fileName": "a.pdf"},
+            {"uploadId": "up-b", "fileName": "b.pdf"},
+        ]
+    }
+    assert [f.upload_id for f in result.finalized] == ["up-a"]
+    assert result.failed[0].index == 1
+    assert result.failed[0].upload_id == "up-b"
+
+
+def test_finalize_many_rejects_an_empty_batch():
+    with pytest.raises(ValueError):
+        _client().context.files.finalize_many([])
+
+
+def test_finalize_many_rejects_a_batch_over_the_cap():
+    uploads = [
+        FinalizeInput(upload_id=f"u-{i}", file_name=f"f-{i}.pdf")
+        for i in range(MAX_BULK_UPLOAD_FILES + 1)
+    ]
+    with pytest.raises(ValueError):
+        _client().context.files.finalize_many(uploads)
+
+
+@respx.mock
+def test_upload_files_uploads_an_explicit_list(tmp_path):
+    a = tmp_path / "a.txt"
+    a.write_text("A")
+    b = tmp_path / "b.txt"
+    b.write_text("B")
+
+    respx.post(f"{BASE}/api/v1/context/files/uploadUrls").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "uploaded": [_slot_json("up-a", upload_url=S3_URL), _slot_json("up-b", upload_url=S3_URL)],
+                "failed": [],
+            },
+        )
+    )
+    respx.put(S3_URL).mock(return_value=httpx.Response(200))
+    _stub_finalize()
+
+    result = _client().context.files.upload_files([a, b])
+
+    assert len(result.uploaded) == 2
+    assert not result.failed
+
+
+@respx.mock
+def test_upload_files_maps_a_finalize_failure_back_to_its_local_path(tmp_path):
+    a = tmp_path / "a.txt"
+    a.write_text("A")
+
+    respx.post(f"{BASE}/api/v1/context/files/uploadUrls").mock(
+        return_value=httpx.Response(
+            200, json={"uploaded": [_slot_json("up-a", upload_url=S3_URL)], "failed": []}
+        )
+    )
+    respx.put(S3_URL).mock(return_value=httpx.Response(200))
+    respx.post(f"{BASE}/api/v1/context/files/finalize").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "finalized": [],
+                "failed": [{"index": 0, "uploadId": "up-a", "error": "not received"}],
+            },
+        )
+    )
+
+    result = _client().context.files.upload_files([a])
+
+    assert not result.uploaded
+    assert result.failed[0].path == str(a)
+    assert result.failed[0].error == "not received"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_async_finalize_and_finalize_many():
+    respx.post(f"{BASE}/api/v1/context/files/up-9/finalize").mock(
+        return_value=httpx.Response(201, json=_file_upload_json("up-9", "processing"))
+    )
+    bulk = respx.post(f"{BASE}/api/v1/context/files/finalize").mock(
+        return_value=httpx.Response(
+            200, json={"finalized": [_file_upload_json("up-a", "processing")], "failed": []}
+        )
+    )
+
+    async with AsyncModusManagement(api_key="modus_test_key", base_url=BASE) as client:
+        one = await client.context.files.finalize("up-9", file_name="report.pdf")
+        many = await client.context.files.finalize_many(
+            [FinalizeInput(upload_id="up-a", file_name="a.pdf")]
+        )
+
+    assert one.upload_id == "up-9"
+    assert [f.upload_id for f in many.finalized] == ["up-a"]
+    assert json.loads(bulk.calls[0].request.read())["uploads"][0]["fileName"] == "a.pdf"

@@ -7,8 +7,10 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from .._generated.models import (
+    BulkFinalizeResponseDto,
     BulkUploadFromUrlsResponseDto,
     BulkUploadUrlsResponseDto,
+    FailedFinalizeDto,
     FailedUploadFromUrlDto,
     FailedUploadUrlDto,
     FileUploadResourceDto,
@@ -23,6 +25,8 @@ BulkUploadUrlsResult = BulkUploadUrlsResponseDto
 BulkUploadFromUrlsResult = BulkUploadFromUrlsResponseDto
 FailedUploadUrl = FailedUploadUrlDto
 FailedUploadFromUrl = FailedUploadFromUrlDto
+BulkFinalizeResult = BulkFinalizeResponseDto
+FinalizeFailure = FailedFinalizeDto
 
 
 @dataclass(frozen=True)
@@ -59,15 +63,26 @@ class UploadDirResult:
 
 
 __all__ = [
+    "BulkFinalizeResult",
     "BulkUploadFromUrlsResult",
     "BulkUploadUrlsResult",
     "FailedUploadFromUrl",
     "FailedUploadUrl",
     "FileUpload",
     "FileUploadStatus",
+    "FinalizeFailure",
+    "FinalizeInput",
     "UploadDirFailure",
     "UploadDirResult",
     "UploadFromUrlInput",
     "UploadUrlInput",
     "UploadUrlSlot",
 ]
+
+
+@dataclass(frozen=True)
+class FinalizeInput:
+    """One entry for ``finalize_many()``."""
+
+    upload_id: str
+    file_name: str

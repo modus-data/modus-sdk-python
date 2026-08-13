@@ -210,6 +210,22 @@ class AutomationRunSource(str, Enum):
     history = 'history'
 
 
+class BulkFinalizeItemDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    upload_id: str = Field(
+        ...,
+        alias='uploadId',
+        description='Upload id returned by `uploadUrl` / `uploadUrls`.',
+        examples=['7a3f9d2c-1111-4000-a000-000000000abc'],
+    )
+    file_name: str = Field(
+        ...,
+        alias='fileName',
+        description='File name returned alongside the upload id.',
+        examples=['Q3-churn-report.pdf'],
+    )
+
+
 class BulkUploadFromUrlItemDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     url: str | None = Field(
@@ -800,6 +816,24 @@ class EvaluationSlackChannelDto(BaseModel):
     )
 
 
+class FailedFinalizeDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    index: float = Field(
+        ..., description='Index of the failing entry in the request `uploads` array.', examples=[2]
+    )
+    upload_id: str = Field(
+        ...,
+        alias='uploadId',
+        description='Upload id from the failing request entry.',
+        examples=['7a3f9d2c-1111-4000-a000-000000000abc'],
+    )
+    error: str = Field(
+        ...,
+        description='Reason this entry could not be finalized.',
+        examples=['The upload has not been received.'],
+    )
+
+
 class FailedUploadFromUrlDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     index: float = Field(
@@ -840,6 +874,16 @@ class FileUploadResourceStatus(str, Enum):
     processing = 'processing'
     ready = 'ready'
     failed = 'failed'
+
+
+class FinalizeUploadDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    file_name: str = Field(
+        ...,
+        alias='fileName',
+        description='File name returned by `uploadUrl`, used to locate the uploaded object.',
+        examples=['Q3-churn-report.pdf'],
+    )
 
 
 class StatusReason(str, Enum):
@@ -2094,6 +2138,13 @@ class BatchCreateCustomContextItemsResponseDto(BaseModel):
     )
 
 
+class BulkFinalizeDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    uploads: list[BulkFinalizeItemDto] = Field(
+        ..., description='Uploads to finalize. Max 100 per request.'
+    )
+
+
 class BulkUploadUrlsResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     uploaded: list[UploadUrlResponseDto] = Field(
@@ -2901,6 +2952,16 @@ class BatchCreateCustomContextItemsDto(BaseModel):
     items: list[CreateCustomContextItemDto] = Field(
         ...,
         description='Custom context items to upsert. Batch imports are idempotent by item hierarchy.',
+    )
+
+
+class BulkFinalizeResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    finalized: list[FileUploadResourceDto] = Field(
+        ..., description='Resources for every upload that was finalized.'
+    )
+    failed: list[FailedFinalizeDto] = Field(
+        ..., description='Per-item failures. Empty when every upload was finalized.'
     )
 
 

@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from modus.types.context_files import (
+    BulkFinalizeResult,
     BulkUploadFromUrlsResult,
     BulkUploadUrlsResult,
     FailedUploadFromUrl,
     FailedUploadUrl,
     FileUpload,
     FileUploadStatus,
+    FinalizeFailure,
+    FinalizeInput,
     UploadDirFailure,
     UploadDirResult,
     UploadFromUrlInput,
@@ -17,11 +20,14 @@ from modus.types.context_files import (
 )
 
 __all__ = [
+    "BulkFinalizeResult",
     "BulkUploadFromUrlsResult",
     "BulkUploadUrlsResult",
     "FailedUploadFromUrl",
     "FailedUploadUrl",
     "FileUpload",
+    "FinalizeFailure",
+    "FinalizeInput",
     "FileUploadStatus",
     "UploadDirFailure",
     "UploadDirResult",
