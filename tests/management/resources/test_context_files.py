@@ -708,6 +708,65 @@ def test_upload_dir_on_progress_counts_slot_failures(tmp_path):
 
 
 @respx.mock
+def test_upload_dir_on_progress_ticks_up_one_at_a_time_for_multiple_slot_failures(tmp_path):
+    (tmp_path / "bad1.txt").write_text("bad")
+    (tmp_path / "bad2.txt").write_text("bad")
+
+    respx.post(f"{BASE}/api/v1/context/files/uploadUrls").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "uploaded": [],
+                "failed": [
+                    {"index": 0, "fileName": "bad1.txt", "error": "not allowed"},
+                    {"index": 1, "fileName": "bad2.txt", "error": "not allowed"},
+                ],
+            },
+        )
+    )
+
+    ticks: list = []
+    result = _client().context.files.upload_dir(
+        tmp_path,
+        on_progress=lambda p: ticks.append((p.completed, p.total, p.succeeded, p.failed)),
+    )
+
+    assert len(result.failed) == 2
+    # completed must equal succeeded + failed on every tick, not just the last one.
+    assert ticks == [(1, 2, 0, 1), (2, 2, 0, 2)]
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_async_upload_dir_on_progress_ticks_up_one_at_a_time_for_multiple_slot_failures(tmp_path):
+    (tmp_path / "bad1.txt").write_text("bad")
+    (tmp_path / "bad2.txt").write_text("bad")
+
+    respx.post(f"{BASE}/api/v1/context/files/uploadUrls").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "uploaded": [],
+                "failed": [
+                    {"index": 0, "fileName": "bad1.txt", "error": "not allowed"},
+                    {"index": 1, "fileName": "bad2.txt", "error": "not allowed"},
+                ],
+            },
+        )
+    )
+
+    ticks: list = []
+    async with AsyncModusManagement(api_key="modus_test_key", base_url=BASE) as client:
+        result = await client.context.files.upload_dir(
+            tmp_path,
+            on_progress=lambda p: ticks.append((p.completed, p.total, p.succeeded, p.failed)),
+        )
+
+    assert len(result.failed) == 2
+    assert ticks == [(1, 2, 0, 1), (2, 2, 0, 2)]
+
+
+@respx.mock
 def test_upload_files_maps_a_finalize_failure_back_to_its_local_path(tmp_path):
     a = tmp_path / "a.txt"
     a.write_text("A")

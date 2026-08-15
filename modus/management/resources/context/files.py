@@ -549,8 +549,21 @@ class ContextFilesResource:
         for batch in _chunked(list(files), MAX_BULK_UPLOAD_FILES):
             failed_before = len(failed)
             slots = self._create_slots(batch, failed)
-            for _ in range(len(failed) - failed_before):
-                emit()
+            # create_upload_urls can report several failures in one synchronous call,
+            # so tick `failed` up one at a time here — reusing `emit()` would report
+            # the final `len(failed)` on every tick and break the
+            # completed == succeeded + failed invariant for all but the last of them.
+            for reported in range(failed_before + 1, len(failed) + 1):
+                completed += 1
+                if on_progress is not None:
+                    on_progress(
+                        UploadProgress(
+                            completed=completed,
+                            total=total,
+                            succeeded=len(uploaded),
+                            failed=reported,
+                        )
+                    )
 
             def on_outcome(result: Union[FileUpload, UploadDirFailure]) -> None:
                 if isinstance(result, UploadDirFailure):
@@ -875,8 +888,21 @@ class AsyncContextFilesResource:
         for batch in _chunked(list(files), MAX_BULK_UPLOAD_FILES):
             failed_before = len(failed)
             slots = await self._create_slots(batch, failed)
-            for _ in range(len(failed) - failed_before):
-                emit()
+            # create_upload_urls can report several failures in one synchronous call,
+            # so tick `failed` up one at a time here — reusing `emit()` would report
+            # the final `len(failed)` on every tick and break the
+            # completed == succeeded + failed invariant for all but the last of them.
+            for reported in range(failed_before + 1, len(failed) + 1):
+                completed += 1
+                if on_progress is not None:
+                    on_progress(
+                        UploadProgress(
+                            completed=completed,
+                            total=total,
+                            succeeded=len(uploaded),
+                            failed=reported,
+                        )
+                    )
 
             def on_outcome(result: Union[FileUpload, UploadDirFailure]) -> None:
                 if isinstance(result, UploadDirFailure):
