@@ -4,7 +4,20 @@ client-side value types for the ``upload()`` / ``upload_dir()`` helpers."""
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Callable, List, Optional
+
+
+@dataclass(frozen=True)
+class UploadProgress:
+    """Progress event fired once per file after it succeeds or fails in a batch upload."""
+
+    completed: int
+    total: int
+    succeeded: int
+    failed: int
+
+
+UploadProgressCallback = Callable[[UploadProgress], None]
 
 from .._generated.models import (
     BulkFinalizeResponseDto,
@@ -75,6 +88,8 @@ __all__ = [
     "UploadDirFailure",
     "UploadDirResult",
     "UploadFromUrlInput",
+    "UploadProgress",
+    "UploadProgressCallback",
     "UploadUrlInput",
     "UploadUrlSlot",
 ]

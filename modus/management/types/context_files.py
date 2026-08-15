@@ -15,6 +15,8 @@ from modus.types.context_files import (
     UploadDirFailure,
     UploadDirResult,
     UploadFromUrlInput,
+    UploadProgress,
+    UploadProgressCallback,
     UploadUrlInput,
     UploadUrlSlot,
 )
@@ -32,6 +34,8 @@ __all__ = [
     "UploadDirFailure",
     "UploadDirResult",
     "UploadFromUrlInput",
+    "UploadProgress",
+    "UploadProgressCallback",
     "UploadUrlInput",
     "UploadUrlSlot",
 ]

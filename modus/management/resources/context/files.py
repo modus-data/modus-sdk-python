@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Iterator, List, Literal, Optional, Sequence, Tuple, Union
+from typing import Callable, Iterator, List, Literal, Optional, Sequence, Tuple, Union
 
 import httpx
 
@@ -32,6 +32,8 @@ from ...types.context_files import (
     UploadDirFailure,
     UploadDirResult,
     UploadFromUrlInput,
+    UploadProgress,
+    UploadProgressCallback,
     UploadUrlInput,
     UploadUrlSlot,
 )
@@ -390,12 +392,23 @@ class ContextFilesResource:
         *,
         concurrency: int = 10,
         wait_until: WaitUntil = "processing",
+        on_progress: Optional[UploadProgressCallback] = None,
     ) -> UploadDirResult:
         """Upload an explicit list of local files.
 
         Same machinery as ``upload_dir`` without the directory walk.
+
+        Args:
+            on_progress: Optional callback after each file settles. Receives
+                cumulative ``completed``, ``total``, ``succeeded``, and ``failed``
+                counts. The SDK never prints; wire this for CLI/UI progress.
         """
-        return self._upload_paths([Path(p) for p in paths], concurrency=concurrency, wait_until=wait_until)
+        return self._upload_paths(
+            [Path(p) for p in paths],
+            concurrency=concurrency,
+            wait_until=wait_until,
+            on_progress=on_progress,
+        )
 
     def upload(
         self,
@@ -466,6 +479,7 @@ class ContextFilesResource:
         recursive: bool = True,
         concurrency: int = 10,
         wait_until: WaitUntil = "processing",
+        on_progress: Optional[UploadProgressCallback] = None,
     ) -> UploadDirResult:
         """Upload every file in a local directory.
 
@@ -479,6 +493,9 @@ class ContextFilesResource:
             recursive:   Recurse into subdirectories (default ``True``).
             concurrency: Max concurrent PUT+poll operations.
             wait_until:  ``"processing"`` (default) or ``"ready"`` — same as ``upload()``.
+            on_progress: Optional callback after each file settles. Receives
+                cumulative ``completed``, ``total``, ``succeeded``, and ``failed``
+                counts. The SDK never prints; wire this for CLI/UI progress.
 
         Returns:
             ``UploadDirResult`` with every successful ``FileUpload`` and every
@@ -493,11 +510,19 @@ class ContextFilesResource:
             raise ValueError(f"Not a directory: {dir_path}")
 
         return self._upload_paths(
-            _walk_files(dir_path, recursive=recursive), concurrency=concurrency, wait_until=wait_until
+            _walk_files(dir_path, recursive=recursive),
+            concurrency=concurrency,
+            wait_until=wait_until,
+            on_progress=on_progress,
         )
 
     def _upload_paths(
-        self, files: Sequence[Path], *, concurrency: int, wait_until: WaitUntil
+        self,
+        files: Sequence[Path],
+        *,
+        concurrency: int,
+        wait_until: WaitUntil,
+        on_progress: Optional[UploadProgressCallback] = None,
     ) -> UploadDirResult:
         """Shared body of ``upload_files`` and ``upload_dir``."""
         _validate_wait_until(wait_until)
@@ -505,13 +530,36 @@ class ContextFilesResource:
             raise ValueError(f"concurrency must be >= 1, got {concurrency!r}")
         uploaded: List[FileUpload] = []
         failed: List[UploadDirFailure] = []
+        total = len(files)
+        completed = 0
+
+        def emit() -> None:
+            nonlocal completed
+            completed += 1
+            if on_progress is not None:
+                on_progress(
+                    UploadProgress(
+                        completed=completed,
+                        total=total,
+                        succeeded=len(uploaded),
+                        failed=len(failed),
+                    )
+                )
+
         for batch in _chunked(list(files), MAX_BULK_UPLOAD_FILES):
+            failed_before = len(failed)
             slots = self._create_slots(batch, failed)
-            for result in self._upload_batch(slots, wait_until, concurrency):
+            for _ in range(len(failed) - failed_before):
+                emit()
+
+            def on_outcome(result: Union[FileUpload, UploadDirFailure]) -> None:
                 if isinstance(result, UploadDirFailure):
                     failed.append(result)
                 else:
                     uploaded.append(result)
+                emit()
+
+            self._upload_batch(slots, wait_until, concurrency, on_outcome=on_outcome)
         return UploadDirResult(uploaded=uploaded, failed=failed)
 
     def _create_slots(
@@ -524,7 +572,12 @@ class ContextFilesResource:
         return _assign_slots(readable, result, failed)
 
     def _upload_batch(
-        self, slots: Sequence[_SlotAssignment], wait_until: WaitUntil, concurrency: int
+        self,
+        slots: Sequence[_SlotAssignment],
+        wait_until: WaitUntil,
+        concurrency: int,
+        *,
+        on_outcome: Optional[Callable[[Union[FileUpload, UploadDirFailure]], None]] = None,
     ) -> List[Union[FileUpload, UploadDirFailure]]:
         if not slots:
             return []
@@ -540,15 +593,20 @@ class ContextFilesResource:
             except Exception as exc:  # continue-on-error: one bad file must not sink the batch
                 return UploadDirFailure(path=str(file_path), error=str(exc))
 
-        with ThreadPoolExecutor(max_workers=min(concurrency, len(slots))) as pool:
-            put_results = list(pool.map(put, slots))
-
         landed: List[_SlotAssignment] = []
-        for result in put_results:
-            if isinstance(result, UploadDirFailure):
-                out.append(result)
-            else:
-                landed.append(result)
+        with ThreadPoolExecutor(max_workers=min(concurrency, len(slots))) as pool:
+            futures = [pool.submit(put, entry) for entry in slots]
+            for fut in as_completed(futures):
+                result = fut.result()
+                if isinstance(result, UploadDirFailure):
+                    out.append(result)
+                    if on_outcome is not None:
+                        on_outcome(result)
+            # Preserve submit order for finalize index mapping.
+            for fut in futures:
+                result = fut.result()
+                if not isinstance(result, UploadDirFailure):
+                    landed.append(result)
         if not landed:
             return out
 
@@ -557,11 +615,17 @@ class ContextFilesResource:
         finalized = self.finalize_many(_finalize_inputs_for(landed))
         failed_indices = {int(f.index) for f in finalized.failed}
         for f in finalized.failed:
-            out.append(UploadDirFailure(path=str(landed[int(f.index)][0]), error=f.error))
+            failure = UploadDirFailure(path=str(landed[int(f.index)][0]), error=f.error)
+            out.append(failure)
+            if on_outcome is not None:
+                on_outcome(failure)
         remaining = [entry for i, entry in enumerate(landed) if i not in failed_indices]
 
         if wait_until != "ready":
-            out.extend(finalized.finalized)
+            for success in finalized.finalized:
+                out.append(success)
+                if on_outcome is not None:
+                    on_outcome(success)
             return out
 
         # Only `ready` needs polling; `processing` is already satisfied above.
@@ -574,7 +638,10 @@ class ContextFilesResource:
 
         if remaining:
             with ThreadPoolExecutor(max_workers=min(concurrency, len(remaining))) as pool:
-                out.extend(pool.map(poll, remaining))
+                for outcome in pool.map(poll, remaining):
+                    out.append(outcome)
+                    if on_outcome is not None:
+                        on_outcome(outcome)
         return out
 
 
@@ -686,10 +753,20 @@ class AsyncContextFilesResource:
         *,
         concurrency: int = 10,
         wait_until: WaitUntil = "processing",
+        on_progress: Optional[UploadProgressCallback] = None,
     ) -> UploadDirResult:
-        """Async twin of the sync ``upload_files``."""
+        """Async twin of the sync ``upload_files``.
+
+        Args:
+            on_progress: Optional callback after each file settles. Receives
+                cumulative ``completed``, ``total``, ``succeeded``, and ``failed``
+                counts. The SDK never prints; wire this for CLI/UI progress.
+        """
         return await self._upload_paths(
-            [Path(p) for p in paths], concurrency=concurrency, wait_until=wait_until
+            [Path(p) for p in paths],
+            concurrency=concurrency,
+            wait_until=wait_until,
+            on_progress=on_progress,
         )
 
     async def upload(
@@ -742,8 +819,15 @@ class AsyncContextFilesResource:
         recursive: bool = True,
         concurrency: int = 10,
         wait_until: WaitUntil = "processing",
+        on_progress: Optional[UploadProgressCallback] = None,
     ) -> UploadDirResult:
-        """Upload every file in a local directory. See the sync ``upload_dir`` for argument details."""
+        """Upload every file in a local directory. See the sync ``upload_dir`` for argument details.
+
+        Args:
+            on_progress: Optional callback after each file settles. Receives
+                cumulative ``completed``, ``total``, ``succeeded``, and ``failed``
+                counts. The SDK never prints; wire this for CLI/UI progress.
+        """
         _validate_wait_until(wait_until)
         if concurrency < 1:
             raise ValueError(f"concurrency must be >= 1, got {concurrency!r}")
@@ -752,11 +836,19 @@ class AsyncContextFilesResource:
             raise ValueError(f"Not a directory: {dir_path}")
 
         return await self._upload_paths(
-            _walk_files(dir_path, recursive=recursive), concurrency=concurrency, wait_until=wait_until
+            _walk_files(dir_path, recursive=recursive),
+            concurrency=concurrency,
+            wait_until=wait_until,
+            on_progress=on_progress,
         )
 
     async def _upload_paths(
-        self, files: Sequence[Path], *, concurrency: int, wait_until: WaitUntil
+        self,
+        files: Sequence[Path],
+        *,
+        concurrency: int,
+        wait_until: WaitUntil,
+        on_progress: Optional[UploadProgressCallback] = None,
     ) -> UploadDirResult:
         """Shared body of ``upload_files`` and ``upload_dir``."""
         _validate_wait_until(wait_until)
@@ -764,13 +856,36 @@ class AsyncContextFilesResource:
             raise ValueError(f"concurrency must be >= 1, got {concurrency!r}")
         uploaded: List[FileUpload] = []
         failed: List[UploadDirFailure] = []
+        total = len(files)
+        completed = 0
+
+        def emit() -> None:
+            nonlocal completed
+            completed += 1
+            if on_progress is not None:
+                on_progress(
+                    UploadProgress(
+                        completed=completed,
+                        total=total,
+                        succeeded=len(uploaded),
+                        failed=len(failed),
+                    )
+                )
+
         for batch in _chunked(list(files), MAX_BULK_UPLOAD_FILES):
+            failed_before = len(failed)
             slots = await self._create_slots(batch, failed)
-            for result in await self._upload_batch(slots, wait_until, concurrency):
+            for _ in range(len(failed) - failed_before):
+                emit()
+
+            def on_outcome(result: Union[FileUpload, UploadDirFailure]) -> None:
                 if isinstance(result, UploadDirFailure):
                     failed.append(result)
                 else:
                     uploaded.append(result)
+                emit()
+
+            await self._upload_batch(slots, wait_until, concurrency, on_outcome=on_outcome)
         return UploadDirResult(uploaded=uploaded, failed=failed)
 
     async def _create_slots(
@@ -783,7 +898,12 @@ class AsyncContextFilesResource:
         return _assign_slots(readable, result, failed)
 
     async def _upload_batch(
-        self, slots: Sequence[_SlotAssignment], wait_until: WaitUntil, concurrency: int
+        self,
+        slots: Sequence[_SlotAssignment],
+        wait_until: WaitUntil,
+        concurrency: int,
+        *,
+        on_outcome: Optional[Callable[[Union[FileUpload, UploadDirFailure]], None]] = None,
     ) -> List[Union[FileUpload, UploadDirFailure]]:
         if not slots:
             return []
@@ -802,12 +922,17 @@ class AsyncContextFilesResource:
                 except Exception as exc:  # continue-on-error: one bad file must not sink the batch
                     return UploadDirFailure(path=str(file_path), error=str(exc))
 
-        put_results = list(await asyncio.gather(*(put(entry) for entry in slots)))
+        tasks = [asyncio.create_task(put(entry)) for entry in slots]
         landed: List[_SlotAssignment] = []
-        for result in put_results:
+        for fut in asyncio.as_completed(tasks):
+            result = await fut
             if isinstance(result, UploadDirFailure):
                 out.append(result)
-            else:
+                if on_outcome is not None:
+                    on_outcome(result)
+        for task in tasks:
+            result = task.result()
+            if not isinstance(result, UploadDirFailure):
                 landed.append(result)
         if not landed:
             return out
@@ -817,11 +942,17 @@ class AsyncContextFilesResource:
         finalized = await self.finalize_many(_finalize_inputs_for(landed))
         failed_indices = {int(f.index) for f in finalized.failed}
         for f in finalized.failed:
-            out.append(UploadDirFailure(path=str(landed[int(f.index)][0]), error=f.error))
+            failure = UploadDirFailure(path=str(landed[int(f.index)][0]), error=f.error)
+            out.append(failure)
+            if on_outcome is not None:
+                on_outcome(failure)
         remaining = [entry for i, entry in enumerate(landed) if i not in failed_indices]
 
         if wait_until != "ready":
-            out.extend(finalized.finalized)
+            for success in finalized.finalized:
+                out.append(success)
+                if on_outcome is not None:
+                    on_outcome(success)
             return out
 
         # Only `ready` needs polling; `processing` is already satisfied above.
@@ -835,5 +966,9 @@ class AsyncContextFilesResource:
                 except Exception as exc:
                     return UploadDirFailure(path=str(file_path), error=str(exc))
 
-        out.extend(await asyncio.gather(*(poll(entry) for entry in remaining)))
+        if remaining:
+            for outcome in await asyncio.gather(*(poll(entry) for entry in remaining)):
+                out.append(outcome)
+                if on_outcome is not None:
+                    on_outcome(outcome)
         return out

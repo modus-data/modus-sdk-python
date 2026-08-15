@@ -651,6 +651,63 @@ def test_upload_files_uploads_an_explicit_list(tmp_path):
 
 
 @respx.mock
+def test_upload_files_on_progress_reports_completed_and_total(tmp_path):
+    a = tmp_path / "a.txt"
+    a.write_text("A")
+    b = tmp_path / "b.txt"
+    b.write_text("B")
+
+    respx.post(f"{BASE}/api/v1/context/files/uploadUrls").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "uploaded": [_slot_json("up-a", upload_url=S3_URL), _slot_json("up-b", upload_url=S3_URL)],
+                "failed": [],
+            },
+        )
+    )
+    respx.put(S3_URL).mock(return_value=httpx.Response(200))
+    _stub_finalize()
+
+    ticks: list = []
+    result = _client().context.files.upload_files(
+        [a, b],
+        on_progress=lambda p: ticks.append((p.completed, p.total, p.succeeded, p.failed)),
+    )
+
+    assert len(result.uploaded) == 2
+    assert ticks == [(1, 2, 1, 0), (2, 2, 2, 0)]
+
+
+@respx.mock
+def test_upload_dir_on_progress_counts_slot_failures(tmp_path):
+    (tmp_path / "good.txt").write_text("ok")
+    (tmp_path / "bad.txt").write_text("bad")
+
+    respx.post(f"{BASE}/api/v1/context/files/uploadUrls").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "uploaded": [_slot_json("up-good")],
+                "failed": [{"index": 0, "fileName": "bad.txt", "error": "not allowed"}],
+            },
+        )
+    )
+    respx.put(S3_URL).mock(return_value=httpx.Response(200))
+    _stub_finalize()
+
+    ticks: list = []
+    result = _client().context.files.upload_dir(
+        tmp_path,
+        on_progress=lambda p: ticks.append((p.completed, p.total, p.succeeded, p.failed)),
+    )
+
+    assert len(result.uploaded) == 1
+    assert len(result.failed) == 1
+    assert ticks == [(1, 2, 0, 1), (2, 2, 1, 1)]
+
+
+@respx.mock
 def test_upload_files_maps_a_finalize_failure_back_to_its_local_path(tmp_path):
     a = tmp_path / "a.txt"
     a.write_text("A")
