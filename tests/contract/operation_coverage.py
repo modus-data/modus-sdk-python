@@ -94,6 +94,12 @@ OPERATIONS: dict[str, str] = {
     "CustomContextItemsController_batchCreate": "mgmt.context.custom_items.batch_create()",
     "CustomContextItemsController_update": "mgmt.context.custom_items.update()",
     "CustomContextItemsController_delete": "mgmt.context.custom_items.delete()",
+    "ContextFilesController_uploadUrl": "mgmt.context.files.create_upload_url(); convenience: upload()",
+    "ContextFilesController_uploadUrls": "mgmt.context.files.create_upload_urls(); convenience: upload_dir()",
+    "ContextFilesController_uploadFromUrl": "mgmt.context.files.upload_from_url()",
+    "ContextFilesController_uploadFromUrls": "mgmt.context.files.upload_from_urls()",
+    "ContextFilesController_get": "mgmt.context.files.get()",
+    "ContextFilesController_list": "mgmt.context.files.list()",
     # --- Connections ---
     "ConnectionsController_list": "client.connections.list()",
     # --- Suggestions ---

@@ -76,6 +76,10 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "CustomContextItemsController_create": _model_wire_fields(CreateCustomContextItemDto),
     "CustomContextItemsController_batchCreate": _model_wire_fields(BatchCreateCustomContextItemsDto),
     "CustomContextItemsController_update": _model_wire_fields(UpdateCustomContextItemDto),
+    "ContextFilesController_uploadUrl": {"fileName", "contentType", "fileSize"},
+    "ContextFilesController_uploadUrls": {"files"},
+    "ContextFilesController_uploadFromUrl": {"url", "fileName"},
+    "ContextFilesController_uploadFromUrls": {"urls"},
     # --- Scopes (/api/v1/scopes; request schemas share the generated *Skill* DTOs) ---
     "ScopesController_create": _model_wire_fields(_ScopeCreateBody),
     "ScopesController_update": _model_wire_fields(_ScopeUpdateBody),

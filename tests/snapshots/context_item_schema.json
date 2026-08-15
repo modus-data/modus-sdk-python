@@ -88,7 +88,7 @@
         }
       ],
       "default": null,
-      "description": "Originating integration connection id for integration-derived items. Null for user-created items.",
+      "description": "Originating integration connection id, or a virtual connection id such as `custom` or `files` for org-owned context.",
       "examples": [
         "00000000-0000-4000-a000-000000000111"
       ],
@@ -104,7 +104,7 @@
         }
       ],
       "default": null,
-      "description": "Originating selection id (datamap-scoped) for integration-derived items.",
+      "description": "Datamap selection id. For custom context, this is the customer-defined source id.",
       "examples": [
         "00000000-0000-4000-a000-000000000222"
       ],

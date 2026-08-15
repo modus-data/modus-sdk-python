@@ -185,6 +185,17 @@ SAMPLE_TOOL_CATALOG_ENTRY: Dict[str, Any] = {
     "requiresConnection": False,
 }
 
+SAMPLE_FILE_UPLOAD: Dict[str, Any] = {
+    "uploadId": "7a3f9d2c-1111-4000-a000-000000000abc",
+    "status": "ready",
+}
+
+
+def _context_files_invoke(client: Client) -> Any:
+    assert isinstance(client, ModusManagement)
+    return client.context.files.list(page_size=25, page_token="tok_abc")
+
+
 SAMPLE_EVAL_RUN: Dict[str, Any] = {
     "id": "run-1",
     "skillId": 42,
@@ -308,6 +319,15 @@ SDK_AIP_LIST_OPERATIONS: List[ListOperationSpec] = [
         sample_item=SAMPLE_EVAL_RUN,
         client_kind="management",
         invoke=_scope_evaluations_invoke,
+    ),
+    ListOperationSpec(
+        operation_id="ContextFilesController_list",
+        mock_url_suffix="/api/v1/context/files",
+        items_key="files",
+        wrong_items_key="skills",
+        sample_item=SAMPLE_FILE_UPLOAD,
+        client_kind="management",
+        invoke=_context_files_invoke,
     ),
     # --- Workflows (/api/v1/workflows) ---
     ListOperationSpec(

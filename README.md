@@ -150,6 +150,12 @@ mgmt.scopes.deploy(scope.id)
 # Create returns context_item_id (also available as .uid); list/get use .uid
 note = mgmt.context.create_note("Title", "Body")
 print(note.context_item_id, note.uid)  # same UUID
+
+upload = mgmt.context.files.upload("report.pdf")
+print(upload.upload_id, upload.status)
+
+result = mgmt.context.files.upload_dir("./reports")
+print(len(result.uploaded), len(result.failed))
 ```
 
 Requires a token with write access to scopes and workflows (same as the Modus UI).
