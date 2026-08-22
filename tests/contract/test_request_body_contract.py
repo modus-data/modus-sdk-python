@@ -76,6 +76,8 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "CustomContextItemsController_create": _model_wire_fields(CreateCustomContextItemDto),
     "CustomContextItemsController_batchCreate": _model_wire_fields(BatchCreateCustomContextItemsDto),
     "CustomContextItemsController_update": _model_wire_fields(UpdateCustomContextItemDto),
+    "ContextFilesController_finalize": {"fileName"},
+    "ContextFilesController_finalizeMany": {"uploads"},
     "ContextFilesController_uploadUrl": {"fileName", "contentType", "fileSize"},
     "ContextFilesController_uploadUrls": {"files"},
     "ContextFilesController_uploadFromUrl": {"url", "fileName"},

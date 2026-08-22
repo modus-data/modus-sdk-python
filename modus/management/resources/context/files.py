@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Iterator, List, Literal, Optional, Sequence, Tuple, Union
+from typing import Callable, Iterator, List, Literal, Optional, Sequence, Tuple, Union
 
 import httpx
 
@@ -24,12 +24,16 @@ from modus._validation import validate_id, validate_page_size
 from modus.types.pagination import AsyncPage, Page
 
 from ...types.context_files import (
+    BulkFinalizeResult,
     BulkUploadFromUrlsResult,
     BulkUploadUrlsResult,
     FileUpload,
+    FinalizeInput,
     UploadDirFailure,
     UploadDirResult,
     UploadFromUrlInput,
+    UploadProgress,
+    UploadProgressCallback,
     UploadUrlInput,
     UploadUrlSlot,
 )
@@ -39,6 +43,9 @@ MAX_BULK_UPLOAD_FILES = 100
 
 _DEFAULT_LIST_PAGE_SIZE = 50
 _DEFAULT_PUT_TIMEOUT_S = 60.0
+# `pending` is gone from the public enum: an upload has no resource until it is
+# finalized. Kept at rank 0 so an older server still reporting it is ordered
+# below `processing` rather than treated as unknown.
 _STATUS_ORDER = {"pending": 0, "processing": 1, "ready": 2}
 _WAIT_UNTIL_VALUES = ("processing", "ready")
 
@@ -133,6 +140,19 @@ def _create_slots_payload(files: Sequence[UploadUrlInput]) -> dict:
     }
 
 
+def _finalize_payload(uploads: Sequence["FinalizeInput"]) -> dict:
+    return {"uploads": [{"uploadId": u.upload_id, "fileName": u.file_name} for u in uploads]}
+
+
+def _finalize_inputs_for(slots: Sequence[_SlotAssignment]) -> List["FinalizeInput"]:
+    # `slot.file_name` rather than the local basename: the server sanitizes the
+    # name when minting the key, and finalize re-derives the key from it.
+    return [
+        FinalizeInput(upload_id=slot.upload_id, file_name=slot.file_name or path.name)
+        for path, slot in slots
+    ]
+
+
 def _upload_from_urls_payload(urls: Sequence[UploadFromUrlInput]) -> dict:
     return {
         "urls": [
@@ -216,7 +236,14 @@ class ContextFilesResource:
 
         Returns:
             Presigned upload slot. PUT the raw bytes to ``upload_url`` within 15
-            minutes, then poll ``get(upload_id)`` — there is no separate finalize call.
+            minutes, then call
+            ``finalize(slot.upload_id, file_name=slot.file_name)``.
+
+            Pass the slot's own ``file_name`` rather than your local basename:
+            the server may sanitize the requested name when it mints the key,
+            and finalization re-derives the key from ``upload_id`` and
+            ``file_name``. Fall back to the basename only if the slot returns
+            no name.
         """
         payload = {"fileName": file_name, "contentType": content_type, "fileSize": file_size}
         data = with_retry(
@@ -325,6 +352,64 @@ class ContextFilesResource:
         )
         return build_aip_page(data, "files", FileUpload, lambda cur: self._list_page(page_size, cur))
 
+    def finalize(self, upload_id: str, *, file_name: str) -> FileUpload:
+        """Turn a file already PUT to a presigned URL into durable context.
+
+        Call once the PUT completes. The server locates the object from
+        ``upload_id`` + ``file_name`` and validates the bytes that arrived.
+        Safe to retry — a second call returns the same resource.
+        """
+        validate_id(upload_id, name="upload_id")
+        data = with_retry(
+            lambda: invoke_operation(
+                self._http,
+                "ContextFilesController_finalize",
+                path_params={"uploadId": upload_id},
+                json_body={"fileName": file_name},
+            ),
+            self._config.max_retries,
+        )
+        return FileUpload.model_validate(data)
+
+    def finalize_many(self, uploads: Sequence[FinalizeInput]) -> BulkFinalizeResult:
+        """Finalize up to 100 uploads in one call.
+
+        What makes directory upload cheap: 2000 files cost 20 requests here
+        rather than 2000. Per-index failures never fail the whole batch.
+        """
+        _validate_bulk_size(len(uploads), name="uploads")
+        data = with_retry(
+            lambda: invoke_operation(
+                self._http, "ContextFilesController_finalizeMany", json_body=_finalize_payload(uploads)
+            ),
+            self._config.max_retries,
+        )
+        return BulkFinalizeResult.model_validate(data)
+
+    def upload_files(
+        self,
+        paths: Sequence[Union[str, Path]],
+        *,
+        concurrency: int = 10,
+        wait_until: WaitUntil = "processing",
+        on_progress: Optional[UploadProgressCallback] = None,
+    ) -> UploadDirResult:
+        """Upload an explicit list of local files.
+
+        Same machinery as ``upload_dir`` without the directory walk.
+
+        Args:
+            on_progress: Optional callback after each file settles. Receives
+                cumulative ``completed``, ``total``, ``succeeded``, and ``failed``
+                counts. The SDK never prints; wire this for CLI/UI progress.
+        """
+        return self._upload_paths(
+            [Path(p) for p in paths],
+            concurrency=concurrency,
+            wait_until=wait_until,
+            on_progress=on_progress,
+        )
+
     def upload(
         self,
         path: Union[str, Path],
@@ -362,6 +447,11 @@ class ContextFilesResource:
         )
         content_type = _slot_content_type(slot, file_path.name)
         _put_bytes_sync(slot.upload_url, file_path.read_bytes(), content_type, _DEFAULT_PUT_TIMEOUT_S)
+        # Finalize returns the resource already at `processing`, so it replaces
+        # the first poll rather than adding a round trip.
+        finalized = self.finalize(slot.upload_id, file_name=slot.file_name or file_path.name)
+        if _status_satisfies(_status_value(finalized), wait_until):
+            return finalized
         return self._poll_until(
             slot.upload_id, wait_until=wait_until, poll_interval_s=poll_interval_s, timeout_s=timeout_s
         )
@@ -389,6 +479,7 @@ class ContextFilesResource:
         recursive: bool = True,
         concurrency: int = 10,
         wait_until: WaitUntil = "processing",
+        on_progress: Optional[UploadProgressCallback] = None,
     ) -> UploadDirResult:
         """Upload every file in a local directory.
 
@@ -402,6 +493,9 @@ class ContextFilesResource:
             recursive:   Recurse into subdirectories (default ``True``).
             concurrency: Max concurrent PUT+poll operations.
             wait_until:  ``"processing"`` (default) or ``"ready"`` — same as ``upload()``.
+            on_progress: Optional callback after each file settles. Receives
+                cumulative ``completed``, ``total``, ``succeeded``, and ``failed``
+                counts. The SDK never prints; wire this for CLI/UI progress.
 
         Returns:
             ``UploadDirResult`` with every successful ``FileUpload`` and every
@@ -415,15 +509,70 @@ class ContextFilesResource:
         if not dir_path.is_dir():
             raise ValueError(f"Not a directory: {dir_path}")
 
+        return self._upload_paths(
+            _walk_files(dir_path, recursive=recursive),
+            concurrency=concurrency,
+            wait_until=wait_until,
+            on_progress=on_progress,
+        )
+
+    def _upload_paths(
+        self,
+        files: Sequence[Path],
+        *,
+        concurrency: int,
+        wait_until: WaitUntil,
+        on_progress: Optional[UploadProgressCallback] = None,
+    ) -> UploadDirResult:
+        """Shared body of ``upload_files`` and ``upload_dir``."""
+        _validate_wait_until(wait_until)
+        if concurrency < 1:
+            raise ValueError(f"concurrency must be >= 1, got {concurrency!r}")
         uploaded: List[FileUpload] = []
         failed: List[UploadDirFailure] = []
-        for batch in _chunked(_walk_files(dir_path, recursive=recursive), MAX_BULK_UPLOAD_FILES):
+        total = len(files)
+        completed = 0
+
+        def emit() -> None:
+            nonlocal completed
+            completed += 1
+            if on_progress is not None:
+                on_progress(
+                    UploadProgress(
+                        completed=completed,
+                        total=total,
+                        succeeded=len(uploaded),
+                        failed=len(failed),
+                    )
+                )
+
+        for batch in _chunked(list(files), MAX_BULK_UPLOAD_FILES):
+            failed_before = len(failed)
             slots = self._create_slots(batch, failed)
-            for result in self._upload_batch(slots, wait_until, concurrency):
+            # create_upload_urls can report several failures in one synchronous call,
+            # so tick `failed` up one at a time here — reusing `emit()` would report
+            # the final `len(failed)` on every tick and break the
+            # completed == succeeded + failed invariant for all but the last of them.
+            for reported in range(failed_before + 1, len(failed) + 1):
+                completed += 1
+                if on_progress is not None:
+                    on_progress(
+                        UploadProgress(
+                            completed=completed,
+                            total=total,
+                            succeeded=len(uploaded),
+                            failed=reported,
+                        )
+                    )
+
+            def on_outcome(result: Union[FileUpload, UploadDirFailure]) -> None:
                 if isinstance(result, UploadDirFailure):
                     failed.append(result)
                 else:
                     uploaded.append(result)
+                emit()
+
+            self._upload_batch(slots, wait_until, concurrency, on_outcome=on_outcome)
         return UploadDirResult(uploaded=uploaded, failed=failed)
 
     def _create_slots(
@@ -436,22 +585,77 @@ class ContextFilesResource:
         return _assign_slots(readable, result, failed)
 
     def _upload_batch(
-        self, slots: Sequence[_SlotAssignment], wait_until: WaitUntil, concurrency: int
+        self,
+        slots: Sequence[_SlotAssignment],
+        wait_until: WaitUntil,
+        concurrency: int,
+        *,
+        on_outcome: Optional[Callable[[Union[FileUpload, UploadDirFailure]], None]] = None,
     ) -> List[Union[FileUpload, UploadDirFailure]]:
         if not slots:
             return []
 
-        def worker(entry: _SlotAssignment) -> Union[FileUpload, UploadDirFailure]:
+        out: List[Union[FileUpload, UploadDirFailure]] = []
+
+        def put(entry: _SlotAssignment) -> Union[_SlotAssignment, UploadDirFailure]:
             file_path, slot = entry
             try:
                 content_type = _slot_content_type(slot, file_path.name)
                 _put_bytes_sync(slot.upload_url, file_path.read_bytes(), content_type, _DEFAULT_PUT_TIMEOUT_S)
-                return self._poll_until(slot.upload_id, wait_until=wait_until, poll_interval_s=0.5, timeout_s=120)
+                return entry
             except Exception as exc:  # continue-on-error: one bad file must not sink the batch
                 return UploadDirFailure(path=str(file_path), error=str(exc))
 
+        landed: List[_SlotAssignment] = []
         with ThreadPoolExecutor(max_workers=min(concurrency, len(slots))) as pool:
-            return list(pool.map(worker, slots))
+            futures = [pool.submit(put, entry) for entry in slots]
+            for fut in as_completed(futures):
+                result = fut.result()
+                if isinstance(result, UploadDirFailure):
+                    out.append(result)
+                    if on_outcome is not None:
+                        on_outcome(result)
+            # Preserve submit order for finalize index mapping.
+            for fut in futures:
+                result = fut.result()
+                if not isinstance(result, UploadDirFailure):
+                    landed.append(result)
+        if not landed:
+            return out
+
+        # One bulk finalize for the batch — the reason a 2000-file directory
+        # costs one request per 100 files rather than one per file.
+        finalized = self.finalize_many(_finalize_inputs_for(landed))
+        failed_indices = {int(f.index) for f in finalized.failed}
+        for f in finalized.failed:
+            failure = UploadDirFailure(path=str(landed[int(f.index)][0]), error=f.error)
+            out.append(failure)
+            if on_outcome is not None:
+                on_outcome(failure)
+        remaining = [entry for i, entry in enumerate(landed) if i not in failed_indices]
+
+        if wait_until != "ready":
+            for success in finalized.finalized:
+                out.append(success)
+                if on_outcome is not None:
+                    on_outcome(success)
+            return out
+
+        # Only `ready` needs polling; `processing` is already satisfied above.
+        def poll(entry: _SlotAssignment) -> Union[FileUpload, UploadDirFailure]:
+            file_path, slot = entry
+            try:
+                return self._poll_until(slot.upload_id, wait_until=wait_until, poll_interval_s=0.5, timeout_s=120)
+            except Exception as exc:
+                return UploadDirFailure(path=str(file_path), error=str(exc))
+
+        if remaining:
+            with ThreadPoolExecutor(max_workers=min(concurrency, len(remaining))) as pool:
+                for outcome in pool.map(poll, remaining):
+                    out.append(outcome)
+                    if on_outcome is not None:
+                        on_outcome(outcome)
+        return out
 
 
 class AsyncContextFilesResource:
@@ -531,6 +735,53 @@ class AsyncContextFilesResource:
         )
         return build_async_aip_page(data, "files", FileUpload, lambda cur: self._list_page(page_size, cur))
 
+    async def finalize(self, upload_id: str, *, file_name: str) -> FileUpload:
+        """Async twin of the sync ``finalize``."""
+        validate_id(upload_id, name="upload_id")
+        data = await async_with_retry(
+            lambda: invoke_operation_async(
+                self._http,
+                "ContextFilesController_finalize",
+                path_params={"uploadId": upload_id},
+                json_body={"fileName": file_name},
+            ),
+            self._config.max_retries,
+        )
+        return FileUpload.model_validate(data)
+
+    async def finalize_many(self, uploads: Sequence[FinalizeInput]) -> BulkFinalizeResult:
+        """Async twin of the sync ``finalize_many``."""
+        _validate_bulk_size(len(uploads), name="uploads")
+        data = await async_with_retry(
+            lambda: invoke_operation_async(
+                self._http, "ContextFilesController_finalizeMany", json_body=_finalize_payload(uploads)
+            ),
+            self._config.max_retries,
+        )
+        return BulkFinalizeResult.model_validate(data)
+
+    async def upload_files(
+        self,
+        paths: Sequence[Union[str, Path]],
+        *,
+        concurrency: int = 10,
+        wait_until: WaitUntil = "processing",
+        on_progress: Optional[UploadProgressCallback] = None,
+    ) -> UploadDirResult:
+        """Async twin of the sync ``upload_files``.
+
+        Args:
+            on_progress: Optional callback after each file settles. Receives
+                cumulative ``completed``, ``total``, ``succeeded``, and ``failed``
+                counts. The SDK never prints; wire this for CLI/UI progress.
+        """
+        return await self._upload_paths(
+            [Path(p) for p in paths],
+            concurrency=concurrency,
+            wait_until=wait_until,
+            on_progress=on_progress,
+        )
+
     async def upload(
         self,
         path: Union[str, Path],
@@ -551,6 +802,9 @@ class AsyncContextFilesResource:
         )
         content_type = _slot_content_type(slot, file_path.name)
         await _put_bytes_async(slot.upload_url, file_path.read_bytes(), content_type, _DEFAULT_PUT_TIMEOUT_S)
+        finalized = await self.finalize(slot.upload_id, file_name=slot.file_name or file_path.name)
+        if _status_satisfies(_status_value(finalized), wait_until):
+            return finalized
         return await self._poll_until(
             slot.upload_id, wait_until=wait_until, poll_interval_s=poll_interval_s, timeout_s=timeout_s
         )
@@ -578,8 +832,15 @@ class AsyncContextFilesResource:
         recursive: bool = True,
         concurrency: int = 10,
         wait_until: WaitUntil = "processing",
+        on_progress: Optional[UploadProgressCallback] = None,
     ) -> UploadDirResult:
-        """Upload every file in a local directory. See the sync ``upload_dir`` for argument details."""
+        """Upload every file in a local directory. See the sync ``upload_dir`` for argument details.
+
+        Args:
+            on_progress: Optional callback after each file settles. Receives
+                cumulative ``completed``, ``total``, ``succeeded``, and ``failed``
+                counts. The SDK never prints; wire this for CLI/UI progress.
+        """
         _validate_wait_until(wait_until)
         if concurrency < 1:
             raise ValueError(f"concurrency must be >= 1, got {concurrency!r}")
@@ -587,15 +848,70 @@ class AsyncContextFilesResource:
         if not dir_path.is_dir():
             raise ValueError(f"Not a directory: {dir_path}")
 
+        return await self._upload_paths(
+            _walk_files(dir_path, recursive=recursive),
+            concurrency=concurrency,
+            wait_until=wait_until,
+            on_progress=on_progress,
+        )
+
+    async def _upload_paths(
+        self,
+        files: Sequence[Path],
+        *,
+        concurrency: int,
+        wait_until: WaitUntil,
+        on_progress: Optional[UploadProgressCallback] = None,
+    ) -> UploadDirResult:
+        """Shared body of ``upload_files`` and ``upload_dir``."""
+        _validate_wait_until(wait_until)
+        if concurrency < 1:
+            raise ValueError(f"concurrency must be >= 1, got {concurrency!r}")
         uploaded: List[FileUpload] = []
         failed: List[UploadDirFailure] = []
-        for batch in _chunked(_walk_files(dir_path, recursive=recursive), MAX_BULK_UPLOAD_FILES):
+        total = len(files)
+        completed = 0
+
+        def emit() -> None:
+            nonlocal completed
+            completed += 1
+            if on_progress is not None:
+                on_progress(
+                    UploadProgress(
+                        completed=completed,
+                        total=total,
+                        succeeded=len(uploaded),
+                        failed=len(failed),
+                    )
+                )
+
+        for batch in _chunked(list(files), MAX_BULK_UPLOAD_FILES):
+            failed_before = len(failed)
             slots = await self._create_slots(batch, failed)
-            for result in await self._upload_batch(slots, wait_until, concurrency):
+            # create_upload_urls can report several failures in one synchronous call,
+            # so tick `failed` up one at a time here — reusing `emit()` would report
+            # the final `len(failed)` on every tick and break the
+            # completed == succeeded + failed invariant for all but the last of them.
+            for reported in range(failed_before + 1, len(failed) + 1):
+                completed += 1
+                if on_progress is not None:
+                    on_progress(
+                        UploadProgress(
+                            completed=completed,
+                            total=total,
+                            succeeded=len(uploaded),
+                            failed=reported,
+                        )
+                    )
+
+            def on_outcome(result: Union[FileUpload, UploadDirFailure]) -> None:
                 if isinstance(result, UploadDirFailure):
                     failed.append(result)
                 else:
                     uploaded.append(result)
+                emit()
+
+            await self._upload_batch(slots, wait_until, concurrency, on_outcome=on_outcome)
         return UploadDirResult(uploaded=uploaded, failed=failed)
 
     async def _create_slots(
@@ -608,13 +924,19 @@ class AsyncContextFilesResource:
         return _assign_slots(readable, result, failed)
 
     async def _upload_batch(
-        self, slots: Sequence[_SlotAssignment], wait_until: WaitUntil, concurrency: int
+        self,
+        slots: Sequence[_SlotAssignment],
+        wait_until: WaitUntil,
+        concurrency: int,
+        *,
+        on_outcome: Optional[Callable[[Union[FileUpload, UploadDirFailure]], None]] = None,
     ) -> List[Union[FileUpload, UploadDirFailure]]:
         if not slots:
             return []
         semaphore = asyncio.Semaphore(concurrency)
+        out: List[Union[FileUpload, UploadDirFailure]] = []
 
-        async def worker(entry: _SlotAssignment) -> Union[FileUpload, UploadDirFailure]:
+        async def put(entry: _SlotAssignment) -> Union[_SlotAssignment, UploadDirFailure]:
             file_path, slot = entry
             async with semaphore:
                 try:
@@ -622,10 +944,57 @@ class AsyncContextFilesResource:
                     await _put_bytes_async(
                         slot.upload_url, file_path.read_bytes(), content_type, _DEFAULT_PUT_TIMEOUT_S
                     )
-                    return await self._poll_until(
-                        slot.upload_id, wait_until=wait_until, poll_interval_s=0.5, timeout_s=120
-                    )
+                    return entry
                 except Exception as exc:  # continue-on-error: one bad file must not sink the batch
                     return UploadDirFailure(path=str(file_path), error=str(exc))
 
-        return list(await asyncio.gather(*(worker(entry) for entry in slots)))
+        tasks = [asyncio.create_task(put(entry)) for entry in slots]
+        landed: List[_SlotAssignment] = []
+        for fut in asyncio.as_completed(tasks):
+            result = await fut
+            if isinstance(result, UploadDirFailure):
+                out.append(result)
+                if on_outcome is not None:
+                    on_outcome(result)
+        for task in tasks:
+            result = task.result()
+            if not isinstance(result, UploadDirFailure):
+                landed.append(result)
+        if not landed:
+            return out
+
+        # One bulk finalize for the batch — the reason a 2000-file directory
+        # costs one request per 100 files rather than one per file.
+        finalized = await self.finalize_many(_finalize_inputs_for(landed))
+        failed_indices = {int(f.index) for f in finalized.failed}
+        for f in finalized.failed:
+            failure = UploadDirFailure(path=str(landed[int(f.index)][0]), error=f.error)
+            out.append(failure)
+            if on_outcome is not None:
+                on_outcome(failure)
+        remaining = [entry for i, entry in enumerate(landed) if i not in failed_indices]
+
+        if wait_until != "ready":
+            for success in finalized.finalized:
+                out.append(success)
+                if on_outcome is not None:
+                    on_outcome(success)
+            return out
+
+        # Only `ready` needs polling; `processing` is already satisfied above.
+        async def poll(entry: _SlotAssignment) -> Union[FileUpload, UploadDirFailure]:
+            file_path, slot = entry
+            async with semaphore:
+                try:
+                    return await self._poll_until(
+                        slot.upload_id, wait_until=wait_until, poll_interval_s=0.5, timeout_s=120
+                    )
+                except Exception as exc:
+                    return UploadDirFailure(path=str(file_path), error=str(exc))
+
+        if remaining:
+            for outcome in await asyncio.gather(*(poll(entry) for entry in remaining)):
+                out.append(outcome)
+                if on_outcome is not None:
+                    on_outcome(outcome)
+        return out

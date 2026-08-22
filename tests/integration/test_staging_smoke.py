@@ -145,6 +145,27 @@ def test_staging_journey() -> None:
 
 
 @pytest.mark.skipif(not _has_live, reason="MODUS_API_KEY not set")
+def test_staging_context_files_upload(tmp_path) -> None:
+    """Presign → PUT → finalize via mgmt.context.files.upload (Moonactive path)."""
+    from pathlib import Path
+
+    mgmt = _mgmt()
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    run_id = uuid.uuid4().hex[:8]
+    file_path = Path(tmp_path) / f"[SDK Staging Smoke]-files-{stamp}-{run_id}.txt"
+    file_path.write_text("sdk staging smoke context file — safe to leave\n", encoding="utf-8")
+
+    uploaded = mgmt.context.files.upload(file_path, wait_until="processing")
+    assert uploaded.upload_id
+    assert uploaded.status in ("processing", "ready")
+
+    got = mgmt.context.files.get(uploaded.upload_id)
+    assert got.upload_id == uploaded.upload_id
+    assert got.status in ("processing", "ready")
+    # Orphan prefix documented in STAGING-SMOKE.md — no public delete for file uploads.
+
+
+@pytest.mark.skipif(not _has_live, reason="MODUS_API_KEY not set")
 def test_staging_chat_and_stream() -> None:
     """Buffered chat + streaming against staging agent host (hard gate)."""
     model = os.getenv("MODUS_SMOKE_MODEL") or "claude-sonnet-5"

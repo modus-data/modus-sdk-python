@@ -4,11 +4,26 @@ client-side value types for the ``upload()`` / ``upload_dir()`` helpers."""
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Callable, List, Optional
+
+
+@dataclass(frozen=True)
+class UploadProgress:
+    """Progress event fired once per file after it succeeds or fails in a batch upload."""
+
+    completed: int
+    total: int
+    succeeded: int
+    failed: int
+
+
+UploadProgressCallback = Callable[[UploadProgress], None]
 
 from .._generated.models import (
+    BulkFinalizeResponseDto,
     BulkUploadFromUrlsResponseDto,
     BulkUploadUrlsResponseDto,
+    FailedFinalizeDto,
     FailedUploadFromUrlDto,
     FailedUploadUrlDto,
     FileUploadResourceDto,
@@ -23,6 +38,8 @@ BulkUploadUrlsResult = BulkUploadUrlsResponseDto
 BulkUploadFromUrlsResult = BulkUploadFromUrlsResponseDto
 FailedUploadUrl = FailedUploadUrlDto
 FailedUploadFromUrl = FailedUploadFromUrlDto
+BulkFinalizeResult = BulkFinalizeResponseDto
+FinalizeFailure = FailedFinalizeDto
 
 
 @dataclass(frozen=True)
@@ -59,15 +76,28 @@ class UploadDirResult:
 
 
 __all__ = [
+    "BulkFinalizeResult",
     "BulkUploadFromUrlsResult",
     "BulkUploadUrlsResult",
     "FailedUploadFromUrl",
     "FailedUploadUrl",
     "FileUpload",
     "FileUploadStatus",
+    "FinalizeFailure",
+    "FinalizeInput",
     "UploadDirFailure",
     "UploadDirResult",
     "UploadFromUrlInput",
+    "UploadProgress",
+    "UploadProgressCallback",
     "UploadUrlInput",
     "UploadUrlSlot",
 ]
+
+
+@dataclass(frozen=True)
+class FinalizeInput:
+    """One entry for ``finalize_many()``."""
+
+    upload_id: str
+    file_name: str

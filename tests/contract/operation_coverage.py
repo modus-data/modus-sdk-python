@@ -98,6 +98,8 @@ OPERATIONS: dict[str, str] = {
     "ContextFilesController_uploadUrls": "mgmt.context.files.create_upload_urls(); convenience: upload_dir()",
     "ContextFilesController_uploadFromUrl": "mgmt.context.files.upload_from_url()",
     "ContextFilesController_uploadFromUrls": "mgmt.context.files.upload_from_urls()",
+    "ContextFilesController_finalize": "mgmt.context.files.finalize(); convenience: upload()",
+    "ContextFilesController_finalizeMany": "mgmt.context.files.finalize_many(); convenience: upload_dir(), upload_files()",
     "ContextFilesController_get": "mgmt.context.files.get()",
     "ContextFilesController_list": "mgmt.context.files.list()",
     # --- Connections ---
