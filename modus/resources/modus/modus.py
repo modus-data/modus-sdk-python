@@ -51,6 +51,10 @@ class ModusResource:
             message:   The message to send.
             model:     Model id, e.g. ``"claude-sonnet-5"``.
             thread_id: Continue an existing conversation; omit to start new.
+
+        Example:
+            >>> result = client.modus.chat("What tables describe revenue?", model="claude-sonnet-5")
+            >>> print(result.content, result.thread_id)
         """
         return modus_chat_buffered(
             self._http, message, model=model, thread_id=thread_id
@@ -63,7 +67,16 @@ class ModusResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> ChatStream:
-        """Stream a Modus reply token by token."""
+        """
+        Stream a Modus reply token by token.
+
+        Example:
+            >>> with client.modus.chat_stream(
+            ...     "Summarize ARR", model="claude-sonnet-5"
+            ... ) as stream:
+            ...     for token in stream.text_stream:
+            ...         print(token, end="", flush=True)
+        """
         return modus_stream_session(
             self._agent_http, message, model=model, thread_id=thread_id
         )
@@ -76,6 +89,9 @@ class ModusResource:
     ) -> SkillContextComposition:
         """
         Return composed full-environment context for an intent, without running chat.
+
+        Example:
+            >>> ctx = client.modus.get_context("What tables describe revenue?", limit=5)
         """
         body = ModusContextRequestDto(message=message, limit=limit)
         data = with_retry(
