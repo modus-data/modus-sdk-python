@@ -50,6 +50,20 @@ def _parse_lookup_response(raw: Dict[str, Any]) -> Optional[ContextItemLookupRow
 
 
 class ContextItemsResource:
+    """
+    Read the org knowledge base (notes, metrics, saved queries, integration items).
+
+    Use ``client.context.items`` after ``modus.Modus()``. Prefer ``list`` /
+    ``get`` / ``lookup`` for discovery; use ``list_values`` when a field holds
+    a large array inside ``content``.
+
+    Example:
+        >>> import modus
+        >>> client = modus.Modus()
+        >>> for item in client.context.items.list(page_size=25).auto_paging_iter():
+        ...     print(item.context_type, modus.context_item_label(item), item.uid)
+    """
+
     def __init__(self, http: HttpClient, config: ModusConfig) -> None:
         self._http = http
         self._config = config
@@ -67,7 +81,16 @@ class ContextItemsResource:
         Args:
             page_size:    Items per page (default 25).
             page_token:   Opaque token from a previous page's ``next_page_token``.
-            context_type: Filter by type e.g. "note", "metric", "saved_query".
+            context_type: Filter by type e.g. ``"note"``, ``"metric"``, ``"saved_query"``.
+
+        Returns:
+            ``Page[ContextItem]``. Use ``.auto_paging_iter()`` for all pages.
+            Print ``modus.context_item_label(item)`` for a human title.
+
+        Example:
+            >>> notes = client.context.items.list(context_type="note", page_size=50)
+            >>> for item in notes:
+            ...     print(modus.context_item_label(item), item.uid)
         """
         validate_page_size(page_size)
         return self._list_page(page_size, page_token, context_type)
@@ -96,8 +119,18 @@ class ContextItemsResource:
         """
         Retrieve a single context item by its UID.
 
+        Args:
+            uid: Stable UUID from ``list`` / ``lookup``.
+
+        Returns:
+            Full ``ContextItem`` (``uid``, ``context_type``, ``content``, …).
+
         Raises:
             NotFoundError: if no item with this UID exists.
+
+        Example:
+            >>> item = client.context.items.get(uid)
+            >>> print(item.context_type, modus.context_item_label(item))
         """
         data = with_retry(
             lambda: invoke_operation(
@@ -120,12 +153,17 @@ class ContextItemsResource:
         Look up a context item by type and data path.
 
         Args:
-            context_type:        The context type to search for.
-            data_path:           The data path to match.
-            content_projection:  Optional projection filter for content.
+            context_type:        The context type to search for (e.g. ``"note"``).
+            data_path:           Hierarchical path segments that identify the item.
+            content_projection:  Optional projection filter for content fields.
 
         Returns:
-            ContextItemLookupRow if found, None if not found (404).
+            ContextItemLookupRow if found, ``None`` if not found (404).
+
+        Example:
+            >>> found = client.context.items.lookup("note", ["finance", "arr-definition"])
+            >>> if found:
+            ...     print(found.uid, modus.context_item_label(found))
         """
         projection: ContentProjectionDto | None = None
         if content_projection is not None:
@@ -165,7 +203,7 @@ class ContextItemsResource:
         Args:
             uid:               The context item's UUID.
             context_type:      Context type of the item (required by the backend for
-                               partition-aware reads, e.g. "salesforce_object_field").
+                               partition-aware reads, e.g. ``"table_column"``).
             content_key_path:  Dot-separated JSON path to the array of values inside
                                ``content``. Example: ``"enumValues"`` or ``"sample.values"``.
             page_size:         Values per page (default 25, max 200).
@@ -173,6 +211,17 @@ class ContextItemsResource:
 
         Returns:
             Page of value entries (shape varies by context type).
+
+        Example:
+            >>> # Replace PLACEHOLDER_UID with a real uid whose content has enumValues.
+            >>> page = client.context.items.list_values(
+            ...     "PLACEHOLDER_UID",
+            ...     "table_column",
+            ...     "enumValues",
+            ...     page_size=25,
+            ... )
+            >>> for row in page:
+            ...     print(row)
         """
         validate_page_size(page_size, max_page_size=DEFAULT_MAX_PAGE_SIZE)
         return self._list_values_page(uid, context_type, content_key_path, page_size, page_token)
@@ -197,6 +246,12 @@ class ContextItemsResource:
                                ``content``. Example: ``"enumValues"`` or ``"sample.values"``.
             page_size:         Values per page (default 25, max 200).
             page_token:        Opaque token from a previous page's ``next_page_token``.
+
+        Example:
+            >>> # Replace PLACEHOLDER_UID with a real uid that has enumValues in content.
+            >>> item = client.context.items.get("PLACEHOLDER_UID")
+            >>> for row in client.context.items.list_values_for(item, "enumValues"):
+            ...     print(row)
         """
         return self.list_values(
             item.uid,
@@ -343,7 +398,7 @@ class AsyncContextItemsResource:
         Args:
             uid:               The context item's UUID.
             context_type:      Context type of the item (required by the backend for
-                               partition-aware reads, e.g. "salesforce_object_field").
+                               partition-aware reads, e.g. "table_column").
             content_key_path:  Dot-separated JSON path to the array of values inside
                                ``content``. Example: ``"enumValues"`` or ``"sample.values"``.
             page_size:         Values per page (default 25, max 200).
