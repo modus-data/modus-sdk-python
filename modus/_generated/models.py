@@ -2006,6 +2006,7 @@ class RunSource(str, Enum):
     slack_dm = 'slack_dm'
     teams = 'teams'
     context_chat = 'context_chat'
+    dashboard_copilot = 'dashboard_copilot'
     other = 'other'
 
 
@@ -2804,6 +2805,7 @@ class ActiveConversationRunDto(BaseModel):
     session_id: str = Field(..., alias='sessionId', description='Conversation thread id.')
     status: ActiveConversationRunStatus = Field(..., description='Current non-terminal run status.')
     message: str | None = Field(None, description='User message that started the run.')
+    source: str | None = Field(None, description='Client interaction source for the run.')
     created_at: AwareDatetime = Field(..., alias='createdAt', description='Creation timestamp.')
     updated_at: AwareDatetime = Field(
         ..., alias='updatedAt', description='Most recent update timestamp.'
