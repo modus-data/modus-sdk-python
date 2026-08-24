@@ -84,12 +84,19 @@ def _workflows_list_params(
 
 class WorkflowsResource:
     """
-    Read access to Modus workflows.
+    Read and run access to Modus workflows.
 
-    client.workflows.list() → Page[Agent]
-    client.workflows.get(workflow_id) → Agent
+    - ``list`` / ``get`` — browse workflows (``view="active"`` or ``"draft"``)
+    - ``chat_stream`` — stream a chat turn against one workflow
+    - ``runs`` — start runs, follow history, cancel / resume
 
-    To create, update, or deploy workflows use modus.management.ModusManagement.
+    To create, update, or deploy workflows use ``modus.management.ModusManagement``.
+
+    Example:
+        >>> import modus
+        >>> client = modus.Modus()
+        >>> for wf in client.workflows.list().auto_paging_iter():
+        ...     print(wf.id, wf.name, wf.status)
     """
 
     def __init__(
@@ -126,6 +133,13 @@ class WorkflowsResource:
             type:              Filter by workflow type: ``"task"`` or ``"workflow"``.
             view:              Variation view — ``"active"`` (deployed) or ``"draft"``.
             include_variation: Include variation payload on each list row.
+
+        Returns:
+            ``Page[Agent]``. Use ``.auto_paging_iter()`` to walk all pages.
+
+        Example:
+            >>> for wf in client.workflows.list(search="digest").auto_paging_iter():
+            ...     print(wf.id, wf.name, wf.status)
         """
         validate_page_size(page_size)
         return self._list_page(
@@ -169,10 +183,18 @@ class WorkflowsResource:
         Retrieve a workflow by ID or slug.
 
         Args:
+            workflow_id: Workflow numeric id or slug string.
             view: Variation view — ``"active"`` (deployed) or ``"draft"``.
+
+        Returns:
+            Workflow record (``id``, ``name``, ``status``, …).
 
         Raises:
             NotFoundError: if no workflow with this ID/slug exists.
+
+        Example:
+            >>> wf = client.workflows.get("weekly-digest")
+            >>> print(wf.name, wf.status)
         """
         validate_id(workflow_id, name="workflow_id")
         query = {} if view is None else {"view": view}
@@ -197,7 +219,10 @@ class WorkflowsResource:
         version: Optional[RunVersion] = None,
     ) -> ChatStream:
         """
-        Send a message to a workflow and stream the reply token by token.
+        Stream a workflow reply token by token (SSE).
+
+        Prefer ``client.workflows.runs.create`` when you need run lifecycle
+        events (cancel / resume). Use this helper for a chat-shaped stream.
 
         Args:
             workflow_id: Workflow ID or slug.
@@ -208,7 +233,17 @@ class WorkflowsResource:
             version:   Run a specific variation — ``"published"`` or ``"draft"``.
 
         Returns:
-            ChatStream you can iterate for text chunks; the final result carries the ``thread_id``.
+            ``ChatStream``. After iteration,
+            ``stream.get_final_result()`` exposes ``content`` and ``thread_id``.
+
+        Example:
+            >>> with client.workflows.chat_stream(
+            ...     workflow_id,
+            ...     "Run the weekly digest summary.",
+            ...     model="claude-sonnet-5",
+            ... ) as stream:
+            ...     for token in stream.text_stream:
+            ...         print(token, end="", flush=True)
         """
         return self._ops.stream_session(
             self._agent_http,
@@ -222,12 +257,14 @@ class WorkflowsResource:
 
 class AsyncWorkflowsResource:
     """
-    Async read access to Modus workflows.
+    Async read and run access to Modus workflows.
 
     await client.workflows.list() → AsyncPage[Agent]
     await client.workflows.get(workflow_id) → Agent
 
-    To create, update, or deploy workflows use modus.management.ModusManagement.
+    Sync Examples on ``WorkflowsResource`` apply; swap in ``await`` /
+    ``async for`` as needed. To create, update, or deploy workflows use
+    ``modus.management.ModusManagement``.
     """
 
     def __init__(
