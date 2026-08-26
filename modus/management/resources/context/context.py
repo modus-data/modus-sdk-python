@@ -72,6 +72,11 @@ class ContextResource:
 
         Returns:
             Created item with its new ``uid``.
+
+        Example:
+            >>> mgmt = modus.management.ModusManagement()
+            >>> created = mgmt.context.create_note("Runbook", "# Steps\\n1. Check logs")
+            >>> created.uid
         """
         body = CreateNoteDto(title=title, content=content)
         return self._create(
@@ -95,6 +100,27 @@ class ContextResource:
         Preserves server-owned fields (``noteId``, ``s3Key``, …) on the
         existing ``content`` blob. Pass ``existing`` to skip a GET when you
         already have the item from a list call.
+
+        Args:
+            uid: Context item uid.
+            title: New display title.
+            body: New markdown body.
+            existing: Optional already-fetched item (skips a GET).
+            description: Optional item description override.
+            user_feedback: Optional feedback label or enum.
+            topics: Optional topic tags.
+
+        Returns:
+            The updated ``ContextItem``.
+
+        Example:
+            >>> mgmt = modus.management.ModusManagement()
+            >>> item = mgmt.context.update_note(
+            ...     "PLACEHOLDER_UID",
+            ...     title="Runbook",
+            ...     body="# Steps\\n1. Check logs\\n2. Escalate",
+            ... )
+            >>> item.uid
         """
         content = resolve_existing_content(
             self.items, uid, context_type="note", existing=existing
@@ -126,6 +152,15 @@ class ContextResource:
 
         Returns:
             Created item with its new ``uid``.
+
+        Example:
+            >>> mgmt = modus.management.ModusManagement()
+            >>> created = mgmt.context.create_saved_query(
+            ...     "Monthly ARR",
+            ...     query="select * from arr_monthly",
+            ...     connection_id="conn_warehouse",
+            ... )
+            >>> created.uid
         """
         body = CreateSavedQueryDto(
             name=name,
@@ -152,7 +187,31 @@ class ContextResource:
         user_feedback: UserFeedback | str | None = None,
         topics: Optional[List[str]] = None,
     ) -> ContextItem:
-        """Update a saved query's name, SQL, and optional connection metadata."""
+        """Update a saved query's name, SQL, and optional connection metadata.
+
+        Args:
+            uid: Context item uid.
+            name: Display name for the saved query.
+            query: SQL text.
+            connection_id: Optional data connection id override.
+            path: Optional hierarchical path segments.
+            existing: Optional already-fetched item (skips a GET).
+            description: Optional item description override.
+            user_feedback: Optional feedback label or enum.
+            topics: Optional topic tags.
+
+        Returns:
+            The updated ``ContextItem``.
+
+        Example:
+            >>> mgmt = modus.management.ModusManagement()
+            >>> item = mgmt.context.update_saved_query(
+            ...     "PLACEHOLDER_UID",
+            ...     name="Monthly ARR",
+            ...     query="select sum(amount) from arr_monthly",
+            ... )
+            >>> item.uid
+        """
         content = resolve_existing_content(
             self.items, uid, context_type="saved_query", existing=existing
         )
@@ -188,6 +247,14 @@ class ContextResource:
 
         Returns:
             Created item with its new ``uid``.
+
+        Example:
+            >>> mgmt = modus.management.ModusManagement()
+            >>> created = mgmt.context.create_link(
+            ...     "https://docs.example.com/runbook",
+            ...     title="Ops runbook",
+            ... )
+            >>> created.uid
         """
         body = CreateLinkDto(
             url=url,
@@ -215,6 +282,26 @@ class ContextResource:
 
         Merges ``title`` and/or ``url`` into the stored ``content`` blob.
         Does not re-fetch or re-crawl the URL.
+
+        Args:
+            uid: Context item uid.
+            title: Optional new display title.
+            url: Optional new link URL.
+            existing: Optional already-fetched item (skips a GET).
+            description: Optional item description override.
+            user_feedback: Optional feedback label or enum.
+            topics: Optional topic tags.
+
+        Returns:
+            The updated ``ContextItem``.
+
+        Example:
+            >>> mgmt = modus.management.ModusManagement()
+            >>> item = mgmt.context.update_link(
+            ...     "PLACEHOLDER_UID",
+            ...     title="Ops runbook (2025)",
+            ... )
+            >>> item.uid
         """
         if title is None and url is None and description is None and user_feedback is None and topics is None:
             raise ValueError("Provide at least one field to update.")

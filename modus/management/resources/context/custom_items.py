@@ -87,6 +87,10 @@ class CustomContextItemsResource:
 
         Returns:
             A page of custom context items.
+
+        Example:
+            >>> for item in mgmt.context.custom_items.list(page_size=25).auto_paging_iter():
+            ...     print(item.uid, item.context_type)
         """
         validate_page_size(page_size)
         return self._list_page(page_size, page_token, search_query, topics)
@@ -120,6 +124,10 @@ class CustomContextItemsResource:
 
         Returns:
             The matching custom context item.
+
+        Example:
+            >>> item = mgmt.context.custom_items.get("PLACEHOLDER_UID")
+            >>> item.context_type
         """
         data = with_retry(
             lambda: invoke_operation(
@@ -132,7 +140,24 @@ class CustomContextItemsResource:
         return ContextItem.model_validate(data)
 
     def create(self, **payload: Any) -> Dict[str, Any]:
-        """Create a custom context item for an internal system or custom database."""
+        """Create a custom context item for an internal system or custom database.
+
+        Args:
+            **payload: Item fields such as ``kind``, ``source_id``, ``name``,
+                ``content``, and optional hierarchy / attribute keys.
+
+        Returns:
+            Create acknowledgement dict including ``uid``.
+
+        Example:
+            >>> created = mgmt.context.custom_items.create(
+            ...     kind="entity",
+            ...     source_id="my-source",
+            ...     name="Q3 churn notes",
+            ...     content={"summary": "Key findings…"},
+            ... )
+            >>> created["uid"]
+        """
         data = with_retry(
             lambda: invoke_operation(
                 self._http,
@@ -144,7 +169,28 @@ class CustomContextItemsResource:
         return _with_created_uid(dict(data))
 
     def batch_create(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Create or update a batch of custom context items by stable hierarchy."""
+        """Create or update a batch of custom context items by stable hierarchy.
+
+        Args:
+            items: Payloads with the same shape as ``create`` (``kind``,
+                ``source_id`` / ``sourceId``, ``name``, ``content``, …).
+
+        Returns:
+            List of create acknowledgement dicts, each including ``uid``.
+
+        Example:
+            >>> created = mgmt.context.custom_items.batch_create(
+            ...     [
+            ...         {
+            ...             "kind": "entity",
+            ...             "sourceId": "my-source",
+            ...             "name": "Q3 churn notes",
+            ...             "content": {"summary": "Key findings"},
+            ...         }
+            ...     ]
+            ... )
+            >>> print(created[0]["uid"])
+        """
         data = with_retry(
             lambda: invoke_operation(
                 self._http,
@@ -165,6 +211,12 @@ class CustomContextItemsResource:
 
         Returns:
             The update acknowledgement payload.
+
+        Example:
+            >>> mgmt.context.custom_items.update(
+            ...     "PLACEHOLDER_UID",
+            ...     description="Updated summary",
+            ... )
         """
         data = with_retry(
             lambda: invoke_operation(
@@ -185,6 +237,10 @@ class CustomContextItemsResource:
 
         Returns:
             Deletion metadata for the removed item.
+
+        Example:
+            >>> result = mgmt.context.custom_items.delete("PLACEHOLDER_UID")
+            >>> result.uid
         """
         raw = with_retry(
             lambda: invoke_operation(

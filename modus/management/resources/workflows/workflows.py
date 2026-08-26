@@ -139,6 +139,14 @@ class WorkflowsResource:
             type:              Filter by workflow type: ``"task"`` or ``"workflow"``.
             view:              Variation view — ``"active"`` (deployed) or ``"draft"``.
             include_variation: Include variation payload on each list row.
+
+        Returns:
+            ``Page[Agent]``. Use ``.auto_paging_iter()`` to walk all pages.
+
+        Example:
+            >>> mgmt = modus.management.ModusManagement()
+            >>> for wf in mgmt.workflows.list(search="digest").auto_paging_iter():
+            ...     print(wf.id, wf.name, wf.status)
         """
         validate_page_size(page_size)
         return self._list_page(
@@ -178,7 +186,21 @@ class WorkflowsResource:
         *,
         view: Optional[VariationView] = None,
     ) -> Agent:
-        """Retrieve a Modus workflow with full configuration."""
+        """
+        Retrieve a Modus workflow with full configuration.
+
+        Args:
+            workflow_id: Workflow numeric id or slug string.
+            view:        Variation view — ``"active"`` (deployed) or ``"draft"``.
+
+        Returns:
+            Workflow record (``id``, ``name``, ``status``, …).
+
+        Example:
+            >>> mgmt = modus.management.ModusManagement()
+            >>> wf = mgmt.workflows.get("weekly-digest")
+            >>> print(wf.name, wf.status)
+        """
         validate_id(workflow_id, name="workflow_id")
         query = {} if view is None else {"view": view}
         data = with_retry(
@@ -213,10 +235,22 @@ class WorkflowsResource:
             name: Display name for the workflow.
             type: ``"task"`` for single-step skill orchestration, or ``"workflow"``
                   for a multi-step graph.
+            description: Optional human-readable description.
+            trigger: Optional trigger configuration payload.
+            agent_selection: Optional scope/skill selection for task workflows.
+            workflow_structure: Optional multi-step graph for ``\"workflow\"`` type.
             guardrails: Runtime guardrail labels (for example ``\"no-pii\"``).
                 When set, the workflow is created with these labels under the
                 organisation default sharing rules. Omit (``None``) to create
                 with no guardrails. ACL fields cannot be set from the SDK.
+
+        Returns:
+            The created workflow (draft).
+
+        Example:
+            >>> mgmt = modus.management.ModusManagement()
+            >>> wf = mgmt.workflows.create("Daily report", "task")
+            >>> print(wf.id, wf.name)
         """
         body = _WorkflowCreateBody(
             name=name, type=type, description=description,
@@ -254,10 +288,29 @@ class WorkflowsResource:
         fields not named in the mask untouched.
 
         Args:
+            workflow_id: Workflow numeric id or slug string.
+            name: Optional new display name.
+            type: Optional new type (``\"task\"`` or ``\"workflow\"``).
+            description: Optional new description.
+            trigger: Optional trigger configuration payload.
+            agent_selection: Optional scope/skill selection for task workflows.
+            workflow_structure: Optional multi-step graph for ``\"workflow\"`` type.
             guardrails: Runtime guardrail labels to set on the workflow. Fetches
                 the current workflow first and merges these labels into its access
                 configuration (an extra ``get`` request). Omit (``None``) to
                 leave guardrails unchanged. Pass ``[]`` to clear all guardrails.
+            update_mask: Comma-separated field names to update or clear.
+
+        Returns:
+            The updated workflow.
+
+        Example:
+            >>> mgmt = modus.management.ModusManagement()
+            >>> wf = mgmt.workflows.update(
+            ...     "PLACEHOLDER_WORKFLOW_ID",
+            ...     description="Runs every morning",
+            ... )
+            >>> print(wf.description)
         """
         validate_id(workflow_id, name="workflow_id")
         access_config = access_config_body_for_update(
@@ -298,6 +351,12 @@ class WorkflowsResource:
 
         Returns:
             The workflow with its newly published configuration.
+
+        Example:
+            >>> mgmt = modus.management.ModusManagement()
+            >>> mgmt.workflows.update(workflow_id, description="Runs every morning")
+            >>> published = mgmt.workflows.deploy(workflow_id)
+            >>> print(published.status)
         """
         validate_id(workflow_id, name="workflow_id")
         raw = with_retry(
@@ -329,6 +388,13 @@ class WorkflowsResource:
 
         Args:
             workflow_id: Workflow to remove.
+
+        Returns:
+            ``None``.
+
+        Example:
+            >>> mgmt = modus.management.ModusManagement()
+            >>> mgmt.workflows.delete(workflow_id)
         """
         validate_id(workflow_id, name="workflow_id")
         with_retry(

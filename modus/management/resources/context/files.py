@@ -320,6 +320,10 @@ class ContextFilesResource:
 
         Returns:
             The file upload resource, including its processing ``status``.
+
+        Example:
+            >>> upload = mgmt.context.files.get("PLACEHOLDER_UPLOAD_ID")
+            >>> print(upload.status, upload.file_name)
         """
         validate_id(upload_id, name="upload_id")
         data = with_retry(
@@ -340,6 +344,10 @@ class ContextFilesResource:
         Returns:
             Page of file uploads. Uploads that only have a pending row (not yet
             landed) aren't included here — use ``get(upload_id)`` for those.
+
+        Example:
+            >>> for row in mgmt.context.files.list(page_size=25).auto_paging_iter():
+            ...     print(row.upload_id, row.file_name, row.status)
         """
         validate_page_size(page_size, max_page_size=200)
         return self._list_page(page_size, page_token)
@@ -435,6 +443,10 @@ class ContextFilesResource:
 
         Raises:
             ModusError: if the PUT fails, or polling times out.
+
+        Example:
+            >>> upload = mgmt.context.files.upload("./arr-definition.pdf")
+            >>> print(upload.upload_id, upload.status)
         """
         _validate_wait_until(wait_until)
         file_path = Path(path)
