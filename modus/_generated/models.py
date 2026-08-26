@@ -2465,7 +2465,10 @@ class MemberGroupDto(BaseModel):
     uid: str
     name: str
     description: str
-    member_ids: list[str]
+    member_ids: list[str] | None = Field(
+        None,
+        description='Clerk user ids in this group. Present for native groups (the synthesized Everyone group included). Absent for directory-sourced groups — use `member_count`; membership is directory-managed.',
+    )
     created_at: str
     updated_at: str
     source: MemberGroupSource | None = Field(
