@@ -1157,14 +1157,9 @@ class LookupContextItemRowDto(BaseModel):
     )
 
 
-class MemberGroupDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    uid: str
-    name: str
-    description: str
-    member_ids: list[str]
-    created_at: str
-    updated_at: str
+class MemberGroupSource(str, Enum):
+    native = 'native'
+    directory = 'directory'
 
 
 class MemoryDto(BaseModel):
@@ -2011,6 +2006,7 @@ class RunSource(str, Enum):
     slack_dm = 'slack_dm'
     teams = 'teams'
     context_chat = 'context_chat'
+    dashboard_copilot = 'dashboard_copilot'
     other = 'other'
 
 
@@ -2400,11 +2396,6 @@ class ListFilesResponseDto(BaseModel):
     )
 
 
-class ListMemberGroupsResponseDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    groups: list[MemberGroupDto]
-
-
 class ListMemoriesResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     memories: list[MemoryDto] = Field(..., description='Memories belonging to the scope.')
@@ -2466,6 +2457,29 @@ class LookupContextItemResponseDto(BaseModel):
     item: LookupContextItemRowDto | None = Field(
         ...,
         description="The matched row, or null when no row in the caller's tenant matches the supplied `(contextType, dataPath)`.",
+    )
+
+
+class MemberGroupDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    uid: str
+    name: str
+    description: str
+    member_ids: list[str] | None = Field(
+        None,
+        description='Clerk user ids in this group. Present for native groups (the synthesized Everyone group included). Absent for directory-sourced groups — use `member_count`; membership is directory-managed.',
+    )
+    created_at: str
+    updated_at: str
+    source: MemberGroupSource | None = Field(
+        None,
+        description='Provenance of the group: org-managed ("native") or backed by an identity-provider directory group ("directory").',
+        examples=['native'],
+    )
+    member_count: float | None = Field(
+        None,
+        description='Member count for directory-sourced groups. Present (and non-null) only when `source` is "directory".',
+        examples=[42],
     )
 
 
@@ -2794,6 +2808,7 @@ class ActiveConversationRunDto(BaseModel):
     session_id: str = Field(..., alias='sessionId', description='Conversation thread id.')
     status: ActiveConversationRunStatus = Field(..., description='Current non-terminal run status.')
     message: str | None = Field(None, description='User message that started the run.')
+    source: str | None = Field(None, description='Client interaction source for the run.')
     created_at: AwareDatetime = Field(..., alias='createdAt', description='Creation timestamp.')
     updated_at: AwareDatetime = Field(
         ..., alias='updatedAt', description='Most recent update timestamp.'
@@ -3143,6 +3158,11 @@ class ListAgentsResponseDto(BaseModel):
         alias='nextPageToken',
         description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
     )
+
+
+class ListMemberGroupsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    groups: list[MemberGroupDto]
 
 
 class ScopeDto(BaseModel):

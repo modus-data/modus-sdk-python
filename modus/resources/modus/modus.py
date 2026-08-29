@@ -1,4 +1,4 @@
-"""Native Modus chat — org-wide assistant, not a skill."""
+"""Native Modus chat — org-wide assistant (not a single scope)."""
 
 from __future__ import annotations
 
@@ -24,11 +24,28 @@ from .conversations import AsyncModusConversationsResource, ModusConversationsRe
 
 class ModusResource:
     """
-    Chat with Modus — your org-wide assistant with full context and tools.
+    Chat with Modus — the org-wide assistant with full environment context and tools.
 
-    client.modus.chat("…", model="claude-sonnet-5")
-    client.modus.conversations.list(kind="modus")
-    client.modus.get_context("What tables describe churn?")
+    Prefer this over ``client.scopes.chat`` when the question is not tied to one
+    published scope. Construct the client with ``modus.Modus()`` (reads
+    ``MODUS_API_KEY``).
+
+    When to use which method:
+
+    - ``chat`` — one complete reply (simplest).
+    - ``chat_stream`` — print tokens as they arrive.
+    - ``get_context`` — preview composed context without running a chat turn.
+    - ``conversations`` — list/get prior Modus threads.
+
+    Example:
+        >>> import modus
+        >>> client = modus.Modus()
+        >>> result = client.modus.chat(
+        ...     "What tables describe revenue?",
+        ...     model="claude-sonnet-5",
+        ... )
+        >>> print(result.content)
+        >>> print(result.thread_id)  # pass as thread_id on the next message
     """
 
     def __init__(self, http: HttpClient, agent_http: HttpClient, config: ModusConfig) -> None:
@@ -45,12 +62,37 @@ class ModusResource:
         thread_id: Optional[str] = None,
     ) -> ChatResult:
         """
-        Send a message to Modus and get the complete reply.
+        Send a message to Modus and wait for the complete reply.
 
         Args:
-            message:   The message to send.
-            model:     Model id, e.g. ``"claude-sonnet-5"``.
-            thread_id: Continue an existing conversation; omit to start new.
+            message:   User message text.
+            model:     Model id, e.g. ``"claude-sonnet-5"``. Unsupported ids raise
+                       ``ValueError`` before the request is sent.
+            thread_id: Continue an existing conversation; omit to start a new thread.
+
+        Returns:
+            ``ChatResult`` with:
+
+            - ``content`` — final assistant text
+            - ``thread_id`` — pass to the next ``chat`` / ``chat_stream`` call
+            - ``run_id`` — opaque id for logging
+
+        Raises:
+            AuthenticationError: Invalid or missing API key.
+            NotFoundError: ``thread_id`` does not exist.
+            APIError: Upstream request failure.
+
+        Example:
+            >>> result = client.modus.chat(
+            ...     "What tables describe revenue?",
+            ...     model="claude-sonnet-5",
+            ... )
+            >>> print(result.content, result.thread_id)
+            >>> follow = client.modus.chat(
+            ...     "Break that down by region.",
+            ...     model="claude-sonnet-5",
+            ...     thread_id=result.thread_id,
+            ... )
         """
         return modus_chat_buffered(
             self._http, message, model=model, thread_id=thread_id
@@ -63,7 +105,30 @@ class ModusResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> ChatStream:
-        """Stream a Modus reply token by token."""
+        """
+        Stream a Modus reply token by token (SSE).
+
+        The HTTP request starts when you consume ``text_stream`` or
+        ``event_stream``. Always use the context manager and iterate.
+
+        Args:
+            message:   User message text.
+            model:     Model id, e.g. ``"claude-sonnet-5"``.
+            thread_id: Continue an existing conversation; omit to start new.
+
+        Returns:
+            ``ChatStream``. After the stream finishes,
+            ``stream.get_final_result()`` exposes ``content`` and ``thread_id``.
+
+        Example:
+            >>> with client.modus.chat_stream(
+            ...     "Summarize ARR in three bullets.",
+            ...     model="claude-sonnet-5",
+            ... ) as stream:
+            ...     for token in stream.text_stream:
+            ...         print(token, end="", flush=True)
+            >>> print(stream.get_final_result().thread_id)
+        """
         return modus_stream_session(
             self._agent_http, message, model=model, thread_id=thread_id
         )
@@ -75,7 +140,26 @@ class ModusResource:
         limit: Optional[int] = None,
     ) -> SkillContextComposition:
         """
-        Return composed full-environment context for an intent, without running chat.
+        Compose full-environment context for an intent without running chat.
+
+        Use this to inspect what Modus would retrieve before (or instead of)
+        calling ``chat``.
+
+        Args:
+            message: Natural-language intent used to select context.
+            limit:   Optional cap on structured fallback items when no markdown
+                     summary exists.
+
+        Returns:
+            Composition object (includes counts / session metadata used by the
+            product UI). Prefer ``chat`` when you need an assistant reply.
+
+        Example:
+            >>> ctx = client.modus.get_context(
+            ...     "What tables describe revenue?",
+            ...     limit=5,
+            ... )
+            >>> print(ctx.original_count, ctx.session_id)
         """
         body = ModusContextRequestDto(message=message, limit=limit)
         data = with_retry(
@@ -90,7 +174,17 @@ class ModusResource:
 
 
 class AsyncModusResource:
-    """Async native Modus chat."""
+    """
+    Async native Modus chat (same methods as ``ModusResource``).
+
+    Example:
+        >>> async with modus.AsyncModus() as client:
+        ...     result = await client.modus.chat(
+        ...         "Hello",
+        ...         model="claude-sonnet-5",
+        ...     )
+        ...     print(result.content)
+    """
 
     def __init__(self, http: AsyncHttpClient, agent_http: AsyncHttpClient, config: ModusConfig) -> None:
         self._http = http
@@ -105,7 +199,17 @@ class AsyncModusResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> ChatResult:
-        """Send a message to Modus and get the complete reply. See the sync ``chat`` for argument details."""
+        """
+        Send a message to Modus and wait for the complete reply.
+
+        Args:
+            message:   User message text.
+            model:     Model id, e.g. ``"claude-sonnet-5"``.
+            thread_id: Continue an existing conversation; omit to start new.
+
+        Returns:
+            ``ChatResult`` with ``content``, ``thread_id``, and ``run_id``.
+        """
         return await modus_chat_buffered_async(
             self._http, message, model=model, thread_id=thread_id
         )
@@ -117,7 +221,17 @@ class AsyncModusResource:
         model: str,
         thread_id: Optional[str] = None,
     ) -> AsyncChatStream:
-        """Stream a Modus reply token by token. See the sync ``chat_stream`` for argument details."""
+        """
+        Stream a Modus reply token by token (async).
+
+        Args:
+            message:   User message text.
+            model:     Model id, e.g. ``"claude-sonnet-5"``.
+            thread_id: Continue an existing conversation; omit to start new.
+
+        Returns:
+            ``AsyncChatStream`` — ``async for token in stream.text_stream``.
+        """
         return modus_stream_session_async(
             self._agent_http, message, model=model, thread_id=thread_id
         )
@@ -128,7 +242,13 @@ class AsyncModusResource:
         *,
         limit: Optional[int] = None,
     ) -> SkillContextComposition:
-        """Return composed full-environment context for an intent. See the sync ``get_context`` for argument details."""
+        """
+        Compose full-environment context for an intent without running chat.
+
+        Args:
+            message: Natural-language intent used to select context.
+            limit:   Optional cap on structured fallback items.
+        """
         body = ModusContextRequestDto(message=message, limit=limit)
         data = await async_with_retry(
             lambda: invoke_operation_async(

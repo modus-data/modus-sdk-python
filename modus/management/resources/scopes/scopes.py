@@ -183,6 +183,13 @@ class ScopesResource:
             search:      Case-insensitive substring filter on the scope name.
             view:        Variation view — ``"active"`` (deployed) or ``"draft"``.
             manager_id:  Return only scopes supervised by this manager scope id.
+
+        Returns:
+            ``Page[Skill]``. Use ``.auto_paging_iter()`` to walk all pages.
+
+        Example:
+            >>> for scope in mgmt.scopes.list().auto_paging_iter():
+            ...     print(scope.id, scope.name, scope.status)
         """
         validate_page_size(page_size)
         return self._list_page(page_size, page_token, search, view, manager_id)
@@ -215,7 +222,19 @@ class ScopesResource:
         *,
         view: Optional[VariationView] = None,
     ) -> Skill:
-        """Retrieve a Modus scope with full configuration (instructions, model, and related fields)."""
+        """Retrieve a Modus scope with full configuration (instructions, model, and related fields).
+
+        Args:
+            scope_id: Scope numeric id or slug string.
+            view:     Variation view — ``"active"`` (deployed) or ``"draft"``.
+
+        Returns:
+            Scope record (``id``, ``name``, ``status``, …).
+
+        Example:
+            >>> scope = mgmt.scopes.get("PLACEHOLDER_SCOPE_ID")
+            >>> print(scope.name, scope.status)
+        """
         validate_id(scope_id, name="scope_id")
         query = {} if view is None else {"view": view}
         data = with_retry(
@@ -246,10 +265,30 @@ class ScopesResource:
         """Create a new Modus scope in the organisation.
 
         Args:
+            name: Display name for the scope.
+            description: Optional human-readable description.
+            expected_output: Optional expected-output guidance for the model.
+            instructions: Optional instruction strings.
+            toolset: Optional tool configuration payload.
+            model: Optional model id (for example ``\"claude-sonnet-5\"``).
+            connection_set: Optional data connections for the scope.
+            context_selections: Optional context selection payload.
+            interfaces: Optional interface configuration payload.
             guardrails: Runtime guardrail labels (for example ``\"no-pii\"``).
                 When set, the scope is created with these labels under the
                 organisation default sharing rules. Omit (``None``) to create
                 with no guardrails. ACL fields cannot be set from the SDK.
+
+        Returns:
+            The new scope (draft) with ``id``, ``name``, and related fields.
+
+        Example:
+            >>> mgmt = modus.management.ModusManagement()
+            >>> scope = mgmt.scopes.create(
+            ...     name="Support assistant",
+            ...     model="claude-sonnet-5",
+            ... )
+            >>> print(scope.id, scope.name)
         """
         body = _ScopeCreateBody(
             name=name, description=description, expected_output=expected_output,
@@ -298,10 +337,36 @@ class ScopesResource:
         fields not named in the mask untouched.
 
         Args:
+            scope_id: Scope numeric id or slug string.
+            name: Optional new display name.
+            description: Optional new description.
+            expected_output: Optional expected-output guidance.
+            instructions: Optional instruction strings.
+            toolset: Optional tool configuration payload.
+            model: Optional model id.
+            connection_set: Optional data connections for the scope.
+            context_selections: Optional context selection payload.
+            interfaces: Optional interface configuration payload.
             guardrails: Runtime guardrail labels to set on the scope. Fetches
                 the current scope first and merges these labels into its access
                 configuration (an extra ``get`` request). Omit (``None``) to
                 leave guardrails unchanged. Pass ``[]`` to clear all guardrails.
+            manager_id: Optional supervising manager scope id.
+            evaluations: Optional evaluation configuration payload.
+            supervision_subordinate_descriptions: Optional map of subordinate
+                scope id to description text.
+            update_mask: Comma-separated field names to update or clear.
+
+        Returns:
+            The updated scope.
+
+        Example:
+            >>> mgmt = modus.management.ModusManagement()
+            >>> scope = mgmt.scopes.update(
+            ...     "PLACEHOLDER_SCOPE_ID",
+            ...     description="Answers billing questions for enterprise customers.",
+            ... )
+            >>> scope.description
         """
         validate_id(scope_id, name="scope_id")
         access_config = access_config_body_for_update(
@@ -350,6 +415,11 @@ class ScopesResource:
 
         Returns:
             The scope with its newly published configuration.
+
+        Example:
+            >>> scope = mgmt.scopes.create(name="Support assistant")
+            >>> published = mgmt.scopes.deploy(scope.id)
+            >>> published.status
         """
         validate_id(scope_id, name="scope_id")
         raw = with_retry(
@@ -369,6 +439,13 @@ class ScopesResource:
 
         Args:
             scope_id: Scope to remove.
+
+        Returns:
+            ``None``.
+
+        Example:
+            >>> mgmt = modus.management.ModusManagement()
+            >>> mgmt.scopes.delete("PLACEHOLDER_SCOPE_ID")
         """
         validate_id(scope_id, name="scope_id")
         with_retry(

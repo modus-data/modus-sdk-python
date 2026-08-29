@@ -135,6 +135,21 @@ async def _parse_events_async(lines: AsyncIterator[str]) -> AsyncIterator[RunEve
 
 
 class WorkflowRunsResource:
+    """
+    Start, inspect, and control workflow runs.
+
+    Typical path: ``create`` (or ``create_scope`` / ``create_modus``) → stream
+    events → ``list`` / ``get`` history → ``cancel`` or ``resume`` when needed.
+
+    Example:
+        >>> for event in client.workflows.runs.create(
+        ...     workflow_id,
+        ...     {"message": "Summarize yesterday's sales", "config": {"model": "claude-sonnet-5"}},
+        ... ):
+        ...     if event.type == "token":
+        ...         print(event.content, end="", flush=True)
+    """
+
     def __init__(
         self,
         http: HttpClient,
@@ -168,6 +183,15 @@ class WorkflowRunsResource:
             timeframe:       Filter by time window (e.g. ``"last_hour"``, ``"last_day"``, ``"last_week"``).
             approval_scope:  When ``status="awaiting_human"``, scope to ``"mine"`` or ``"all"``.
             search:          Free-text search filter.
+
+        Returns:
+            ``Page`` of run summaries. Use ``.auto_paging_iter()`` for all pages.
+
+        Example:
+            >>> for run in client.workflows.runs.list(
+            ...     workflow_id, status="completed"
+            ... ).auto_paging_iter():
+            ...     print(run.workflow_id, run.status, run.started_at)
         """
         validate_id(workflow_id, name="workflow_id")
         validate_page_size(page_size, max_page_size=100)
@@ -180,6 +204,7 @@ class WorkflowRunsResource:
             approval_scope=approval_scope,
             search=search,
         )
+
 
     def _list_page(
         self,
@@ -291,8 +316,16 @@ class WorkflowRunsResource:
 
         Args:
             workflow_id:      Modus workflow ID or slug.
-            run_id:           Run ID.
-            temporal_run_id:  Optional Temporal run ID when disambiguating.
+            run_id:           Run ID (the list row's ``workflow_id`` field, not
+                              the composite ``id``).
+            temporal_run_id:  Optional Temporal run ID when disambiguating retries.
+
+        Returns:
+            Full run details including status and output.
+
+        Example:
+            >>> run = client.workflows.runs.get(workflow_id, run_id)
+            >>> print(run.status)
         """
         validate_id(workflow_id, name="workflow_id")
         if not run_id or not str(run_id).strip():
@@ -321,7 +354,23 @@ class WorkflowRunsResource:
 
         Args:
             workflow_id: Workflow ID or slug.
-            body:        Run request fields such as message, sessionId, config, and runId.
+            body:        Run request fields such as ``message``, optional
+                         ``sessionId``, ``config`` (e.g. ``{"model": "..."}``),
+                         and optional ``runId``.
+
+        Returns:
+            Iterator of ``RunEvent`` (``token``, ``done``, ``error``, …).
+
+        Example:
+            >>> for event in client.workflows.runs.create(
+            ...     workflow_id,
+            ...     {
+            ...         "message": "Summarize yesterday's sales",
+            ...         "config": {"model": "claude-sonnet-5"},
+            ...     },
+            ... ):
+            ...     if event.type == "token":
+            ...         print(event.content, end="", flush=True)
         """
         validate_id(workflow_id, name="workflow_id")
         return _parse_events(
@@ -341,9 +390,24 @@ class WorkflowRunsResource:
         """
         Start a scope run and stream its events.
 
+        Same event stream shape as ``create``, but targets a published scope
+        instead of a workflow.
+
         Args:
             scope_id: Scope ID or slug.
-            body:     Run request fields such as message, sessionId, config, and runId.
+            body:     Run request fields such as ``message``, ``sessionId``,
+                      ``config``, and ``runId``.
+
+        Example:
+            >>> for event in client.workflows.runs.create_scope(
+            ...     scope_id,
+            ...     {
+            ...         "message": "What is our ARR trend?",
+            ...         "config": {"model": "claude-sonnet-5"},
+            ...     },
+            ... ):
+            ...     if event.type == "token":
+            ...         print(event.content, end="", flush=True)
         """
         validate_id(scope_id, name="scope_id")
         return _parse_events(
@@ -357,10 +421,21 @@ class WorkflowRunsResource:
 
     def create_modus(self, body: Mapping[str, Any]) -> Iterator[RunEvent]:
         """
-        Start a Modus run and stream its events.
+        Start a Modus org-assistant run and stream its events.
 
         Args:
-            body: Run request fields such as message, sessionId, config, and runId.
+            body: Run request fields such as ``message``, ``sessionId``,
+                  ``config``, and optional ``subordinateSkillIds``.
+
+        Example:
+            >>> for event in client.workflows.runs.create_modus(
+            ...     {
+            ...         "message": "Summarize ARR in three bullets.",
+            ...         "config": {"model": "claude-sonnet-5"},
+            ...     },
+            ... ):
+            ...     if event.type == "token":
+            ...         print(event.content, end="", flush=True)
         """
         return _parse_events(
             invoke_operation_stream(
@@ -376,7 +451,21 @@ class WorkflowRunsResource:
 
         Args:
             run_id: Run ID to resume.
-            body:   Resume request fields including the decision and message.
+            body:   Resume fields including ``decision``
+                    (``"approve"`` / ``"deny"`` / ``"connected"`` / ``"cancelled"``),
+                    ``message``, and ``sessionId``.
+
+        Example:
+            >>> for event in client.workflows.runs.resume(
+            ...     run_id,
+            ...     {
+            ...         "decision": "approve",
+            ...         "message": "Looks good — continue.",
+            ...         "sessionId": session_id,
+            ...     },
+            ... ):
+            ...     if event.type == "token":
+            ...         print(event.content, end="", flush=True)
         """
         validate_id(run_id, name="run_id")
         return _parse_events(
@@ -390,11 +479,14 @@ class WorkflowRunsResource:
 
     def cancel(self, run_id: str, body: Optional[Mapping[str, Any]] = None) -> None:
         """
-        Cancel a run.
+        Cancel a run that is still in progress.
 
         Args:
             run_id: Run ID to cancel.
             body:   Optional cancellation details.
+
+        Example:
+            >>> client.workflows.runs.cancel(run_id)
         """
         validate_id(run_id, name="run_id")
         with_retry(
@@ -463,10 +555,15 @@ class WorkflowRunsResource:
 
     def stream(self, run_id: str) -> Iterator[RunEvent]:
         """
-        Stream run output events.
+        Reconnect to an in-progress run and stream output events.
 
         Args:
             run_id: Run ID to follow.
+
+        Example:
+            >>> for event in client.workflows.runs.stream(run_id):
+            ...     if event.type == "token":
+            ...         print(event.content, end="", flush=True)
         """
         validate_id(run_id, name="run_id")
         return _parse_events(
@@ -479,6 +576,13 @@ class WorkflowRunsResource:
 
 
 class AsyncWorkflowRunsResource:
+    """
+    Async start / inspect / control for workflow runs.
+
+    Sync Examples on ``WorkflowRunsResource`` apply; use ``async for`` on
+    streaming methods and ``await`` on list/get/cancel.
+    """
+
     def __init__(
         self,
         http: AsyncHttpClient,

@@ -58,6 +58,12 @@ class ContextItemsResource:
 
         Returns:
             Page of context items.
+
+        Example:
+            >>> for item in mgmt.context.items.list(
+            ...     context_type="note", page_size=25
+            ... ).auto_paging_iter():
+            ...     print(item.uid, item.description)
         """
         validate_page_size(page_size)
         return self._list_page(page_size, page_token, context_type)
@@ -94,6 +100,10 @@ class ContextItemsResource:
 
         Raises:
             NotFoundError: if no item with this UID exists.
+
+        Example:
+            >>> item = mgmt.context.items.get("PLACEHOLDER_UID")
+            >>> print(item.context_type, item.description)
         """
         data = with_retry(
             lambda: invoke_operation(
@@ -130,6 +140,13 @@ class ContextItemsResource:
                            fields not named in the mask are left untouched.
 
         Only the fields you pass are changed; omitted fields are left as-is.
+
+        Example:
+            >>> updated = mgmt.context.items.update(
+            ...     "PLACEHOLDER_UID",
+            ...     description="ARR definition (finance)",
+            ... )
+            >>> print(updated.description)
         """
         feedback: UserFeedback | None = (
             UserFeedback(user_feedback) if user_feedback is not None else None
@@ -162,6 +179,9 @@ class ContextItemsResource:
 
         Returns:
             Deletion confirmation with the removed item's UID.
+
+        Example:
+            >>> mgmt.context.items.delete("PLACEHOLDER_UID")
         """
         raw = with_retry(
             lambda: invoke_operation(

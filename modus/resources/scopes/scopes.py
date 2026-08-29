@@ -88,14 +88,31 @@ def _scopes_list_params(
 
 class ScopesResource:
     """
-    Read access to Modus scopes.
+    Read and chat with published **scopes** (consumption client).
 
-    client.scopes.list()                               → Page[Skill]
-    client.scopes.get(scope_id)                        → Skill
-    client.scopes.conversations(scope_id).list()       → Page[ConversationListItem]
-    client.scopes.conversations(scope_id).get(thread)  → Conversation
+    Construct with ``modus.Modus()`` (reads ``MODUS_API_KEY``). To create or
+    deploy scopes use ``modus.management.ModusManagement``.
 
-    To create, update, or deploy scopes use modus.management.ModusManagement.
+    When to use which method:
+
+    - ``list`` / ``get`` — find an active scope id or slug
+    - ``chat`` — one complete reply from that scope
+    - ``chat_stream`` — print tokens as they arrive
+    - ``get_context`` — preview composed context without chatting
+    - ``conversations(scope_id)`` — list/get prior threads for that scope
+
+    For the org-wide assistant use ``client.modus`` instead.
+
+    Example:
+        >>> import modus
+        >>> client = modus.Modus()
+        >>> scope = next(
+        ...     s for s in client.scopes.list().auto_paging_iter() if s.status == "active"
+        ... )
+        >>> result = client.scopes.chat(
+        ...     scope.id, "What is our ARR trend?", model="claude-sonnet-5"
+        ... )
+        >>> print(result.content)
     """
 
     def __init__(
@@ -111,7 +128,13 @@ class ScopesResource:
         self._ops = ops
 
     def conversations(self, scope_id: Union[int, str]) -> ScopeConversationsResource:
-        """Return the conversations sub-resource scoped to ``scope_id``."""
+        """
+        Return the conversations sub-resource for one scope.
+
+        Example:
+            >>> for row in client.scopes.conversations(scope_id).list(page_size=10):
+            ...     print(row.thread_id, row.first_message)
+        """
         return ScopeConversationsResource(self._http, self._config, scope_id, self._ops.conversations)
 
     def list(
@@ -132,6 +155,13 @@ class ScopesResource:
             search:      Case-insensitive substring filter on the scope name.
             view:        Variation view — ``"active"`` (deployed) or ``"draft"``.
             manager_id:  Return only scopes supervised by this manager scope id.
+
+        Returns:
+            ``Page[Skill]``. Use ``.auto_paging_iter()`` to walk all pages.
+
+        Example:
+            >>> for scope in client.scopes.list().auto_paging_iter():
+            ...     print(scope.id, scope.name, scope.status)
         """
         validate_page_size(page_size)
         return self._list_page(page_size, page_token, search, view, manager_id)
@@ -168,10 +198,18 @@ class ScopesResource:
         Retrieve a scope by ID or slug.
 
         Args:
-            view: Variation view — ``"active"`` (deployed) or ``"draft"``.
+            scope_id: Scope numeric id or slug string.
+            view:     Variation view — ``"active"`` (deployed) or ``"draft"``.
+
+        Returns:
+            Scope record (``id``, ``name``, ``status``, …).
 
         Raises:
-            NotFoundError: if no scope with this ID/slug exists.
+            NotFoundError: No scope with this id/slug exists.
+
+        Example:
+            >>> scope = client.scopes.get("revenue-analysis")
+            >>> print(scope.name, scope.status)
         """
         validate_id(scope_id, name="scope_id")
         query = {} if view is None else {"view": view}
@@ -195,17 +233,37 @@ class ScopesResource:
         thread_id: Optional[str] = None,
     ) -> ChatResult:
         """
-        Send a message to a scope and get the complete reply.
+        Send a message to a **published scope** and wait for the complete reply.
+
+        For the org-wide assistant use ``client.modus.chat`` instead.
 
         Args:
-            scope_id:  Scope ID or slug.
-            message:   The message to send.
-            model:     Model to run this message with (required). One of the
-                       supported model IDs, e.g. ``"claude-sonnet-5"`` or ``"gpt-5.5"``.
+            scope_id:  Scope numeric id or slug (must be active/deployed for chat).
+            message:   User message text.
+            model:     Model id, e.g. ``"claude-sonnet-5"``. Unsupported ids raise
+                       ``ValueError`` before the request is sent.
             thread_id: Continue an existing conversation; omit to start a new one.
 
         Returns:
-            ChatResult with the reply ``content`` and the ``thread_id`` to continue the conversation.
+            ``ChatResult`` with ``content``, ``thread_id``, and ``run_id``.
+
+        Raises:
+            NotFoundError: Scope or ``thread_id`` does not exist.
+            AuthenticationError: Invalid or missing API key.
+
+        Example:
+            >>> result = client.scopes.chat(
+            ...     scope_id,
+            ...     "What is our ARR trend?",
+            ...     model="claude-sonnet-5",
+            ... )
+            >>> print(result.content)
+            >>> follow = client.scopes.chat(
+            ...     scope_id,
+            ...     "Break that down by segment.",
+            ...     model="claude-sonnet-5",
+            ...     thread_id=result.thread_id,
+            ... )
         """
         return chat_buffered(
             self._http,
@@ -226,18 +284,30 @@ class ScopesResource:
         version: Optional[RunVersion] = None,
     ) -> ChatStream:
         """
-        Send a message to a scope and stream the reply token by token.
+        Stream a scope reply token by token (SSE).
+
+        The HTTP request starts when you consume ``text_stream`` or
+        ``event_stream``. Always use the context manager and iterate.
 
         Args:
-            scope_id:  Scope ID or slug.
-            message:   The message to send.
-            model:     Model to run this message with (required). One of the
-                       supported model IDs, e.g. ``"claude-sonnet-5"`` or ``"gpt-5.5"``.
-            thread_id: Continue an existing conversation; omit to start a new one.
+            scope_id:  Scope numeric id or slug.
+            message:   User message text.
+            model:     Model id, e.g. ``"claude-sonnet-5"``.
+            thread_id: Continue an existing conversation; omit to start new.
             version:   Run a specific variation — ``"published"`` or ``"draft"``.
 
         Returns:
-            ChatStream you can iterate for text chunks; the final result carries the ``thread_id``.
+            ``ChatStream``. After iteration,
+            ``stream.get_final_result()`` exposes ``content`` and ``thread_id``.
+
+        Example:
+            >>> with client.scopes.chat_stream(
+            ...     scope_id,
+            ...     "Summarize in three bullets.",
+            ...     model="claude-sonnet-5",
+            ... ) as stream:
+            ...     for token in stream.text_stream:
+            ...         print(token, end="", flush=True)
         """
         return self._ops.stream_session(
             self._agent_http,
@@ -256,12 +326,25 @@ class ScopesResource:
         limit: Optional[int] = None,
     ) -> SkillContextComposition:
         """
-        Return composed context Modus would use for a scope query, without running chat.
+        Compose context this scope would use for an intent, without running chat.
 
         Args:
-            scope_id: Scope id or slug.
+            scope_id: Scope numeric id or slug.
             message:  Natural-language query used to select context.
-            limit:    Optional cap on structured fallback items when no markdown summary exists.
+            limit:    Optional cap on structured fallback items when no markdown
+                      summary exists.
+
+        Returns:
+            Composition metadata (counts / session id). Use ``chat`` when you need
+            an assistant reply.
+
+        Example:
+            >>> ctx = client.scopes.get_context(
+            ...     scope_id,
+            ...     "Which tables describe churn?",
+            ...     limit=5,
+            ... )
+            >>> print(ctx.original_count, ctx.session_id)
         """
         validate_id(scope_id, name="scope_id")
         body = ComposeSkillContextRequestDto(message=message, limit=limit)

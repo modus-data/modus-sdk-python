@@ -48,6 +48,13 @@ def _get_query(
 
 
 class ScopeConversationsResource:
+    """
+    Prior chat threads for one published scope.
+
+    Obtained via ``client.scopes.conversations(scope_id)``. List summaries
+    first, then ``get(thread_id)`` for the full message history.
+    """
+
     def __init__(
         self,
         http: HttpClient,
@@ -78,6 +85,10 @@ class ScopeConversationsResource:
             ``first_message`` and ``message_count``. Call ``.get(thread_id)``
             for the full message history. Use ``.auto_paging_iter()`` to walk
             all pages.
+
+        Example:
+            >>> for row in client.scopes.conversations(scope_id).list(page_size=10):
+            ...     print(row.thread_id, row.first_message, row.message_count)
         """
         validate_page_size(page_size)
         return self._list_page(page_size, page_token)
@@ -121,6 +132,17 @@ class ScopeConversationsResource:
                 for the full available conversation.
             before_message_index: Load messages before this zero-based
                 index. Requires ``message_limit``.
+
+        Returns:
+            ``Conversation`` with ``messages`` (role + content).
+
+        Raises:
+            NotFoundError: Scope or thread does not exist.
+
+        Example:
+            >>> thread = client.scopes.conversations(scope_id).get(row.thread_id)
+            >>> for msg in thread.messages:
+            ...     print(msg.type, str(msg.content)[:80])
         """
         validate_id(self._scope_id, name="scope_id")
         validate_id(thread_id, name="thread_id")
