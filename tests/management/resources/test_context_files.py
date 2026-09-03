@@ -124,10 +124,16 @@ def test_upload_from_url():
     route = respx.post(f"{BASE}/api/v1/context/files/uploadFromUrl").mock(
         return_value=httpx.Response(201, json=_file_upload_json("up-2", "processing"))
     )
-    result = _client().context.files.upload_from_url("https://example.com/r.pdf", file_name="r.pdf")
+    result = _client().context.files.upload_from_url(
+        "https://example.com/r.pdf", file_name="r.pdf", folder_path="reports/2026"
+    )
     assert result.upload_id == "up-2"
     body = json.loads(route.calls[0].request.read())
-    assert body == {"url": "https://example.com/r.pdf", "fileName": "r.pdf"}
+    assert body == {
+        "url": "https://example.com/r.pdf",
+        "fileName": "r.pdf",
+        "folderPath": "reports/2026",
+    }
 
 
 @respx.mock
@@ -317,6 +323,28 @@ def test_upload_dir_skips_hidden_and_symlinks_recursive(tmp_path):
     file_names = {f["fileName"] for f in upload_call["files"]}
     assert file_names == {"a.txt", "b.txt"}
     assert not any(name.startswith(".") for name in file_names)
+
+
+@respx.mock
+def test_upload_dir_sends_nested_folder_path_at_finalize(tmp_path):
+    nested = tmp_path / "nested"
+    nested.mkdir()
+    (tmp_path / "root.txt").write_text("root")
+    (nested / "child.txt").write_text("child")
+
+    respx.post(f"{BASE}/api/v1/context/files/uploadUrls").mock(side_effect=_upload_urls_side_effect)
+    respx.put(SHARED_PUT_URL).mock(return_value=httpx.Response(200))
+    finalize = _stub_finalize()
+
+    result = _client().context.files.upload_dir(tmp_path)
+
+    assert len(result.uploaded) == 2
+    uploads = json.loads(finalize.calls[0].request.read())["uploads"]
+    assert any(upload["fileName"] == "root.txt" and "folderPath" not in upload for upload in uploads)
+    assert any(
+        upload["fileName"] == "child.txt" and upload["folderPath"] == "nested"
+        for upload in uploads
+    )
 
 
 @respx.mock
@@ -572,10 +600,13 @@ def test_finalize_sends_file_name_and_returns_resource():
         return_value=httpx.Response(201, json=_file_upload_json("up-9", "processing"))
     )
 
-    result = _client().context.files.finalize("up-9", file_name="report.pdf")
+    result = _client().context.files.finalize("up-9", file_name="report.pdf", folder_path="reports/2026")
 
     assert result.upload_id == "up-9"
-    assert json.loads(route.calls[0].request.read()) == {"fileName": "report.pdf"}
+    assert json.loads(route.calls[0].request.read()) == {
+        "fileName": "report.pdf",
+        "folderPath": "reports/2026",
+    }
 
 
 @respx.mock
@@ -594,7 +625,7 @@ def test_finalize_many_serializes_uploads_and_maps_failures():
 
     result = _client().context.files.finalize_many(
         [
-            FinalizeInput(upload_id="up-a", file_name="a.pdf"),
+            FinalizeInput(upload_id="up-a", file_name="a.pdf", folder_path="reports/2026"),
             FinalizeInput(upload_id="up-b", file_name="b.pdf"),
         ]
     )
@@ -602,7 +633,7 @@ def test_finalize_many_serializes_uploads_and_maps_failures():
     # Exact wire shape: camelCase keys, request order preserved.
     assert json.loads(route.calls[0].request.read()) == {
         "uploads": [
-            {"uploadId": "up-a", "fileName": "a.pdf"},
+            {"uploadId": "up-a", "fileName": "a.pdf", "folderPath": "reports/2026"},
             {"uploadId": "up-b", "fileName": "b.pdf"},
         ]
     }
