@@ -3,6 +3,7 @@
 Every operation in the public OpenAPI snapshot must appear here with a note on
 where the SDK method lives. Each mapped operation makes a real HTTP call.
 """
+
 from __future__ import annotations
 
 # operationId -> short note on where/how the SDK exposes it.
@@ -92,6 +93,7 @@ OPERATIONS: dict[str, str] = {
     "CustomContextItemsController_get": "client.context.custom_items.get() / mgmt.context.custom_items.get()",
     "CustomContextItemsController_create": "mgmt.context.custom_items.create()",
     "CustomContextItemsController_batchCreate": "mgmt.context.custom_items.batch_create()",
+    "CustomContextItemsController_createRelations": "mgmt.context.custom_items.create_relations()",
     "CustomContextItemsController_update": "mgmt.context.custom_items.update()",
     "CustomContextItemsController_delete": "mgmt.context.custom_items.delete()",
     "ContextFilesController_uploadUrl": "mgmt.context.files.create_upload_url(); convenience: upload()",

@@ -149,6 +149,7 @@ mgmt.scopes.deploy(scope.id)
 
 # Create returns context_item_id (also available as .uid); list/get use .uid
 note = mgmt.context.create_note("Title", "Body")
+related_note = mgmt.context.create_note("Related title", "Related body")
 print(note.context_item_id, note.uid)  # same UUID
 
 upload = mgmt.context.files.upload("report.pdf")
@@ -156,9 +157,18 @@ print(upload.upload_id, upload.status)
 
 result = mgmt.context.files.upload_dir("./reports")
 print(len(result.uploaded), len(result.failed))
+
+upserted = mgmt.context.custom_items.create_relations([
+    {
+        "from_uid": note.uid,
+        "to_uid": related_note.uid,
+        "relation_type": "depends_on",
+    }
+])
+print(upserted)
 ```
 
-Requires a token with write access to scopes and workflows (same as the Modus UI).
+Requires a token with write access to scopes, workflows, and context (same as the Modus UI). Custom context items and relations need the `context:write` permission.
 
 ## Pagination
 

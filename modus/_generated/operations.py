@@ -218,6 +218,16 @@ OPERATIONS: dict[str, OperationSpec] = {
         "request_schema": 'CreateCustomContextItemDto',
         "response_schema": 'CreatedCustomContextItemResponseDto',
     },
+    "CustomContextItemsController_createRelations": {
+        "method": "POST",
+        "path": '/api/v1/context/custom-items/relations',
+        "service": 'modus-api',
+        "server_url": 'https://api.getmodus.com',
+        "path_params": (),
+        "query_params": (),
+        "request_schema": 'BatchCreateCustomContextItemRelationsDto',
+        "response_schema": 'BatchCreateCustomContextItemRelationsResponseDto',
+    },
     "CustomContextItemsController_delete": {
         "method": "DELETE",
         "path": '/api/v1/context/custom-items/{uid}',

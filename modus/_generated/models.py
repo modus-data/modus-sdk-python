@@ -210,6 +210,16 @@ class AutomationRunSource(str, Enum):
     history = 'history'
 
 
+class BatchCreateCustomContextItemRelationsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    upserted_count: float = Field(
+        ...,
+        alias='upsertedCount',
+        description='Number of relations created or updated by the batch.',
+        examples=[12],
+    )
+
+
 class BulkFinalizeItemDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     upload_id: str = Field(
@@ -554,6 +564,31 @@ class ConversationMessageWindowDto(BaseModel):
         alias='hasMoreAfter',
         description='Whether a newer message window exists after endIndex.',
         examples=[False],
+    )
+
+
+class CreateCustomContextItemRelationDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    from_uid: str = Field(
+        ...,
+        alias='fromUid',
+        description='Uid of the source context item.',
+        examples=['00000000-0000-4000-a000-000000000abc'],
+    )
+    to_uid: str = Field(
+        ...,
+        alias='toUid',
+        description='Uid of the target context item.',
+        examples=['00000000-0000-4000-a000-000000000def'],
+    )
+    relation_type: str = Field(
+        ...,
+        alias='relationType',
+        description='Snake_case relation type describing how the source relates to the target.',
+        examples=['depends_on'],
+    )
+    content: dict[str, Any] | None = Field(
+        None, description='Optional structured payload stored on the relation edge.'
     )
 
 
@@ -2145,6 +2180,14 @@ class AgentInterfaceDto(BaseModel):
         alias='updatedAt',
         description='Most recent update timestamp.',
         examples=['2026-05-11T10:00:00.000Z'],
+    )
+
+
+class BatchCreateCustomContextItemRelationsDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    relations: list[CreateCustomContextItemRelationDto] = Field(
+        ...,
+        description='Relations to upsert. Idempotent by (fromUid, toUid, relationType); re-sending updates content.',
     )
 
 

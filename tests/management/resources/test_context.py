@@ -3,10 +3,19 @@
 import json
 
 import httpx
+import pytest
 import respx
 from modus.management import ModusManagement
-from modus.management.types.context import ContextItem, ContextItemDeletion, CreatedContextItem
-from tests.fixtures.context_content import LINK_CONTENT, NOTE_CONTENT, SAVED_QUERY_CONTENT
+from modus.management.types.context import (
+    ContextItem,
+    ContextItemDeletion,
+    CreatedContextItem,
+)
+from tests.fixtures.context_content import (
+    LINK_CONTENT,
+    NOTE_CONTENT,
+    SAVED_QUERY_CONTENT,
+)
 
 BASE = "https://api.modus.com"
 
@@ -26,6 +35,7 @@ def _context_item_wire(uid: str, context_type: str, content: dict) -> dict:
         "createdAt": "2026-01-01T00:00:00.000Z",
         "updatedAt": "2026-01-01T00:00:00.000Z",
     }
+
 
 CREATED_RESP = {
     "contextItemId": "uid-abc-123",
@@ -70,7 +80,9 @@ def test_context_create_saved_query():
 @respx.mock
 def test_context_items_list(client, sample_context_item):
     respx.get(f"{BASE}/api/v1/context/items").mock(
-        return_value=httpx.Response(200, json={"contextItems": [sample_context_item], "nextPageToken": None})
+        return_value=httpx.Response(
+            200, json={"contextItems": [sample_context_item], "nextPageToken": None}
+        )
     )
     page = client.context.items.list()
     assert len(page) == 1
@@ -178,9 +190,55 @@ def test_custom_context_items_create(client):
 
 
 @respx.mock
+def test_custom_context_item_relations_create(client):
+    route = respx.post(f"{BASE}/api/v1/context/custom-items/relations").mock(
+        return_value=httpx.Response(201, json={"upsertedCount": 1})
+    )
+
+    count = client.context.custom_items.create_relations(
+        [
+            {
+                "from_uid": "source-1",
+                "to_uid": "target-1",
+                "relation_type": "depends_on",
+                "content": {"source": "go.mod"},
+            }
+        ]
+    )
+
+    assert count == 1
+    assert json.loads(route.calls[0].request.read()) == {
+        "relations": [
+            {
+                "fromUid": "source-1",
+                "toUid": "target-1",
+                "relationType": "depends_on",
+                "content": {"source": "go.mod"},
+            }
+        ]
+    }
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_custom_context_item_relations_create_async(async_client):
+    respx.post(f"{BASE}/api/v1/context/custom-items/relations").mock(
+        return_value=httpx.Response(201, json={"upsertedCount": 1})
+    )
+
+    count = await async_client.context.custom_items.create_relations(
+        [{"from_uid": "source-1", "to_uid": "target-1", "relation_type": "depends_on"}]
+    )
+
+    assert count == 1
+
+
+@respx.mock
 def test_custom_context_items_list(client):
     route = respx.get(f"{BASE}/api/v1/context/custom-items").mock(
-        return_value=httpx.Response(200, json={"contextItems": [], "nextPageToken": None})
+        return_value=httpx.Response(
+            200, json={"contextItems": [], "nextPageToken": None}
+        )
     )
     page = client.context.custom_items.list(topics=["billing"])
 
@@ -195,7 +253,9 @@ def test_custom_context_items_update_and_delete(client):
         return_value=httpx.Response(200, json={"uid": uid})
     )
     delete_route = respx.delete(f"{BASE}/api/v1/context/custom-items/{uid}").mock(
-        return_value=httpx.Response(200, json={"uid": uid, "contextType": "custom_entity_metadata"})
+        return_value=httpx.Response(
+            200, json={"uid": uid, "contextType": "custom_entity_metadata"}
+        )
     )
 
     client.context.custom_items.update(uid, description="Reviewed", topics=["billing"])
