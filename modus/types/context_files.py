@@ -57,6 +57,7 @@ class UploadFromUrlInput:
 
     url: str
     file_name: Optional[str] = None
+    folder_path: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -101,3 +102,4 @@ class FinalizeInput:
 
     upload_id: str
     file_name: str
+    folder_path: Optional[str] = None

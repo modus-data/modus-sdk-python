@@ -224,6 +224,12 @@ class BulkFinalizeItemDto(BaseModel):
         description='File name returned alongside the upload id.',
         examples=['Q3-churn-report.pdf'],
     )
+    folder_path: str | None = Field(
+        None,
+        alias='folderPath',
+        description='Relative folder label to store with the upload.',
+        examples=['reports/2026/Q3'],
+    )
 
 
 class BulkUploadFromUrlItemDto(BaseModel):
@@ -238,6 +244,12 @@ class BulkUploadFromUrlItemDto(BaseModel):
         alias='fileName',
         description='Override file name. Inferred from the URL path when omitted.',
         examples=['Q3-churn-report.pdf'],
+    )
+    folder_path: str | None = Field(
+        None,
+        alias='folderPath',
+        description='Relative folder label to store with the upload.',
+        examples=['reports/2026/Q3'],
     )
 
 
@@ -882,6 +894,12 @@ class FinalizeUploadDto(BaseModel):
         alias='fileName',
         description='File name returned by `uploadUrl`, used to locate the uploaded object.',
         examples=['Q3-churn-report.pdf'],
+    )
+    folder_path: str | None = Field(
+        None,
+        alias='folderPath',
+        description='Relative folder label to store with the upload.',
+        examples=['reports/2026/Q3'],
     )
 
 
@@ -1768,6 +1786,12 @@ class UploadFromUrlDto(BaseModel):
         description='Override file name. Inferred from the URL path when omitted.',
         examples=['Q3-churn-report.pdf'],
     )
+    folder_path: str | None = Field(
+        None,
+        alias='folderPath',
+        description='Relative folder label to store with the upload.',
+        examples=['reports/2026/Q3'],
+    )
 
 
 class UploadUrlDto(BaseModel):
@@ -2348,6 +2372,12 @@ class FileUploadResourceDto(BaseModel):
         ..., description='Current processing status.', examples=['ready']
     )
     file_name: str | None = Field(None, alias='fileName', examples=['Q3-churn-report.pdf'])
+    folder_path: str | None = Field(
+        None,
+        alias='folderPath',
+        description='Relative folder label supplied when the upload was finalized.',
+        examples=['reports/2026/Q3'],
+    )
     content_type: str | None = Field(None, alias='contentType', examples=['application/pdf'])
     file_size: float | None = Field(None, alias='fileSize', examples=[1048576])
     s3_key: str | None = Field(
