@@ -11,6 +11,11 @@ until `1.0.0` — keep `[Unreleased]` empty while the package stays on `0.x`.
 
 ### Added
 
+- **Conversation lists: optional `source_ref` filter.** Narrows `source` to one instance
+  of that surface — for `dashboard_copilot`, a single dashboard id. Requires `source`;
+  sent on its own it is rejected with a 422. Conversations recorded before the filter
+  shipped carry no instance key and do not match it.
+
 - **File uploads: optional `folder_path`.** `upload_from_url`, `finalize`, and directory
   uploads now accept an optional relative folder label that is stored with the file and
   returned on the file resource. `upload_dir` sets it automatically from each file's path
