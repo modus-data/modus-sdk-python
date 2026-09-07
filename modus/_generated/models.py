@@ -3218,11 +3218,6 @@ class CreateAgentDto(BaseModel):
 
 class CreateIngestedDataDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    org_id: str = Field(
-        ...,
-        description='Clerk organization id. Must match the authenticated organization.',
-        examples=['org_2abc123'],
-    )
     integration_type: str = Field(
         ..., description='Canonical Modus integration identifier.', examples=['generic']
     )

@@ -28,7 +28,6 @@ def test_upload_http_preserves_exact_strings_and_wire_names() -> None:
     client = Modus(api_key=KEY, base_url=BASE, max_retries=0)
 
     result = client.ingested_data.upload(
-        organization_id="org_test",
         integration_type="postgresql",
         request={
             "type": "http",
@@ -43,7 +42,6 @@ def test_upload_http_preserves_exact_strings_and_wire_names() -> None:
     assert result.created is True
     assert result.checksum == "a" * 64
     assert json.loads(route.calls[0].request.content) == {
-        "org_id": "org_test",
         "integration_type": "postgresql",
         "request": {
             "type": "http",
@@ -71,7 +69,6 @@ async def test_async_upload_sql_preserves_empty_response() -> None:
     )
     async with AsyncModus(api_key=KEY, base_url=BASE, max_retries=0) as client:
         result = await client.ingested_data.upload(
-            organization_id="org_test",
             integration_type="snowflake",
             request={"type": "sql", "query": "SELECT 1\n"},
             response={"format": "csv", "content": ""},
@@ -93,7 +90,6 @@ def test_duplicate_raises_standard_conflict_error_without_retry() -> None:
 
     with pytest.raises(ConflictError, match="already exists"):
         client.ingested_data.upload(
-            organization_id="org_test",
             integration_type="snowflake",
             request={"type": "sql", "query": "SELECT 1"},
             response={"format": "csv", "content": ""},
