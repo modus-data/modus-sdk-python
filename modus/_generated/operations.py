@@ -308,6 +308,16 @@ OPERATIONS: dict[str, OperationSpec] = {
         "request_schema": 'UpdateEvaluationConfigDto',
         "response_schema": 'EvaluationConfigDto',
     },
+    "IngestedDataController_upload": {
+        "method": "POST",
+        "path": '/api/v1/ingested-data',
+        "service": 'modus-api',
+        "server_url": 'https://api.getmodus.com',
+        "path_params": (),
+        "query_params": (),
+        "request_schema": 'CreateIngestedDataDto',
+        "response_schema": 'CreatedIngestedDataResponseDto',
+    },
     "MemberGroupsController_list": {
         "method": "GET",
         "path": '/api/v1/users/member-groups',

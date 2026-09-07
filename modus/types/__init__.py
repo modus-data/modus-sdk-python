@@ -38,6 +38,14 @@ from .conversations import (
     conversation_scope_id,
     conversation_skill_id,
 )
+from .ingested_data import (
+    HttpIngestedDataRequest,
+    IngestedDataRequest,
+    IngestedDataResponse,
+    IngestedDataResponseFormat,
+    IngestedDataUploadResult,
+    SqlIngestedDataRequest,
+)
 from .pagination import AsyncPage, Page
 from .scopes import Scope, ScopeStatus, ScopeVariation
 from .skills import Skill, SkillStatus
@@ -60,6 +68,11 @@ __all__ = [
     "Connection",
     "ContextItem",
     "ContextType",
+    "HttpIngestedDataRequest",
+    "IngestedDataRequest",
+    "IngestedDataResponse",
+    "IngestedDataResponseFormat",
+    "IngestedDataUploadResult",
     "CancelRunRequest",
     "EditQueuedRunRequest",
     "InterruptRunRequest",
@@ -86,6 +99,7 @@ __all__ = [
     "SkillContextComposition",
     "SkillRunCreateRequest",
     "SkillStatus",
+    "SqlIngestedDataRequest",
     "SuggestionEventSource",
     "SuggestionEventType",
     "SuggestionQuestion",
