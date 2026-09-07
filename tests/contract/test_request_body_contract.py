@@ -53,7 +53,7 @@ def _model_wire_fields(model: Type[BaseModel]) -> Set[str]:
 # Model-backed bodies are derived from the model; inline-dict bodies are listed
 # explicitly (these mirror exactly what the resource method can put on the wire).
 SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
-    "IngestedDataController_upload": {"org_id", "integration_type", "request", "response"},
+    "IngestedDataController_upload": {"integration_type", "request", "response"},
     "ContextItemsController_update": _model_wire_fields(ContextItemUpdate),
     "ModusChatController_chat": _model_wire_fields(ModusChatRequestDto),
     "ModusContextController_compose": _model_wire_fields(ModusContextRequestDto),

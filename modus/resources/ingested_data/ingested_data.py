@@ -16,13 +16,11 @@ from modus.types.ingested_data import (
 
 def _upload_body(
     *,
-    organization_id: str,
     integration_type: str,
     request: IngestedDataRequest,
     response: IngestedDataResponse,
 ) -> dict:
     return {
-        "org_id": organization_id,
         "integration_type": integration_type,
         "request": request,
         "response": response,
@@ -39,7 +37,6 @@ class IngestedDataResource:
     def upload(
         self,
         *,
-        organization_id: str,
         integration_type: str,
         request: IngestedDataRequest,
         response: IngestedDataResponse,
@@ -52,8 +49,6 @@ class IngestedDataResource:
         stored and may be treated as a safe retry outcome.
 
         Args:
-            organization_id: Clerk organization id; must match the authenticated
-                organization.
             integration_type: Canonical Modus integration identifier.
             request: Exact SQL or HTTP request that produced the response.
             response: Response format and exact string content. SQL requires CSV.
@@ -63,15 +58,13 @@ class IngestedDataResource:
 
         Raises:
             ConflictError: The complete payload is already stored.
-            PermissionDeniedError: The organization does not match or the token lacks
-                ``context:write``.
+            PermissionDeniedError: The token lacks ``context:write``.
             ModusError: The request shape or integration identifier is invalid
                 (HTTP 400).
 
         Example:
             >>> client = modus.Modus()
             >>> stored = client.ingested_data.upload(
-            ...     organization_id="org_2abc123",
             ...     integration_type="snowflake",
             ...     request={"type": "sql", "query": "SELECT id, total FROM orders"},
             ...     response={"format": "csv", "content": "id,total\\n1,42.00\\n"},
@@ -83,7 +76,6 @@ class IngestedDataResource:
                 self._http,
                 "IngestedDataController_upload",
                 json_body=_upload_body(
-                    organization_id=organization_id,
                     integration_type=integration_type,
                     request=request,
                     response=response,
@@ -104,7 +96,6 @@ class AsyncIngestedDataResource:
     async def upload(
         self,
         *,
-        organization_id: str,
         integration_type: str,
         request: IngestedDataRequest,
         response: IngestedDataResponse,
@@ -115,8 +106,6 @@ class AsyncIngestedDataResource:
         and may be treated as a safe retry outcome.
 
         Args:
-            organization_id: Clerk organization id; must match the authenticated
-                organization.
             integration_type: Canonical Modus integration identifier.
             request: Exact SQL or HTTP request that produced the response.
             response: Response format and exact string content. SQL requires CSV.
@@ -126,15 +115,13 @@ class AsyncIngestedDataResource:
 
         Raises:
             ConflictError: The complete payload is already stored.
-            PermissionDeniedError: The organization does not match or the token lacks
-                ``context:write``.
+            PermissionDeniedError: The token lacks ``context:write``.
             ModusError: The request shape or integration identifier is invalid
                 (HTTP 400).
 
         Example:
             >>> async_client = modus.AsyncModus()
             >>> stored = await async_client.ingested_data.upload(
-            ...     organization_id="org_2abc123",
             ...     integration_type="snowflake",
             ...     request={"type": "sql", "query": "SELECT 1"},
             ...     response={"format": "csv", "content": "value\\n1\\n"},
@@ -146,7 +133,6 @@ class AsyncIngestedDataResource:
                 self._http,
                 "IngestedDataController_upload",
                 json_body=_upload_body(
-                    organization_id=organization_id,
                     integration_type=integration_type,
                     request=request,
                     response=response,
