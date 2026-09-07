@@ -88,8 +88,11 @@ class NotFoundError(ModusError):
 
 class ConflictError(ModusError):
     """
-    Idempotency conflict — a run with this ID already exists with a different
-    body (HTTP 409). Use a new idempotency key or omit it to auto-generate.
+    The request conflicts with existing state (HTTP 409).
+
+    Inspect the API message for the operation-specific outcome. For ingested-data
+    uploads, this means the complete payload is already stored and is a safe retry
+    outcome.
     """
     def __init__(self, message: str, **kwargs: Any) -> None:
         super().__init__(message, status_code=409, **kwargs)
@@ -146,4 +149,3 @@ class StreamTimeoutError(ModusError):
 
     def __init__(self, message: str = "Stream timed out.") -> None:
         super().__init__(message)
-

@@ -25,7 +25,7 @@ Modus is your organization's context layer: it connects assistants to curated kn
 
 ## Two clients in one package
 
-**`modus.Modus()`** is what most people need. Use it to chat with Modus, run scopes, browse context, and inspect workflow runs — the same things you do in the Modus app day to day.
+**`modus.Modus()`** is what most people need. Use it to chat with Modus, run scopes, browse context, upload ingested data, and inspect workflow runs — the same things you do in the Modus app day to day.
 
 **`modus.management.ModusManagement()`** is for org setup: create, update, and deploy scopes, workflows, and context — the CRUD operations you would use in the Modus UI as an admin.
 
@@ -127,6 +127,29 @@ with client.scopes.chat_stream(scope_id, "Hi", model=MODEL) as stream:
 for item in client.context.items.list():
     print(item.uid, modus.context_item_label(item))
 ```
+
+### Ingested data
+
+Upload the exact SQL request and CSV response through the regular `Modus` client. With
+`MODUS_API_KEY` configured as above, set `MODUS_ORGANIZATION_ID` to the organization
+associated with the token:
+
+```python
+import os
+
+import modus
+
+client = modus.Modus()  # reads MODUS_API_KEY
+stored = client.ingested_data.upload(
+    organization_id=os.environ["MODUS_ORGANIZATION_ID"],
+    integration_type="postgresql",
+    request={"type": "sql", "query": "SELECT id, name FROM customers"},
+    response={"format": "csv", "content": "id,name\n1,Ada\n"},
+)
+print(stored.checksum, stored.key)
+```
+
+The token must include the `context:write` permission.
 
 ### Workflows
 

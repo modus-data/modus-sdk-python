@@ -31,12 +31,14 @@ from ._http import AsyncHttpClient, HttpClient
 from .resources import (
     AsyncConnectionsResource,
     AsyncContextResource,
+    AsyncIngestedDataResource,
     AsyncModusResource,
     AsyncScopesResource,
     AsyncSuggestionsResource,
     AsyncWorkflowsResource,
     ConnectionsResource,
     ContextResource,
+    IngestedDataResource,
     ModusResource,
     ScopesResource,
     SuggestionsResource,
@@ -117,6 +119,9 @@ class Modus:
         self.context: ContextResource = ContextResource(self._http, self._config)
         self.connections: ConnectionsResource = ConnectionsResource(self._http, self._config)
         self.suggestions: SuggestionsResource = SuggestionsResource(self._http, self._config)
+        self.ingested_data: IngestedDataResource = IngestedDataResource(
+            self._http, self._config
+        )
 
     def close(self) -> None:
         """Close the underlying HTTP connection pool."""
@@ -206,6 +211,9 @@ class AsyncModus:
             self._http, self._config
         )
         self.suggestions: AsyncSuggestionsResource = AsyncSuggestionsResource(
+            self._http, self._config
+        )
+        self.ingested_data: AsyncIngestedDataResource = AsyncIngestedDataResource(
             self._http, self._config
         )
 

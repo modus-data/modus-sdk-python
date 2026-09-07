@@ -8,6 +8,8 @@ from __future__ import annotations
 
 # operationId -> short note on where/how the SDK exposes it.
 OPERATIONS: dict[str, str] = {
+    # --- Ingested data ---
+    "IngestedDataController_upload": "client.ingested_data.upload()",
     # --- Scopes (/api/v1/scopes) ---
     "ScopesController_list": "client.scopes.list() / mgmt.scopes.list()",
     "ScopesController_create": "mgmt.scopes.create()",

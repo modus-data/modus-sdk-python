@@ -1,7 +1,8 @@
 Modus
 =====
 
-Day-to-day client: read scopes, chat, browse context, stream workflow runs.
+Day-to-day client: read scopes, chat, browse context, upload ingested data, and
+stream workflow runs.
 
 .. code-block:: python
 
@@ -11,7 +12,8 @@ Day-to-day client: read scopes, chat, browse context, stream workflow runs.
    for scope in client.scopes.list():
        print(scope.name)
 
-Write operations use ``ModusManagement`` (Management section).
+Configuration write operations use ``ModusManagement`` (Management section).
+Operational writes such as ``client.ingested_data.upload()`` stay on ``Modus``.
 
 .. toctree::
    :maxdepth: 1
@@ -23,6 +25,7 @@ Write operations use ``ModusManagement`` (Management section).
    connections
    chat
    suggestions
+   ingested-data
 
 .. autoclass:: modus.Modus
    :members:

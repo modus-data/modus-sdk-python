@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
@@ -710,6 +710,23 @@ class CreatedCustomContextItemResponseDto(BaseModel):
     )
 
 
+class CreatedIngestedDataResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    checksum: str = Field(
+        ...,
+        description='Lowercase SHA-256 checksum of the canonical JSON envelope.',
+        examples=['84f90e54a330d84e157af078f35409b093299941ffc623af900cd05bfc061b3d'],
+    )
+    key: str = Field(
+        ...,
+        description='Object key of the newly persisted envelope.',
+        examples=['org_2abc123/generic/84f90e54a330d84e157af078f35409b093299941ffc623af900cd05bfc061b3d.txt'],
+    )
+    created: bool = Field(
+        ..., description='Always true for a newly created object.', examples=[True]
+    )
+
+
 class CustomAttributeDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     name: str = Field(..., description='Attribute name.', examples=['status'])
@@ -1035,6 +1052,17 @@ class GroupPermissionDto(BaseModel):
         description='Whether members of this group may manage (edit / deploy / delete) the scope.',
         examples=[False],
     )
+
+
+class HttpIngestedDataRequestType(str, Enum):
+    http = 'http'
+
+
+class IngestedDataResponseFormat(str, Enum):
+    csv = 'csv'
+    json = 'json'
+    xml = 'xml'
+    text = 'text'
 
 
 class ListAutomationRunsResponseDto(BaseModel):
@@ -1504,6 +1532,10 @@ class SkillMcpInterfaceConfigDto(BaseModel):
         alias='mcpToolExposure',
         description='Outbound tool exposure for MCP clients (subset or all).',
     )
+
+
+class SqlIngestedDataRequestType(str, Enum):
+    sql = 'sql'
 
 
 class SuggestionEventSource(str, Enum):
@@ -2439,6 +2471,41 @@ class FileUploadResourceDto(BaseModel):
     )
 
 
+class HttpIngestedDataRequestDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    type: Literal['http'] = Field(..., examples=['http'])
+    uri: str = Field(
+        ...,
+        description='Request URI exactly as sent.',
+        examples=['https://api.example.com/v1/orders?status=open'],
+    )
+    method: str = Field(
+        ...,
+        description='HTTP method exactly as sent. POST requests require `body`.',
+        examples=['GET'],
+    )
+    headers: dict[str, str] | None = Field(
+        None,
+        description='Request headers exactly as sent. Authentication, Authorization, Proxy-Authorization, Cookie, API-key, and credential-token headers (for example, X-Access-Token or X-Amz-Security-Token) are rejected.',
+        examples=[{'Accept': 'application/json'}],
+    )
+    body: str | None = Field(
+        None,
+        description='Request body exactly as sent. Required when `method` is POST.',
+        examples=['{"status":"open"}'],
+    )
+
+
+class IngestedDataResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    format: IngestedDataResponseFormat = Field(..., examples=['json'])
+    content: str = Field(
+        ...,
+        description='Response content exactly as received, including an empty response.',
+        examples=['{"orders":[]}'],
+    )
+
+
 class ListAgentInterfacesResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     interfaces: list[AgentInterfaceDto] = Field(
@@ -2694,6 +2761,16 @@ class SkillVariationDto(BaseModel):
         alias='supervisionSubordinateDescriptions',
         description='Map of subordinateId -> manager-provided description blurb.',
         examples=[{'12': 'Reads warehouse facts', '17': 'Drafts the report'}],
+    )
+
+
+class SqlIngestedDataRequestDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    type: Literal['sql'] = Field(..., examples=['sql'])
+    query: str = Field(
+        ...,
+        description='SQL query exactly as executed.',
+        examples=["SELECT * FROM orders WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'"],
     )
 
 
@@ -3137,6 +3214,22 @@ class CreateAgentDto(BaseModel):
         alias='accessConfig',
         description='Access configuration. Omit to use the default (full-org shared with use + manage).',
     )
+
+
+class CreateIngestedDataDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    org_id: str = Field(
+        ...,
+        description='Clerk organization id. Must match the authenticated organization.',
+        examples=['org_2abc123'],
+    )
+    integration_type: str = Field(
+        ..., description='Canonical Modus integration identifier.', examples=['generic']
+    )
+    request: SqlIngestedDataRequestDto | HttpIngestedDataRequestDto = Field(
+        ..., discriminator='type'
+    )
+    response: IngestedDataResponseDto
 
 
 class CreateSkillDto(BaseModel):

@@ -4,12 +4,16 @@ Published versions come from the `sdk-python/v*` tags; the current release is
 whatever [PyPI](https://pypi.org/project/modus-sdk/) is serving. This file records
 what changed, not which version is live.
 
-Pre-1.0 (`0.x`) releases are internal. Detailed release notes are not maintained
-until `1.0.0` — keep `[Unreleased]` empty while the package stays on `0.x`.
+Record concise, customer-visible release notes under `[Unreleased]` for every SDK
+release, including pre-1.0 (`0.x`) releases.
 
 ## [Unreleased]
 
 ### Added
+
+- **Ingested data uploads.** `Modus.ingested_data.upload` and
+  `AsyncModus.ingested_data.upload` store raw SQL or HTTP request-response exchanges.
+  Uploading identical content again raises `ConflictError`.
 
 - **Conversation lists: optional `source_ref` filter.** Narrows `source` to one instance
   of that surface — for `dashboard_copilot`, a single dashboard id. Requires `source`;
