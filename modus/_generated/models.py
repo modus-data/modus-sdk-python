@@ -720,7 +720,7 @@ class CreatedIngestedDataResponseDto(BaseModel):
     key: str = Field(
         ...,
         description='Object key of the newly persisted envelope.',
-        examples=['org_2abc123/generic/84f90e54a330d84e157af078f35409b093299941ffc623af900cd05bfc061b3d.txt'],
+        examples=['org_2abc123/generic/84f90e54a330d84e157af078f35409b093299941ffc623af900cd05bfc061b3d.json'],
     )
     created: bool = Field(
         ..., description='Always true for a newly created object.', examples=[True]
@@ -2479,19 +2479,10 @@ class HttpIngestedDataRequestDto(BaseModel):
         description='Request URI exactly as sent.',
         examples=['https://api.example.com/v1/orders?status=open'],
     )
-    method: str = Field(
-        ...,
-        description='HTTP method exactly as sent. POST requests require `body`.',
-        examples=['GET'],
-    )
-    headers: dict[str, str] | None = Field(
-        None,
-        description='Request headers exactly as sent. Authentication, Authorization, Proxy-Authorization, Cookie, API-key, and credential-token headers (for example, X-Access-Token or X-Amz-Security-Token) are rejected.',
-        examples=[{'Accept': 'application/json'}],
-    )
+    method: str = Field(..., description='HTTP method exactly as sent.', examples=['GET'])
     body: str | None = Field(
         None,
-        description='Request body exactly as sent. Required when `method` is POST.',
+        description='Request body exactly as sent. An omitted body is stored as an empty string, so both spellings of a bodiless request share one checksum.',
         examples=['{"status":"open"}'],
     )
 

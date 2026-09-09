@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, Literal, TypedDict, Union
+from typing import Literal, TypedDict, Union
 
 from modus._generated.models import CreatedIngestedDataResponseDto
 
@@ -21,9 +21,13 @@ class _RequiredHttpIngestedDataRequest(TypedDict):
 
 
 class HttpIngestedDataRequest(_RequiredHttpIngestedDataRequest, total=False):
-    """An executed HTTP request whose response is being stored."""
+    """An executed HTTP request whose response is being stored.
 
-    headers: Dict[str, str]
+    Request headers are not accepted: they routinely carry credentials, and a
+    name-based filter cannot reliably tell an auth header from an ordinary one.
+    An omitted ``body`` is stored as an empty string.
+    """
+
     body: str
 
 
