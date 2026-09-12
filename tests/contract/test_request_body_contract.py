@@ -8,6 +8,7 @@ every caller.
 This is the test that would have caught ``context.items.update`` sending ``title``
 and ``verificationStatus`` (both rejected by the server).
 """
+
 from __future__ import annotations
 
 from typing import Dict, Set, Type
@@ -16,6 +17,7 @@ import pytest
 from modus._generated.models import (
     ActiveRunsBySessionDto,
     AgentRunDto,
+    BatchCreateCustomContextItemRelationsDto,
     BatchCreateCustomContextItemsDto,
     CancelRunDto,
     ComposeSkillContextRequestDto,
@@ -32,7 +34,10 @@ from modus._generated.models import (
     UpdateEvaluationConfigDto,
     WorkflowActionDto,
 )
-from modus.management.resources.scopes._update_body import _ScopeCreateBody, _ScopeUpdateBody
+from modus.management.resources.scopes._update_body import (
+    _ScopeCreateBody,
+    _ScopeUpdateBody,
+)
 from modus.management.resources.workflows._update_body import (
     _WorkflowCreateBody,
     _WorkflowUpdateBody,
@@ -58,11 +63,17 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "ModusChatController_chat": _model_wire_fields(ModusChatRequestDto),
     "ModusContextController_compose": _model_wire_fields(ModusContextRequestDto),
     "SuggestionsController_recordEvent": {
-        "eventType", "source", "skillId", "threadId", "metadata",
+        "eventType",
+        "source",
+        "skillId",
+        "threadId",
+        "metadata",
     },
     "ModusRunsController_create": _model_wire_fields(ModusRunDto),
     "ResumeRunsController_create": _model_wire_fields(ResumeRunDto),
-    "RunLifecycleController_activeBySession": _model_wire_fields(ActiveRunsBySessionDto),
+    "RunLifecycleController_activeBySession": _model_wire_fields(
+        ActiveRunsBySessionDto
+    ),
     "RunLifecycleController_cancel": _model_wire_fields(CancelRunDto),
     "RunLifecycleController_interrupt": _model_wire_fields(InterruptRunDto),
     "RunLifecycleController_editQueued": _model_wire_fields(EditQueuedRunDto),
@@ -71,12 +82,25 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "ContextItemsController_lookup": {"contextType", "dataPath", "contentProjection"},
     "ContextCreatorsController_createNote": {"title", "content"},
     "ContextCreatorsController_createSavedQuery": {
-        "name", "connectionId", "query", "description", "path",
+        "name",
+        "connectionId",
+        "query",
+        "description",
+        "path",
     },
     "ContextCreatorsController_createLink": {"url", "title", "isCrawl", "pageLimit"},
-    "CustomContextItemsController_create": _model_wire_fields(CreateCustomContextItemDto),
-    "CustomContextItemsController_batchCreate": _model_wire_fields(BatchCreateCustomContextItemsDto),
-    "CustomContextItemsController_update": _model_wire_fields(UpdateCustomContextItemDto),
+    "CustomContextItemsController_create": _model_wire_fields(
+        CreateCustomContextItemDto
+    ),
+    "CustomContextItemsController_batchCreate": _model_wire_fields(
+        BatchCreateCustomContextItemsDto
+    ),
+    "CustomContextItemsController_createRelations": _model_wire_fields(
+        BatchCreateCustomContextItemRelationsDto
+    ),
+    "CustomContextItemsController_update": _model_wire_fields(
+        UpdateCustomContextItemDto
+    ),
     "ContextFilesController_finalize": {"fileName"},
     "ContextFilesController_finalizeMany": {"uploads"},
     "ContextFilesController_uploadUrl": {"fileName", "contentType", "fileSize"},

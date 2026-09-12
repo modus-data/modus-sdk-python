@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from modus._config import ModusConfig
 from modus._exceptions import ModusError
+from modus._generated.models import BatchCreateCustomContextItemRelationsResponseDto
 from modus._http import AsyncHttpClient, HttpClient
 from modus._openapi_invoke import invoke_operation, invoke_operation_async
 from modus._pagination import (
@@ -29,6 +30,9 @@ _FIELD_ALIASES = {
     "entity_type": "entityType",
     "data_type": "dataType",
     "idempotency_key": "idempotencyKey",
+    "from_uid": "fromUid",
+    "to_uid": "toUid",
+    "relation_type": "relationType",
 }
 
 
@@ -48,7 +52,9 @@ def _with_created_uid(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _wire_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
-    return _omit_none({_FIELD_ALIASES.get(key, key): value for key, value in payload.items()})
+    return _omit_none(
+        {_FIELD_ALIASES.get(key, key): value for key, value in payload.items()}
+    )
 
 
 def _custom_list_params(
@@ -200,7 +206,46 @@ class CustomContextItemsResource:
             self._config.max_retries,
         )
         raw_items = dict(data).get("contextItems", [])
-        return [_with_created_uid(dict(item)) for item in raw_items] if isinstance(raw_items, list) else []
+        return (
+            [_with_created_uid(dict(item)) for item in raw_items]
+            if isinstance(raw_items, list)
+            else []
+        )
+
+    def create_relations(self, relations: List[Dict[str, Any]]) -> int:
+        """Create or update typed relations between context items.
+
+        Args:
+            relations: Relations containing ``from_uid``, ``to_uid``,
+                ``relation_type``, and optional structured ``content``.
+
+        Returns:
+            Number of relations created or updated.
+
+        Example:
+            >>> count = mgmt.context.custom_items.create_relations(
+            ...     [{
+            ...         "from_uid": "SOURCE_UID",
+            ...         "to_uid": "TARGET_UID",
+            ...         "relation_type": "depends_on",
+            ...     }]
+            ... )
+        """
+        data = with_retry(
+            lambda: invoke_operation(
+                self._http,
+                "CustomContextItemsController_createRelations",
+                json_body={
+                    "relations": [_wire_payload(relation) for relation in relations]
+                },
+            ),
+            self._config.max_retries,
+        )
+        return int(
+            BatchCreateCustomContextItemRelationsResponseDto.model_validate(
+                data
+            ).upserted_count
+        )
 
     def update(self, uid: str, **payload: Any) -> Dict[str, Any]:
         """Update mutable fields on a custom context item.
@@ -343,7 +388,37 @@ class AsyncCustomContextItemsResource:
             self._config.max_retries,
         )
         raw_items = dict(data).get("contextItems", [])
-        return [_with_created_uid(dict(item)) for item in raw_items] if isinstance(raw_items, list) else []
+        return (
+            [_with_created_uid(dict(item)) for item in raw_items]
+            if isinstance(raw_items, list)
+            else []
+        )
+
+    async def create_relations(self, relations: List[Dict[str, Any]]) -> int:
+        """Create or update typed relations between context items.
+
+        Args:
+            relations: Relations containing ``from_uid``, ``to_uid``,
+                ``relation_type``, and optional structured ``content``.
+
+        Returns:
+            Number of relations created or updated.
+        """
+        data = await async_with_retry(
+            lambda: invoke_operation_async(
+                self._http,
+                "CustomContextItemsController_createRelations",
+                json_body={
+                    "relations": [_wire_payload(relation) for relation in relations]
+                },
+            ),
+            self._config.max_retries,
+        )
+        return int(
+            BatchCreateCustomContextItemRelationsResponseDto.model_validate(
+                data
+            ).upserted_count
+        )
 
     async def update(self, uid: str, **payload: Any) -> Dict[str, Any]:
         """Update mutable fields on a custom context item.

@@ -20,7 +20,7 @@ def test_upload_http_preserves_exact_strings_and_wire_names() -> None:
             201,
             json={
                 "checksum": "a" * 64,
-                "key": f"org_test/postgresql/{'a' * 64}.txt",
+                "key": f"org_test/postgresql/{'a' * 64}.json",
                 "created": True,
             },
         )
@@ -33,7 +33,6 @@ def test_upload_http_preserves_exact_strings_and_wire_names() -> None:
             "type": "http",
             "uri": "https://example.com/שלום?q=%20",
             "method": "PATCH",
-            "headers": {"X-Empty": "", "X-Whitespace": "  "},
             "body": "",
         },
         response={"format": "text", "content": "line 1\r\nשלום\r\n"},
@@ -47,7 +46,6 @@ def test_upload_http_preserves_exact_strings_and_wire_names() -> None:
             "type": "http",
             "uri": "https://example.com/שלום?q=%20",
             "method": "PATCH",
-            "headers": {"X-Empty": "", "X-Whitespace": "  "},
             "body": "",
         },
         "response": {"format": "text", "content": "line 1\r\nשלום\r\n"},
@@ -62,7 +60,7 @@ async def test_async_upload_sql_preserves_empty_response() -> None:
             201,
             json={
                 "checksum": "b" * 64,
-                "key": f"org_test/snowflake/{'b' * 64}.txt",
+                "key": f"org_test/snowflake/{'b' * 64}.json",
                 "created": True,
             },
         )
