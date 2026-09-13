@@ -51,10 +51,11 @@ class IngestedDataResource:
         Args:
             integration_type: Canonical Modus integration identifier.
             request: Exact SQL or HTTP request that produced the response.
-            response: Response format and exact string content. SQL requires CSV.
+            response: Response format, optional source HTTP status, and exact string
+                content. SQL requires CSV.
 
         Returns:
-            The checksum and organization-scoped object key for the new upload.
+            The checksum of the stored envelope.
 
         Raises:
             ConflictError: The complete payload is already stored.
@@ -108,10 +109,11 @@ class AsyncIngestedDataResource:
         Args:
             integration_type: Canonical Modus integration identifier.
             request: Exact SQL or HTTP request that produced the response.
-            response: Response format and exact string content. SQL requires CSV.
+            response: Response format, optional source HTTP status, and exact string
+                content. SQL requires CSV.
 
         Returns:
-            The checksum and organization-scoped object key for the new upload.
+            The checksum of the stored envelope.
 
         Raises:
             ConflictError: The complete payload is already stored.

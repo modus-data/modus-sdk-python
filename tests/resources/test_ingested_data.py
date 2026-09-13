@@ -18,11 +18,7 @@ def test_upload_http_preserves_exact_strings_and_wire_names() -> None:
     route = respx.post(f"{BASE}/api/v1/ingested-data").mock(
         return_value=httpx.Response(
             201,
-            json={
-                "checksum": "a" * 64,
-                "key": f"org_test/postgresql/{'a' * 64}.json",
-                "created": True,
-            },
+            json={"checksum": "a" * 64},
         )
     )
     client = Modus(api_key=KEY, base_url=BASE, max_retries=0)
@@ -35,10 +31,9 @@ def test_upload_http_preserves_exact_strings_and_wire_names() -> None:
             "method": "PATCH",
             "body": "",
         },
-        response={"format": "text", "content": "line 1\r\nשלום\r\n"},
+        response={"status": 200, "format": "text", "content": "line 1\r\nשלום\r\n"},
     )
 
-    assert result.created is True
     assert result.checksum == "a" * 64
     assert json.loads(route.calls[0].request.content) == {
         "integration_type": "postgresql",
@@ -48,7 +43,7 @@ def test_upload_http_preserves_exact_strings_and_wire_names() -> None:
             "method": "PATCH",
             "body": "",
         },
-        "response": {"format": "text", "content": "line 1\r\nשלום\r\n"},
+        "response": {"status": 200, "format": "text", "content": "line 1\r\nשלום\r\n"},
     }
 
 
@@ -58,11 +53,7 @@ async def test_async_upload_sql_preserves_empty_response() -> None:
     route = respx.post(f"{BASE}/api/v1/ingested-data").mock(
         return_value=httpx.Response(
             201,
-            json={
-                "checksum": "b" * 64,
-                "key": f"org_test/snowflake/{'b' * 64}.json",
-                "created": True,
-            },
+            json={"checksum": "b" * 64},
         )
     )
     async with AsyncModus(api_key=KEY, base_url=BASE, max_retries=0) as client:
@@ -72,7 +63,7 @@ async def test_async_upload_sql_preserves_empty_response() -> None:
             response={"format": "csv", "content": ""},
         )
 
-    assert result.created is True
+    assert result.checksum == "b" * 64
     assert json.loads(route.calls[0].request.content)["response"]["content"] == ""
 
 

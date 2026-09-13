@@ -130,23 +130,19 @@ for item in client.context.items.list():
 
 ### Ingested data
 
-Upload the exact SQL request and CSV response through the regular `Modus` client. With
-`MODUS_API_KEY` configured as above, set `MODUS_ORGANIZATION_ID` to the organization
-associated with the token:
+Upload the exact SQL request and CSV response through the regular `Modus` client. The
+organization comes from the configured `MODUS_API_KEY`:
 
 ```python
-import os
-
 import modus
 
 client = modus.Modus()  # reads MODUS_API_KEY
 stored = client.ingested_data.upload(
-    organization_id=os.environ["MODUS_ORGANIZATION_ID"],
     integration_type="postgresql",
     request={"type": "sql", "query": "SELECT id, name FROM customers"},
     response={"format": "csv", "content": "id,name\n1,Ada\n"},
 )
-print(stored.checksum, stored.key)
+print(stored.checksum)
 ```
 
 The token must include the `context:write` permission.

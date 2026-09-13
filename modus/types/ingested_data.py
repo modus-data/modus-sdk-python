@@ -35,11 +35,15 @@ IngestedDataRequest = Union[SqlIngestedDataRequest, HttpIngestedDataRequest]
 IngestedDataResponseFormat = Literal["csv", "json", "xml", "text"]
 
 
-class IngestedDataResponse(TypedDict):
-    """Exact response content produced by an executed request."""
-
+class _RequiredIngestedDataResponse(TypedDict):
     format: IngestedDataResponseFormat
     content: str
+
+
+class IngestedDataResponse(_RequiredIngestedDataResponse, total=False):
+    """Exact response content with an optional source HTTP status."""
+
+    status: int
 
 
 IngestedDataUploadResult = CreatedIngestedDataResponseDto
