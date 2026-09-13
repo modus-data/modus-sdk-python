@@ -11,6 +11,8 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Added
 
+- Ingested-data uploads accept an optional source HTTP `response.status` from 100 through 599.
+
 - **Ingested data uploads.** `Modus.ingested_data.upload` and
   `AsyncModus.ingested_data.upload` store raw SQL or HTTP request-response exchanges.
   Uploading identical content again raises `ConflictError`.
@@ -30,6 +32,9 @@ release, including pre-1.0 (`0.x`) releases.
   relative to the upload root, so directory structure is preserved.
 
 ### Changed
+
+- **Breaking (pre-1.0):** Ingested-data upload results now contain only `checksum`;
+  object keys are internal storage details.
 
 - **Breaking (pre-1.0):** Directory-managed member groups no longer include member IDs.
   Use the member count to determine their size. Native member groups are unchanged.

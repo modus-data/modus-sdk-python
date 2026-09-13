@@ -717,14 +717,6 @@ class CreatedIngestedDataResponseDto(BaseModel):
         description='Lowercase SHA-256 checksum of the canonical JSON envelope.',
         examples=['84f90e54a330d84e157af078f35409b093299941ffc623af900cd05bfc061b3d'],
     )
-    key: str = Field(
-        ...,
-        description='Object key of the newly persisted envelope.',
-        examples=['org_2abc123/generic/84f90e54a330d84e157af078f35409b093299941ffc623af900cd05bfc061b3d.json'],
-    )
-    created: bool = Field(
-        ..., description='Always true for a newly created object.', examples=[True]
-    )
 
 
 class CustomAttributeDto(BaseModel):
@@ -2489,6 +2481,13 @@ class HttpIngestedDataRequestDto(BaseModel):
 
 class IngestedDataResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    status: int | None = Field(
+        None,
+        description='HTTP status returned by the source endpoint.',
+        examples=[200],
+        ge=100,
+        le=599,
+    )
     format: IngestedDataResponseFormat = Field(..., examples=['json'])
     content: str = Field(
         ...,
