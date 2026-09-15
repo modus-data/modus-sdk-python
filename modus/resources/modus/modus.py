@@ -147,8 +147,8 @@ class ModusResource:
 
         Args:
             message: Natural-language intent used to select context.
-            limit:   Optional cap on structured fallback items when no markdown
-                     summary exists.
+            limit:   Maximum context items to return. Omit to return all
+                     selected items.
 
         Returns:
             Composition object (includes counts / session metadata used by the
@@ -247,7 +247,8 @@ class AsyncModusResource:
 
         Args:
             message: Natural-language intent used to select context.
-            limit:   Optional cap on structured fallback items.
+            limit:   Maximum context items to return. Omit to return all
+                     selected items.
         """
         body = ModusContextRequestDto(message=message, limit=limit)
         data = await async_with_retry(

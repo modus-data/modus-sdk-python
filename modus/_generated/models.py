@@ -309,7 +309,7 @@ class ComposeSkillContextRequestDto(BaseModel):
     )
     limit: float | None = Field(
         None,
-        description='Optional cap on context items when the API falls back to structured JSON (no fragment markdown). Ignored when composed markdown is returned.',
+        description='Maximum context items to return. Omit to return all selected items.',
         examples=[25],
         ge=1.0,
         le=200.0,
@@ -1348,7 +1348,7 @@ class ModusContextRequestDto(BaseModel):
     )
     limit: float | None = Field(
         None,
-        description='Optional cap on context items in structured JSON fallback.',
+        description='Maximum context items to return. Omit to return all selected items.',
         examples=[25],
         ge=1.0,
         le=200.0,
