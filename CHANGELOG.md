@@ -11,6 +11,11 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Added
 
+- **Workflows linked to a dashboard alert.** Workflow responses carry `dashboard_alert`
+  (`dashboard_id`, `tile_id`) when a dashboard KPI alert generated the workflow. Updating the
+  name, trigger or workflow structure of such a workflow raises `ConflictError` unless the update
+  sets `disconnect_dashboard_alert=True`, which disconnects it from the alert.
+
 - Ingested-data uploads accept an optional source HTTP `response.status` from 100 through 599.
 
 - **Ingested data uploads.** `Modus.ingested_data.upload` and
