@@ -331,8 +331,8 @@ class ScopesResource:
         Args:
             scope_id: Scope numeric id or slug.
             message:  Natural-language query used to select context.
-            limit:    Optional cap on structured fallback items when no markdown
-                      summary exists.
+            limit:    Maximum context items to return. Omit to return all
+                      selected items.
 
         Returns:
             Composition metadata (counts / session id). Use ``chat`` when you need
@@ -501,7 +501,7 @@ class AsyncScopesResource:
         Args:
             scope_id: Scope id or slug.
             message:  Natural-language query used to select context.
-            limit:    Optional cap on structured fallback items when no markdown summary exists.
+            limit:    Maximum context items to return. Omit to return all selected items.
         """
         validate_id(scope_id, name="scope_id")
         body = ComposeSkillContextRequestDto(message=message, limit=limit)

@@ -33,6 +33,9 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Changed
 
+- `modus.get_context` and `scopes.get_context` now apply `limit` to composed
+  context items, including normal Markdown responses. Omitting it remains unlimited.
+
 - **Breaking (pre-1.0):** Ingested-data upload results now contain only `checksum`;
   object keys are internal storage details.
 
