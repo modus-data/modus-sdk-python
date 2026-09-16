@@ -9,6 +9,14 @@ release, including pre-1.0 (`0.x`) releases.
 
 ## [Unreleased]
 
+### Removed
+
+- **`RunConfigDto.strategies`.** The run API no longer publishes context-composer
+  strategy IDs, so the generated `RunConfigDto` model no longer carries
+  `strategies`. These IDs are the composer's internal vocabulary and get renamed,
+  so a pinned value could silently stop doing anything. Strategy selection is
+  chosen by the service.
+
 ### Added
 
 - **Workflows linked to a dashboard alert.** Workflow responses carry `dashboard_alert`

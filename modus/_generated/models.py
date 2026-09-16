@@ -3576,7 +3576,6 @@ class RunConfigDto(BaseModel):
     connection_all_mode_ids: list[str] | None = Field(None, alias='connectionAllModeIds')
     guardrails: list[str] | None = Field(None, description='Guardrail ids applied to the run.')
     toolset: dict[str, Any] | None = Field(None, description='Map of tool name to tool config.')
-    strategies: list[str] | None = None
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
     debug: bool | None = None
     composer_file_offload: bool | None = Field(
