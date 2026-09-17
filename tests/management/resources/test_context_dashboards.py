@@ -1,4 +1,4 @@
-"""Tests for mgmt.context.dashboards.* (draft elements and layout)."""
+"""Tests for mgmt.context.dashboards.* (documents, versions, access, elements and layout)."""
 
 import json
 
@@ -8,19 +8,29 @@ import respx
 from modus.management import AsyncModusManagement, ModusManagement
 from modus.management.types.context_dashboards import (
     Dashboard,
+    DashboardDraftSnapshot,
     DashboardElement,
     DashboardElementKind,
     DashboardElementLayout,
     DashboardElementPatch,
     DashboardElementResult,
     DashboardElementsList,
+    DashboardGroupPermission,
     DashboardLayoutElement,
+    DashboardPublishResult,
+    DashboardSharedUser,
+    DashboardSharePermission,
+    DashboardVersion,
+    DashboardView,
+    DashboardVisibility,
 )
 
 BASE = "https://api.modus.com"
 DASH = "dash-1"
 ELEMENTS_URL = f"{BASE}/api/v1/context/dashboards/{DASH}/elements"
 LAYOUT_URL = f"{BASE}/api/v1/context/dashboards/{DASH}/layout"
+DASHBOARDS_URL = f"{BASE}/api/v1/context/dashboards"
+DASH_URL = f"{DASHBOARDS_URL}/{DASH}"
 
 # Response fixtures mirror what the service returns today (see the dashboards
 # service response builders): summaries omit sqlReferences on tiles, element
@@ -375,6 +385,33 @@ def test_update_layout():
 
 
 @pytest.mark.parametrize("bad", ["", "   "])
+def test_empty_document_ids_rejected_locally(bad):
+    dashboards = _client().context.dashboards
+    for call in (
+        lambda: dashboards.get(bad),
+        lambda: dashboards.update_draft(bad, expected_revision=1, definition={"tiles": [], "filters": []}),
+        lambda: dashboards.publish(bad, expected_revision=1),
+        lambda: dashboards.delete(bad),
+        lambda: dashboards.list_versions(bad),
+        lambda: dashboards.get_version(bad, "v1"),
+        lambda: dashboards.restore_version(bad, "v1"),
+        lambda: dashboards.list_draft_snapshots(bad),
+        lambda: dashboards.update_access(bad, visibility="private", group_permissions={}, shared_with=[]),
+        lambda: dashboards.request_ownership_transfer(bad, "user_2"),
+        lambda: dashboards.accept_ownership_transfer(bad),
+        lambda: dashboards.cancel_ownership_transfer(bad),
+    ):
+        with pytest.raises(ValueError, match="dashboard_id"):
+            call()
+    with pytest.raises(ValueError, match="version_id"):
+        dashboards.get_version(DASH, bad)
+    with pytest.raises(ValueError, match="version_id"):
+        dashboards.restore_version(DASH, bad)
+    with pytest.raises(ValueError, match="new_owner_user_id"):
+        dashboards.request_ownership_transfer(DASH, bad)
+
+
+@pytest.mark.parametrize("bad", ["", "   "])
 def test_empty_ids_rejected_locally(bad):
     dashboards = _client().context.dashboards
     with pytest.raises(ValueError, match="dashboard_id"):
@@ -452,3 +489,307 @@ async def test_async_writes_send_bodies():
         "expectedRevision": 4,
         "elements": [{"elementId": "tile-1", "layout": {"x": 2, "y": 0, "w": 4, "h": 2}}],
     }
+
+
+# --- documents, versions, access and ownership --------------------------------
+
+DEFINITION = DASHBOARD["definition"]
+VERSION = {
+    "uid": "v1",
+    "dashboardUid": DASH,
+    "versionNumber": 1,
+    "kind": "published",
+    "title": "Revenue",
+    "description": "",
+    "access": ACCESS,
+    "definition": {"tiles": [{"id": "t1", "title": "T", "kind": "table"}], "filters": []},
+    "createdByUserId": "user_1",
+    "createdAt": "2026-09-16T10:00:00.000Z",
+}
+# Versions published before filters and element config existed store only tiles.
+OLDER_VERSION = {
+    **VERSION,
+    "uid": "v0",
+    "versionNumber": 0,
+    "definition": {"tiles": [{"id": "t1", "title": "T", "kind": "table"}]},
+}
+SNAPSHOT = {"uid": "s1", "createdByUserId": "user_1", "createdAt": "2026-09-16T10:00:00.000Z"}
+PENDING_TRANSFER = {
+    **DASHBOARD,
+    "pendingOwnershipTransfer": {
+        "pendingOwnerUserId": "user_2",
+        "pendingOwnerEmail": "ana@example.com",
+        "requestedByUserId": "user_1",
+        "requestedAt": "2026-09-16T10:00:00.000Z",
+    },
+}
+
+
+@respx.mock
+def test_dashboards_list_default_view_sends_no_query():
+    route = respx.get(DASHBOARDS_URL).mock(
+        return_value=httpx.Response(200, json={"dashboards": [DASHBOARD]})
+    )
+    result = _client().context.dashboards.list()
+    assert [d.id for d in result] == [DASH]
+    assert isinstance(result[0], Dashboard)
+    assert "view" not in route.calls[0].request.url.params
+
+
+@respx.mock
+def test_dashboards_list_draft_view():
+    route = respx.get(DASHBOARDS_URL).mock(
+        return_value=httpx.Response(200, json={"dashboards": [DASHBOARD]})
+    )
+    result = _client().context.dashboards.list(view="draft")
+    assert [d.id for d in result] == [DASH]
+    assert route.calls[0].request.url.params["view"] == "draft"
+
+
+@respx.mock
+def test_dashboards_get_accepts_typed_view():
+    route = respx.get(DASH_URL).mock(return_value=httpx.Response(200, json=DASHBOARD))
+    result = _client().context.dashboards.get(DASH, view=DashboardView.draft)
+    assert isinstance(result, Dashboard)
+    assert result.draft_revision == 4
+    assert route.calls[0].request.url.params["view"] == "draft"
+
+
+@respx.mock
+def test_dashboards_create_sends_only_given_fields():
+    route = respx.post(DASHBOARDS_URL).mock(return_value=httpx.Response(201, json=DASHBOARD))
+    result = _client().context.dashboards.create(title="Revenue", definition=DEFINITION)
+    assert result.id == DASH
+    assert json.loads(route.calls[0].request.read()) == {
+        "title": "Revenue",
+        "definition": DEFINITION,
+    }
+
+
+@respx.mock
+def test_dashboards_create_with_description_and_access():
+    route = respx.post(DASHBOARDS_URL).mock(return_value=httpx.Response(201, json=DASHBOARD))
+    access = {"visibility": "shared", "groupPermissions": {"g1": {"use": True, "manage": False}}, "sharedWith": []}
+    _client().context.dashboards.create(
+        title="Revenue", definition=DEFINITION, description="Weekly", access=access
+    )
+    assert json.loads(route.calls[0].request.read()) == {
+        "title": "Revenue",
+        "definition": DEFINITION,
+        "description": "Weekly",
+        "access": access,
+    }
+
+
+@respx.mock
+def test_dashboards_update_draft_sends_revision_and_definition():
+    route = respx.patch(f"{DASH_URL}/draft").mock(return_value=httpx.Response(200, json=DASHBOARD))
+    result = _client().context.dashboards.update_draft(
+        DASH, expected_revision=3, definition=DEFINITION, title="Revenue v2"
+    )
+    assert result.draft_revision == 4
+    assert json.loads(route.calls[0].request.read()) == {
+        "expectedRevision": 3,
+        "definition": DEFINITION,
+        "title": "Revenue v2",
+    }
+
+
+@respx.mock
+def test_dashboards_publish_returns_dashboard_and_version():
+    route = respx.post(f"{DASH_URL}/publish").mock(
+        return_value=httpx.Response(201, json={"dashboard": DASHBOARD, "version": VERSION})
+    )
+    result = _client().context.dashboards.publish(DASH, expected_revision=3)
+    assert isinstance(result, DashboardPublishResult)
+    assert result.version.kind == "published" and result.dashboard.id == DASH
+    assert json.loads(route.calls[0].request.read()) == {"expectedRevision": 3}
+
+
+@respx.mock
+def test_dashboards_publish_accepts_older_version_definition():
+    respx.post(f"{DASH_URL}/publish").mock(
+        return_value=httpx.Response(201, json={"dashboard": DASHBOARD, "version": OLDER_VERSION})
+    )
+    result = _client().context.dashboards.publish(DASH, expected_revision=3)
+    assert "filters" not in result.version.definition
+
+
+@respx.mock
+def test_dashboards_list_versions_accepts_older_definitions():
+    respx.get(f"{DASH_URL}/versions").mock(
+        return_value=httpx.Response(200, json={"versions": [VERSION, OLDER_VERSION]})
+    )
+    versions = _client().context.dashboards.list_versions(DASH)
+    assert all(isinstance(v, DashboardVersion) for v in versions)
+    assert versions[1].definition == OLDER_VERSION["definition"]
+    assert versions[0].version_number == 1
+
+
+@respx.mock
+def test_dashboards_get_version_and_restore_version():
+    get_route = respx.get(f"{DASH_URL}/versions/v1").mock(
+        return_value=httpx.Response(200, json={**DASHBOARD, "view": "active"})
+    )
+    restore_route = respx.post(f"{DASH_URL}/versions/v1/restore").mock(
+        return_value=httpx.Response(201, json=DASHBOARD)
+    )
+    dashboards = _client().context.dashboards
+    assert dashboards.get_version(DASH, "v1").view == DashboardView.active
+    assert dashboards.restore_version(DASH, "v1").view == DashboardView.draft
+    assert get_route.called and restore_route.called
+    assert restore_route.calls[0].request.content in (b"", b"null")
+
+
+@respx.mock
+def test_dashboards_list_draft_snapshots():
+    respx.get(f"{DASH_URL}/draft-snapshots").mock(
+        return_value=httpx.Response(200, json={"snapshots": [SNAPSHOT]})
+    )
+    snapshots = _client().context.dashboards.list_draft_snapshots(DASH)
+    assert isinstance(snapshots[0], DashboardDraftSnapshot)
+    assert snapshots[0].uid == "s1"
+
+
+@respx.mock
+def test_dashboards_delete_is_204():
+    route = respx.delete(DASH_URL).mock(return_value=httpx.Response(204))
+    assert _client().context.dashboards.delete(DASH) is None
+    assert route.called
+
+
+@respx.mock
+def test_dashboards_update_access_sends_whole_object():
+    route = respx.patch(f"{DASH_URL}/access").mock(return_value=httpx.Response(200, json=DASHBOARD))
+    _client().context.dashboards.update_access(
+        DASH,
+        visibility="private",
+        group_permissions={},
+        shared_with=[{"email": "a@b.c", "permission": "use"}],
+    )
+    assert json.loads(route.calls[0].request.read()) == {
+        "visibility": "private",
+        "groupPermissions": {},
+        "sharedWith": [{"email": "a@b.c", "permission": "use"}],
+    }
+
+
+@respx.mock
+def test_dashboards_update_access_accepts_typed_values():
+    route = respx.patch(f"{DASH_URL}/access").mock(return_value=httpx.Response(200, json=DASHBOARD))
+    _client().context.dashboards.update_access(
+        DASH,
+        visibility=DashboardVisibility.shared,
+        group_permissions={"g1": DashboardGroupPermission(use=True, manage=False)},
+        shared_with=[DashboardSharedUser(email="ana@example.com", permission=DashboardSharePermission.use)],
+    )
+    assert json.loads(route.calls[0].request.read()) == {
+        "visibility": "shared",
+        "groupPermissions": {"g1": {"use": True, "manage": False}},
+        "sharedWith": [{"email": "ana@example.com", "permission": "use"}],
+    }
+
+
+@respx.mock
+def test_dashboards_ownership_request_and_accept():
+    request_route = respx.post(f"{DASH_URL}/transfer-ownership").mock(
+        return_value=httpx.Response(201, json=PENDING_TRANSFER)
+    )
+    accept_route = respx.post(f"{DASH_URL}/transfer-ownership/accept").mock(
+        return_value=httpx.Response(201, json=DASHBOARD)
+    )
+    dashboards = _client().context.dashboards
+    pending = dashboards.request_ownership_transfer(DASH, "user_2")
+    assert pending.pending_ownership_transfer.pending_owner_user_id == "user_2"
+    assert json.loads(request_route.calls[0].request.read()) == {"newOwnerUserId": "user_2"}
+    assert dashboards.accept_ownership_transfer(DASH).id == DASH
+    assert accept_route.called
+
+
+@respx.mock
+def test_dashboards_ownership_cancel():
+    respx.delete(f"{DASH_URL}/transfer-ownership").mock(
+        return_value=httpx.Response(200, json=DASHBOARD)
+    )
+    result = _client().context.dashboards.cancel_ownership_transfer(DASH)
+    assert isinstance(result, Dashboard)
+    assert result.id == DASH
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_async_document_operations():
+    list_route = respx.get(DASHBOARDS_URL).mock(
+        return_value=httpx.Response(200, json={"dashboards": [DASHBOARD]})
+    )
+    respx.post(DASHBOARDS_URL).mock(return_value=httpx.Response(201, json=DASHBOARD))
+    get_route = respx.get(DASH_URL).mock(return_value=httpx.Response(200, json=DASHBOARD))
+    draft_route = respx.patch(f"{DASH_URL}/draft").mock(
+        return_value=httpx.Response(200, json=DASHBOARD)
+    )
+    respx.post(f"{DASH_URL}/publish").mock(
+        return_value=httpx.Response(201, json={"dashboard": DASHBOARD, "version": OLDER_VERSION})
+    )
+    delete_route = respx.delete(DASH_URL).mock(return_value=httpx.Response(204))
+    respx.get(f"{DASH_URL}/versions").mock(
+        return_value=httpx.Response(200, json={"versions": [OLDER_VERSION]})
+    )
+    respx.get(f"{DASH_URL}/versions/v0").mock(return_value=httpx.Response(200, json=DASHBOARD))
+    respx.post(f"{DASH_URL}/versions/v0/restore").mock(
+        return_value=httpx.Response(201, json=DASHBOARD)
+    )
+    respx.get(f"{DASH_URL}/draft-snapshots").mock(
+        return_value=httpx.Response(200, json={"snapshots": [SNAPSHOT]})
+    )
+    access_route = respx.patch(f"{DASH_URL}/access").mock(
+        return_value=httpx.Response(200, json=DASHBOARD)
+    )
+    transfer_route = respx.post(f"{DASH_URL}/transfer-ownership").mock(
+        return_value=httpx.Response(201, json=PENDING_TRANSFER)
+    )
+    respx.post(f"{DASH_URL}/transfer-ownership/accept").mock(
+        return_value=httpx.Response(201, json=DASHBOARD)
+    )
+    cancel_route = respx.delete(f"{DASH_URL}/transfer-ownership").mock(
+        return_value=httpx.Response(200, json=DASHBOARD)
+    )
+    async with _async_client() as mgmt:
+        dashboards = mgmt.context.dashboards
+        listed = await dashboards.list(view="draft")
+        created = await dashboards.create(title="Revenue", definition=DEFINITION)
+        got = await dashboards.get(DASH, view="draft")
+        updated = await dashboards.update_draft(DASH, expected_revision=3, definition=DEFINITION)
+        published = await dashboards.publish(DASH, expected_revision=4)
+        deleted = await dashboards.delete(DASH)
+        versions = await dashboards.list_versions(DASH)
+        version = await dashboards.get_version(DASH, "v0")
+        restored = await dashboards.restore_version(DASH, "v0")
+        snapshots = await dashboards.list_draft_snapshots(DASH)
+        access = await dashboards.update_access(
+            DASH, visibility="private", group_permissions={}, shared_with=[]
+        )
+        pending = await dashboards.request_ownership_transfer(DASH, "user_2")
+        accepted = await dashboards.accept_ownership_transfer(DASH)
+        cancelled = await dashboards.cancel_ownership_transfer(DASH)
+    assert [d.id for d in listed] == [DASH]
+    assert list_route.calls[0].request.url.params["view"] == "draft"
+    assert get_route.calls[0].request.url.params["view"] == "draft"
+    for result in (created, got, updated, version, restored, access, accepted, cancelled):
+        assert isinstance(result, Dashboard)
+    assert isinstance(published, DashboardPublishResult)
+    assert published.version.definition == OLDER_VERSION["definition"]
+    assert deleted is None and delete_route.called
+    assert isinstance(versions[0], DashboardVersion)
+    assert isinstance(snapshots[0], DashboardDraftSnapshot)
+    assert pending.pending_ownership_transfer is not None
+    assert cancel_route.called
+    assert json.loads(draft_route.calls[0].request.read()) == {
+        "expectedRevision": 3,
+        "definition": DEFINITION,
+    }
+    assert json.loads(access_route.calls[0].request.read()) == {
+        "visibility": "private",
+        "groupPermissions": {},
+        "sharedWith": [],
+    }
+    assert json.loads(transfer_route.calls[0].request.read()) == {"newOwnerUserId": "user_2"}

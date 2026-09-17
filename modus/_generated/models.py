@@ -760,6 +760,13 @@ class DashboardChartDatasetDto(BaseModel):
     value_column: str = Field(..., alias='valueColumn', max_length=500, min_length=1)
 
 
+class DashboardDraftSnapshotDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    uid: str
+    created_by_user_id: str = Field(..., alias='createdByUserId')
+    created_at: str = Field(..., alias='createdAt', examples=['2026-09-16T10:00:00.000Z'])
+
+
 class DashboardElementKind(str, Enum):
     chart = 'chart'
     kpi = 'kpi'
@@ -918,6 +925,11 @@ class DashboardValueFormat(str, Enum):
     number = 'number'
     currency = 'currency'
     percent = 'percent'
+
+
+class DashboardVersionKind(str, Enum):
+    published = 'published'
+    draft_snapshot = 'draft_snapshot'
 
 
 class DashboardView(str, Enum):
@@ -1360,6 +1372,13 @@ class ListCustomContextItemsResponseDto(BaseModel):
     )
 
 
+class ListDashboardDraftSnapshotsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    snapshots: list[DashboardDraftSnapshotDto] = Field(
+        ..., description='Up to 100 most recent draft snapshots; editors only.'
+    )
+
+
 class Rollup(str, Enum):
     hour = 'hour'
     day = 'day'
@@ -1610,6 +1629,16 @@ class PendingOwnershipTransferDto(BaseModel):
     )
 
 
+class PublishDashboardDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    expected_revision: int = Field(
+        ...,
+        alias='expectedRevision',
+        description='Draft revision to publish; a stale value is rejected with 409.',
+        ge=1,
+    )
+
+
 class ReasoningEffort(str, Enum):
     none = 'none'
     minimal = 'minimal'
@@ -1841,6 +1870,17 @@ class ToolsetToolDto(BaseModel):
     )
 
 
+class TransferDashboardOwnershipDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    new_owner_user_id: str = Field(
+        ...,
+        alias='newOwnerUserId',
+        description='User id of the new owner; must be a member of the organization.',
+        max_length=200,
+        min_length=1,
+    )
+
+
 class TransferOwnershipDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     new_owner_user_id: str = Field(
@@ -2007,6 +2047,24 @@ class UpdateCustomContextItemDto(BaseModel):
         None,
         description='Replacement topic tags. Pass `[]` to clear all tags.',
         examples=[['billing', 'verified']],
+    )
+
+
+class UpdateDashboardAccessDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    visibility: DashboardVisibility = Field(
+        ...,
+        description='shared: the owner and the groups granted in groupPermissions; private: the owner and the users in sharedWith.',
+    )
+    group_permissions: dict[str, DashboardGroupPermissionDto] = Field(
+        ...,
+        alias='groupPermissions',
+        description='Group id to permissions. Used only when visibility is shared; ignored when private.',
+    )
+    shared_with: list[DashboardSharedUserDto] = Field(
+        ...,
+        alias='sharedWith',
+        description='Users granted access. Used only when visibility is private; ignored when shared.',
     )
 
 
@@ -2588,6 +2646,24 @@ class CreateDashboardElementDto(BaseModel):
     layout: DashboardElementLayoutDto = Field(..., description='Grid position of the new element.')
 
 
+class DashboardAccessDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    visibility: DashboardVisibility = Field(
+        ...,
+        description='shared: the owner and the groups granted in groupPermissions; private: the owner and the users in sharedWith.',
+    )
+    group_permissions: dict[str, DashboardGroupPermissionDto] = Field(
+        ...,
+        alias='groupPermissions',
+        description='Group id to permissions. Used only when visibility is shared; ignored when private.',
+    )
+    shared_with: list[DashboardSharedUserDto] = Field(
+        ...,
+        alias='sharedWith',
+        description='Users granted access. Used only when visibility is private; ignored when shared.',
+    )
+
+
 class DashboardAccessResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     visibility: DashboardVisibility
@@ -2755,6 +2831,26 @@ class DashboardTileDto(BaseModel):
     config: dict[str, Any]
 
 
+class DashboardVersionDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    uid: str
+    dashboard_uid: str = Field(..., alias='dashboardUid')
+    version_number: int | None = Field(
+        ...,
+        alias='versionNumber',
+        description='Sequential number for published versions; null for draft snapshots.',
+    )
+    kind: DashboardVersionKind
+    title: str
+    description: str
+    access: DashboardAccessResponseDto
+    definition: dict[str, Any] = Field(
+        ..., description='The definition as stored for this version.'
+    )
+    created_by_user_id: str = Field(..., alias='createdByUserId')
+    created_at: str = Field(..., alias='createdAt', examples=['2026-09-16T10:00:00.000Z'])
+
+
 class EvaluationCadenceDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     frequency: EvaluationCadenceFrequency | None = Field(None, description='Schedule frequency')
@@ -2890,6 +2986,14 @@ class ListAgentInterfacesResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     interfaces: list[AgentInterfaceDto] = Field(
         ..., description='All interfaces attached to the workflow (in creation order).'
+    )
+
+
+class ListDashboardVersionsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    versions: list[DashboardVersionDto] = Field(
+        ...,
+        description='Published versions only, newest first, each with its full definition; not paginated.',
     )
 
 
@@ -3754,9 +3858,25 @@ class ListAgentsResponseDto(BaseModel):
     )
 
 
+class ListDashboardsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    dashboards: list[DashboardDto] = Field(
+        ...,
+        description='Active view: published dashboards the caller can use. Draft view: dashboards the caller can manage. Each has its full definition; not paginated.',
+    )
+
+
 class ListMemberGroupsResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     groups: list[MemberGroupDto]
+
+
+class PublishDashboardResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    dashboard: DashboardDto = Field(
+        ..., description='The dashboard in its active view after publishing.'
+    )
+    version: DashboardVersionDto = Field(..., description='The version that was just published.')
 
 
 class ScopeDto(BaseModel):
@@ -3903,6 +4023,23 @@ class UpdateAgentDto(BaseModel):
     )
 
 
+class UpdateDashboardDraftDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    expected_revision: int = Field(
+        ...,
+        alias='expectedRevision',
+        description='Draft revision the change is based on; a stale value is rejected with 409.',
+        ge=1,
+    )
+    title: str | None = Field(None, description='New dashboard title.', max_length=500)
+    description: str | None = Field(
+        None, description='New dashboard description.', max_length=10000
+    )
+    definition: DashboardDefinitionDto = Field(
+        ..., description='Replaces the whole draft definition.'
+    )
+
+
 class UpdateSkillDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     name: str | None = Field(
@@ -4043,6 +4180,18 @@ class SkillRunDto(BaseModel):
         None,
         alias='subordinateSkillIds',
         description='Subordinate scope ids for an unsaved supervisor-scope draft test.',
+    )
+
+
+class CreateDashboardDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    title: str = Field(..., description='Dashboard title.', max_length=500, min_length=1)
+    description: str | None = Field(None, description='Dashboard description.', max_length=10000)
+    definition: DashboardDefinitionDto = Field(
+        ..., description='Tiles, filters and layout of the draft. Element ids must be unique.'
+    )
+    access: DashboardAccessDto | None = Field(
+        None, description='Who can use and manage the dashboard.'
     )
 
 

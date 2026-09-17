@@ -1,9 +1,12 @@
-"""Dashboard draft element and layout types for modus.management."""
+"""Dashboard document, version, access, element and layout types for modus.management."""
 
 from __future__ import annotations
 
 from modus.types.context_dashboards import (
     Dashboard,
+    DashboardAccess,
+    DashboardDefinition,
+    DashboardDraftSnapshot,
     DashboardElement,
     DashboardElementKind,
     DashboardElementLayout,
@@ -11,11 +14,22 @@ from modus.types.context_dashboards import (
     DashboardElementResult,
     DashboardElementsList,
     DashboardElementSummary,
+    DashboardGroupPermission,
     DashboardLayoutElement,
+    DashboardPublishResult,
+    DashboardSharedUser,
+    DashboardSharePermission,
+    DashboardVersion,
+    DashboardVersionKind,
+    DashboardView,
+    DashboardVisibility,
 )
 
 __all__ = [
     "Dashboard",
+    "DashboardAccess",
+    "DashboardDefinition",
+    "DashboardDraftSnapshot",
     "DashboardElement",
     "DashboardElementKind",
     "DashboardElementLayout",
@@ -23,5 +37,13 @@ __all__ = [
     "DashboardElementResult",
     "DashboardElementSummary",
     "DashboardElementsList",
+    "DashboardGroupPermission",
     "DashboardLayoutElement",
+    "DashboardPublishResult",
+    "DashboardSharePermission",
+    "DashboardSharedUser",
+    "DashboardVersion",
+    "DashboardVersionKind",
+    "DashboardView",
+    "DashboardVisibility",
 ]

@@ -19,6 +19,15 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Added
 
+- **Dashboard documents.** `mgmt.context.dashboards` document operations: list, get, create,
+  update_draft, publish, delete, versions, draft snapshots, access, ownership transfer
+  (`list()`, `get()`, `create()`, `update_draft()`, `publish()`, `delete()`,
+  `list_versions()`, `get_version()`, `restore_version()`, `list_draft_snapshots()`,
+  `update_access()`, `request_ownership_transfer()`, `accept_ownership_transfer()`,
+  `cancel_ownership_transfer()`). New types `DashboardVersion`, `DashboardDraftSnapshot` and
+  `DashboardPublishResult`; version definitions are returned as stored, so older versions
+  may lack newer fields. Async twins are on `AsyncModusManagement`.
+
 - **Dashboard draft elements and layout.** `mgmt.context.dashboards.elements(dashboard_id)`
   lists, reads, creates and updates the tiles and filters of a dashboard draft
   (`list()`, `get()`, `create()`, `update()`), and `mgmt.context.dashboards.update_layout()`

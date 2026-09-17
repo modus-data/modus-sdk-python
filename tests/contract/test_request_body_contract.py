@@ -110,6 +110,11 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "DashboardsController_createElement": {"expectedRevision", "kind", "title", "layout"},
     "DashboardsController_updateElement": {"expectedRevision", "patch"},
     "DashboardsController_updateLayout": {"expectedRevision", "elements"},
+    "DashboardsController_create": {"title", "description", "definition", "access"},
+    "DashboardsController_updateDraft": {"expectedRevision", "title", "description", "definition"},
+    "DashboardsController_publish": {"expectedRevision"},
+    "DashboardsController_updateAccess": {"visibility", "groupPermissions", "sharedWith"},
+    "DashboardsController_transferOwnership": {"newOwnerUserId"},
     # --- Scopes (/api/v1/scopes; request schemas share the generated *Skill* DTOs) ---
     "ScopesController_create": _model_wire_fields(_ScopeCreateBody),
     "ScopesController_update": _model_wire_fields(_ScopeUpdateBody),
