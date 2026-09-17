@@ -25,6 +25,7 @@ from ._content_merge import (
     update_with_merged_content,
 )
 from .custom_items import AsyncCustomContextItemsResource, CustomContextItemsResource
+from .dashboards import AsyncDashboardsResource, DashboardsResource
 from .files import AsyncContextFilesResource, ContextFilesResource
 from .items import AsyncContextItemsResource, ContextItemsResource
 
@@ -45,6 +46,8 @@ class ContextResource:
     mgmt.context.update_link(uid, title=..., url=...)     → ContextItem
     mgmt.context.files.upload(path)                       → FileUpload
     mgmt.context.files.upload_dir(dir_path)                → UploadDirResult
+    mgmt.context.dashboards.elements(dashboard_id).list()  → DashboardElementsList
+    mgmt.context.dashboards.update_layout(dashboard_id, ...) → Dashboard
     """
 
     def __init__(self, http: HttpClient, config: ModusConfig) -> None:
@@ -53,6 +56,7 @@ class ContextResource:
         self.items = ContextItemsResource(http, config)
         self.custom_items = CustomContextItemsResource(http, config)
         self.files = ContextFilesResource(http, config)
+        self.dashboards = DashboardsResource(http, config)
 
     def _create(self, operation_id: str, payload: dict) -> CreatedContextItem:
         data = with_retry(
@@ -335,6 +339,7 @@ class AsyncContextResource:
         self.items = AsyncContextItemsResource(http, config)
         self.custom_items = AsyncCustomContextItemsResource(http, config)
         self.files = AsyncContextFilesResource(http, config)
+        self.dashboards = AsyncDashboardsResource(http, config)
 
     async def _create(self, operation_id: str, payload: dict) -> CreatedContextItem:
         data = await async_with_retry(

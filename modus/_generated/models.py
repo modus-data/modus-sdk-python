@@ -4,7 +4,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, RootModel
 from pydantic.alias_generators import to_camel
 
 
@@ -752,6 +752,182 @@ class CustomContextItemKind(str, Enum):
     entity = 'entity'
     field = 'field'
     entity_samples = 'entity_samples'
+
+
+class DashboardChartDatasetDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="allow")
+    label: str = Field(..., max_length=500, min_length=1)
+    value_column: str = Field(..., alias='valueColumn', max_length=500, min_length=1)
+
+
+class DashboardElementKind(str, Enum):
+    chart = 'chart'
+    kpi = 'kpi'
+    table = 'table'
+    markdown = 'markdown'
+    filter = 'filter'
+
+
+class DashboardElementLayoutDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    x: int = Field(..., description='Left column, 0 through 11.', ge=0, le=11)
+    y: int = Field(..., description='Top row, starting at 0.', ge=0)
+    w: int = Field(..., description='Width in grid columns.', ge=1, le=12)
+    h: int = Field(..., description='Height in grid rows.', ge=1)
+
+
+class Option(RootModel[str]):
+    root: str = Field(..., max_length=500)
+
+
+class DefaultValue(RootModel[list[str]]):
+    root: list[str] = Field(
+        ...,
+        description='Use { start, end } for date/datetime ranges; null clears the default. The value must match the filterType and allowMultiple setting.',
+        max_length=1000,
+        min_length=1,
+    )
+
+
+class DefaultValue1(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    start: str | None = None
+    end: str | None = None
+
+
+class DashboardElementSummaryDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str
+    kind: DashboardElementKind
+    title: str
+    layout: dict[str, Any] | None = Field(
+        ..., description='Grid position (x, y, w, h), or null when the element has none.'
+    )
+    sql_references: list[str] | None = Field(
+        None,
+        alias='sqlReferences',
+        description='Filters only: the exact {{ ... }} templates tile SQL uses to reference this filter; empty when it cannot be referenced.',
+    )
+
+
+class DashboardElementsListResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    dashboard_id: str = Field(..., alias='dashboardId')
+    draft_revision: int = Field(
+        ...,
+        alias='draftRevision',
+        description='Current draft revision; pass it as expectedRevision on the next write.',
+    )
+    elements: list[DashboardElementSummaryDto]
+
+
+class DashboardFilterOptionsQueryPatchDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    connection_id: str | None = Field(
+        None,
+        alias='connectionId',
+        description='Connection the options query runs on.',
+        max_length=200,
+    )
+    sql: str | None = Field(
+        None, description='SQL that returns the dropdown options.', max_length=100000
+    )
+    value_column: str | None = Field(
+        None,
+        alias='valueColumn',
+        description='Result column holding each option value.',
+        max_length=200,
+    )
+    label_column: str | None = Field(
+        None,
+        alias='labelColumn',
+        description='Result column holding each option label.',
+        max_length=200,
+    )
+
+
+class DashboardFilterType(str, Enum):
+    text_pattern = 'text_pattern'
+    dropdown = 'dropdown'
+    query_dropdown = 'query_dropdown'
+    date = 'date'
+    datetime = 'datetime'
+    datetime_sec = 'datetime_sec'
+    date_range = 'date_range'
+    datetime_range = 'datetime_range'
+    datetime_sec_range = 'datetime_sec_range'
+    text = 'text'
+    number = 'number'
+    boolean = 'boolean'
+
+
+class DashboardFilterValueType(str, Enum):
+    string = 'string'
+    number = 'number'
+    boolean = 'boolean'
+    date = 'date'
+    datetime = 'datetime'
+    string_list = 'string_list'
+    number_list = 'number_list'
+
+
+class DashboardGroupPermissionDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    use: bool = Field(..., description='Group members can view the dashboard.')
+    manage: bool = Field(..., description='Group members can edit the dashboard.')
+
+
+class DashboardLayoutElementDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    element_id: str = Field(
+        ...,
+        alias='elementId',
+        description='Id of the dashboard element to place.',
+        max_length=100,
+        min_length=1,
+    )
+    layout: DashboardElementLayoutDto
+
+
+class DashboardQuotationStyle(str, Enum):
+    single = 'single'
+    double = 'double'
+    none = 'none'
+
+
+class DashboardSharePermission(str, Enum):
+    use = 'use'
+    manage = 'manage'
+
+
+class DashboardSharedUserDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    email: str
+    user_id: str | None = Field(None, alias='userId')
+    permission: DashboardSharePermission | None = None
+
+
+class DashboardTileKind(str, Enum):
+    chart = 'chart'
+    kpi = 'kpi'
+    table = 'table'
+    markdown = 'markdown'
+
+
+class DashboardValueFormat(str, Enum):
+    number = 'number'
+    currency = 'currency'
+    percent = 'percent'
+
+
+class DashboardView(str, Enum):
+    active = 'active'
+    draft = 'draft'
+
+
+class DashboardVisibility(str, Enum):
+    shared = 'shared'
+    private = 'private'
 
 
 class DeleteContextItemResponseDto(BaseModel):
@@ -1834,6 +2010,22 @@ class UpdateCustomContextItemDto(BaseModel):
     )
 
 
+class UpdateDashboardLayoutDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    expected_revision: int = Field(
+        ...,
+        alias='expectedRevision',
+        description='Draft revision the change is based on; a stale value is rejected with 409.',
+        ge=1,
+    )
+    elements: list[DashboardLayoutElementDto] = Field(
+        ...,
+        description='Every affected item with its final x, y, width, and height.',
+        max_length=300,
+        min_length=1,
+    )
+
+
 class UpdateMemoryRequestDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     memory: str | None = Field(
@@ -2381,6 +2573,188 @@ class CreateCustomContextItemDto(BaseModel):
     access: AccessPolicyDto | None = None
 
 
+class CreateDashboardElementDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    expected_revision: int = Field(
+        ...,
+        alias='expectedRevision',
+        description='Draft revision the change is based on; a stale value is rejected with 409.',
+        ge=1,
+    )
+    kind: DashboardElementKind = Field(
+        ..., description='Element to create: a chart, KPI, table or markdown tile, or a filter.'
+    )
+    title: str = Field(..., description='Title shown on the element.', max_length=500, min_length=1)
+    layout: DashboardElementLayoutDto = Field(..., description='Grid position of the new element.')
+
+
+class DashboardAccessResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    visibility: DashboardVisibility
+    group_permissions: dict[str, DashboardGroupPermissionDto] = Field(
+        ..., alias='groupPermissions', description='Permissions by group id.'
+    )
+    shared_with: list[DashboardSharedUserDto] = Field(..., alias='sharedWith')
+    owner_user_id: str = Field(..., alias='ownerUserId')
+    owner_email: str | None = Field(..., alias='ownerEmail')
+
+
+class DashboardChartConfigDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="allow")
+    type: str = Field(
+        ..., description='Any Chart.js chart type registered by the renderer.', min_length=1
+    )
+    label_column: str = Field(..., alias='labelColumn', max_length=500, min_length=1)
+    datasets: list[DashboardChartDatasetDto] = Field(
+        ...,
+        description='Chart.js datasets. valueColumn maps SQL results to data; all other Chart.js dataset settings pass through.',
+        min_length=1,
+    )
+    options: dict[str, Any] | None = Field(
+        None, description='Full JSON-serializable Chart.js options object.'
+    )
+
+
+class DashboardElementDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str
+    kind: DashboardElementKind
+    title: str | None = None
+    layout: dict[str, Any] | None = Field(
+        ..., description='Grid position (x, y, w, h), or null when the element has none.'
+    )
+    connection_id: str | None = Field(
+        None, alias='connectionId', description='Chart, KPI and table tiles.'
+    )
+    sql: str | None = Field(None, description='Chart, KPI and table tiles.')
+    chart_config: dict[str, Any] | None = Field(
+        None,
+        alias='chartConfig',
+        description='Chart tiles: the chart settings, or null when none are set.',
+    )
+    format: str | None = Field(None, description='KPI tiles: display format of the value.')
+    markdown: str | None = Field(None, description='Markdown tiles.')
+    filter_type: str | None = Field(
+        None,
+        alias='filterType',
+        description='Filters: the filter type as stored, which can also be a storage type such as string_list.',
+    )
+    required: bool | None = None
+    options: list[str] | None = None
+    allow_multiple: bool | None = Field(None, alias='allowMultiple')
+    quotation: str | None = Field(None, description='Filters: how the value is quoted in SQL.')
+    regex: str | None = None
+    options_query: dict[str, Any] | None = Field(
+        None,
+        alias='optionsQuery',
+        description='Query dropdown filters: connectionId, sql, valueColumn and labelColumn.',
+    )
+    default_value: str | float | bool | list[str | float] | dict[str, Any] | None = Field(
+        None,
+        alias='defaultValue',
+        description='Default filter value; a { start, end } object for date and datetime ranges.',
+    )
+    sql_references: list[str] | None = Field(
+        None,
+        alias='sqlReferences',
+        description='Filters: the exact {{ ... }} templates tile SQL uses to reference this filter.',
+    )
+
+
+class DashboardElementPatchDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    title: str | None = Field(None, description='Element title.', max_length=500)
+    connection_id: str | None = Field(
+        None, alias='connectionId', description='Connection the tile query runs on.', max_length=200
+    )
+    sql: str | None = Field(
+        None, description='SQL query of a chart, KPI or table tile.', max_length=100000
+    )
+    chart_config: DashboardChartConfigDto | None = Field(
+        None, alias='chartConfig', description='Chart settings of a chart tile; null clears them.'
+    )
+    format: DashboardValueFormat | None = Field(None, description='Display format of a KPI value.')
+    markdown: str | None = Field(
+        None, description='Content of a markdown tile.', max_length=1000000
+    )
+    filter_type: DashboardFilterType | None = Field(
+        None,
+        alias='filterType',
+        description='Use only the listed editor filter types. Configure a compatible defaultValue in the same patch.',
+    )
+    required: bool | None = Field(
+        None, description='Whether the filter needs a value before tiles run.'
+    )
+    options: list[Option] | None = Field(None, description='Fixed choices of a dropdown filter.')
+    allow_multiple: bool | None = Field(
+        None, alias='allowMultiple', description='Whether a dropdown filter accepts several values.'
+    )
+    quotation: DashboardQuotationStyle | None = Field(
+        None, description='How the filter value is quoted when inserted into SQL.'
+    )
+    regex: str | None = Field(
+        None, description='Pattern a text filter value must match.', max_length=500
+    )
+    options_query: DashboardFilterOptionsQueryPatchDto | None = Field(
+        None,
+        alias='optionsQuery',
+        description='Query that supplies the choices of a query dropdown filter.',
+    )
+    default_value: str | float | bool | DefaultValue | DefaultValue1 | None = Field(
+        None,
+        alias='defaultValue',
+        description='Use { start, end } for date/datetime ranges; null clears the default. The value must match the filterType and allowMultiple setting.',
+    )
+    layout: DashboardElementLayoutDto | None = Field(
+        None, description='New grid position of the element.'
+    )
+
+
+class DashboardElementResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    dashboard_id: str = Field(..., alias='dashboardId')
+    draft_revision: int = Field(
+        ...,
+        alias='draftRevision',
+        description='Current draft revision; pass it as expectedRevision on the next write.',
+    )
+    element: DashboardElementDto
+
+
+class DashboardFilterDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str
+    label: str
+    type: DashboardFilterValueType
+    required: bool
+    quotation: DashboardQuotationStyle | None = None
+    regex: str | None = None
+    default_value: str | float | bool | list[str | float] | dict[str, Any] | None = Field(
+        None,
+        alias='defaultValue',
+        description='Default filter value; a { start, end } object for date and datetime ranges.',
+    )
+
+
+class DashboardSelectedVersionDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str | None = Field(..., description='Null for the draft.')
+    version_number: int | None = Field(..., alias='versionNumber', description='Null for the draft.')
+    created_by_user_id: str = Field(..., alias='createdByUserId')
+    created_at: str = Field(..., alias='createdAt', examples=['2026-09-16T10:00:00.000Z'])
+    access: DashboardAccessResponseDto
+
+
+class DashboardTileDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str
+    title: str
+    kind: DashboardTileKind
+    connection_id: str | None = Field(None, alias='connectionId')
+    sql: str | None = None
+    config: dict[str, Any]
+
+
 class EvaluationCadenceDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     frequency: EvaluationCadenceFrequency | None = Field(None, description='Schedule frequency')
@@ -2798,6 +3172,19 @@ class TriggerDto(BaseModel):
     )
     schedule: TriggerScheduleDto | None = Field(
         None, description='Schedule details. Required when trigger_type=schedule.'
+    )
+
+
+class UpdateDashboardElementDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    expected_revision: int = Field(
+        ...,
+        alias='expectedRevision',
+        description='Draft revision the change is based on; a stale value is rejected with 409.',
+        ge=1,
+    )
+    patch: DashboardElementPatchDto = Field(
+        ..., description='Fields to change; include at least one.'
     )
 
 
@@ -3299,6 +3686,41 @@ class CreateSkillDto(BaseModel):
         alias='accessConfig',
         description='Access configuration. Omit to use the default (full-org shared with use + manage).',
     )
+
+
+class DashboardDefinitionDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    tiles: list[DashboardTileDto]
+    filters: list[DashboardFilterDto]
+    layout: dict[str, Any] | None = Field(
+        None, description='Element positions and filter settings.'
+    )
+
+
+class DashboardDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str
+    context_item_id: str = Field(..., alias='contextItemId')
+    title: str
+    description: str
+    access: DashboardAccessResponseDto
+    definition: DashboardDefinitionDto
+    view: DashboardView
+    selected_version: DashboardSelectedVersionDto = Field(..., alias='selectedVersion')
+    draft_revision: int = Field(
+        ...,
+        alias='draftRevision',
+        description='Current draft revision; pass it as expectedRevision on the next write.',
+    )
+    active_version_id: str | None = Field(..., alias='activeVersionId')
+    updated_by_user_id: str = Field(..., alias='updatedByUserId')
+    created_at: str = Field(..., alias='createdAt', examples=['2026-09-16T10:00:00.000Z'])
+    updated_at: str = Field(..., alias='updatedAt', examples=['2026-09-16T10:00:00.000Z'])
+    pending_ownership_transfer: PendingOwnershipTransferDto | None = Field(
+        ..., alias='pendingOwnershipTransfer'
+    )
+    can_use: bool = Field(..., alias='canUse')
+    can_manage: bool = Field(..., alias='canManage')
 
 
 class EvaluationConfigDto(BaseModel):

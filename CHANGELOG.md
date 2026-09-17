@@ -19,6 +19,13 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Added
 
+- **Dashboard draft elements and layout.** `mgmt.context.dashboards.elements(dashboard_id)`
+  lists, reads, creates and updates the tiles and filters of a dashboard draft
+  (`list()`, `get()`, `create()`, `update()`), and `mgmt.context.dashboards.update_layout()`
+  moves or resizes several of them in one change. Every write takes the `expected_revision`
+  it is based on and raises `ConflictError` when the draft changed. Async twins are on
+  `AsyncModusManagement`.
+
 - **Workflows linked to a dashboard alert.** Workflow responses carry `dashboard_alert`
   (`dashboard_id`, `tile_id`) when a dashboard KPI alert generated the workflow. Updating the
   name, trigger or workflow structure of such a workflow raises `ConflictError` unless the update

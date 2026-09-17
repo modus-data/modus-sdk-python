@@ -1,0 +1,18 @@
+{
+  "dashboardId": "00000000-0000-4000-8000-0000000000ff",
+  "draftRevision": 11,
+  "element": {
+    "id": "el4",
+    "kind": "chart",
+    "title": "<title>",
+    "layout": {
+      "h": 4,
+      "w": 4,
+      "x": 0,
+      "y": 24
+    },
+    "connectionId": "",
+    "sql": "SELECT <placeholder>",
+    "chartConfig": null
+  }
+}

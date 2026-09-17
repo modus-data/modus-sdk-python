@@ -1,0 +1,238 @@
+{
+  "id": "00000000-0000-4000-8000-0000000000ff",
+  "contextItemId": "00000000000000000000000000000000",
+  "access": {
+    "visibility": "private",
+    "groupPermissions": {},
+    "sharedWith": [],
+    "ownerUserId": "user_PLACEHOLDER",
+    "ownerEmail": "user@example.com"
+  },
+  "draftRevision": 11,
+  "activeVersionId": "00000000-0000-4000-8000-0000000000ff",
+  "updatedByUserId": "user_PLACEHOLDER",
+  "createdAt": "2026-09-08T12:32:41.571Z",
+  "updatedAt": "2026-09-08T13:23:40.488Z",
+  "pendingOwnershipTransfer": null,
+  "canUse": true,
+  "canManage": true,
+  "title": "<title>",
+  "description": "<description>",
+  "definition": {
+    "tiles": [
+      {
+        "id": "el1",
+        "title": "<title>",
+        "kind": "markdown",
+        "config": {
+          "markdown": "<markdown placeholder>"
+        }
+      },
+      {
+        "id": "el2",
+        "title": "<title>",
+        "kind": "table",
+        "connectionId": "00000000-0000-4000-8000-0000000000c1",
+        "sql": "SELECT <placeholder>",
+        "config": {}
+      },
+      {
+        "id": "el3",
+        "title": "<title>",
+        "kind": "markdown",
+        "config": {
+          "markdown": "<markdown placeholder>"
+        }
+      },
+      {
+        "id": "el4",
+        "title": "<title>",
+        "kind": "chart",
+        "connectionId": "",
+        "sql": "SELECT <placeholder>",
+        "config": {
+          "chartConfig": null
+        }
+      }
+    ],
+    "filters": [
+      {
+        "id": "el5",
+        "label": "<label>",
+        "type": "date",
+        "required": false,
+        "defaultValue": "today"
+      },
+      {
+        "id": "el6",
+        "label": "<label>",
+        "type": "date",
+        "required": false,
+        "defaultValue": "this_month"
+      },
+      {
+        "id": "el7",
+        "label": "<label>",
+        "type": "date",
+        "required": false,
+        "defaultValue": "last_7_days"
+      },
+      {
+        "id": "el8",
+        "label": "<label>",
+        "type": "date",
+        "required": false,
+        "defaultValue": "last_7_days"
+      },
+      {
+        "id": "el9",
+        "label": "<label>",
+        "type": "date",
+        "required": false,
+        "defaultValue": "today"
+      },
+      {
+        "id": "el10",
+        "label": "<label>",
+        "type": "datetime",
+        "required": false,
+        "quotation": "single",
+        "defaultValue": "today"
+      },
+      {
+        "id": "el11",
+        "label": "<label>",
+        "type": "date",
+        "required": false,
+        "defaultValue": "2026-01-01"
+      }
+    ],
+    "layout": {
+      "elements": {
+        "el5": {
+          "h": 2,
+          "w": 3,
+          "x": 0,
+          "y": 7
+        },
+        "el6": {
+          "h": 2,
+          "w": 3,
+          "x": 6,
+          "y": 7
+        },
+        "el7": {
+          "h": 2,
+          "w": 3,
+          "x": 3,
+          "y": 7
+        },
+        "el12": {
+          "h": 2,
+          "w": 8,
+          "x": 4,
+          "y": 9
+        },
+        "el10": {
+          "h": 2,
+          "w": 4,
+          "x": 0,
+          "y": 9
+        },
+        "el11": {
+          "h": 2,
+          "w": 3,
+          "x": 9,
+          "y": 7
+        },
+        "el1": {
+          "h": 7,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "el3": {
+          "h": 9,
+          "w": 12,
+          "x": 0,
+          "y": 15
+        },
+        "el2": {
+          "h": 4,
+          "w": 12,
+          "x": 0,
+          "y": 11
+        },
+        "el4": {
+          "h": 4,
+          "w": 4,
+          "x": 0,
+          "y": 24
+        }
+      },
+      "filterConfigs": {
+        "el5": {
+          "title": "<title>",
+          "options": [],
+          "required": false,
+          "filterType": "date",
+          "defaultValue": "today"
+        },
+        "el6": {
+          "title": "<title>",
+          "options": [],
+          "required": false,
+          "filterType": "date",
+          "defaultValue": "this_month"
+        },
+        "el7": {
+          "title": "<title>",
+          "options": [],
+          "required": false,
+          "filterType": "date",
+          "defaultValue": "last_7_days"
+        },
+        "el12": {
+          "title": "<title>",
+          "options": [],
+          "required": false,
+          "filterType": "date_range",
+          "defaultValue": {
+            "end": "today",
+            "start": "last_7_days"
+          }
+        },
+        "el10": {
+          "title": "<title>",
+          "options": [],
+          "required": false,
+          "quotation": "single",
+          "filterType": "datetime",
+          "defaultValue": "today",
+          "allowMultiple": false
+        },
+        "el11": {
+          "title": "<title>",
+          "options": [],
+          "required": false,
+          "filterType": "date",
+          "defaultValue": "2026-01-01"
+        }
+      }
+    }
+  },
+  "view": "draft",
+  "selectedVersion": {
+    "id": null,
+    "versionNumber": null,
+    "createdByUserId": "user_PLACEHOLDER",
+    "createdAt": "2026-09-08T13:23:40.488Z",
+    "access": {
+      "visibility": "private",
+      "groupPermissions": {},
+      "sharedWith": [],
+      "ownerUserId": "user_PLACEHOLDER",
+      "ownerEmail": "user@example.com"
+    }
+  }
+}

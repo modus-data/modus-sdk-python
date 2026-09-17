@@ -106,6 +106,11 @@ OPERATIONS: dict[str, str] = {
     "ContextFilesController_finalizeMany": "mgmt.context.files.finalize_many(); convenience: upload_dir(), upload_files()",
     "ContextFilesController_get": "mgmt.context.files.get()",
     "ContextFilesController_list": "mgmt.context.files.list()",
+    "DashboardsController_listElements": "mgmt.context.dashboards.elements(id).list()",
+    "DashboardsController_getElement": "mgmt.context.dashboards.elements(id).get()",
+    "DashboardsController_createElement": "mgmt.context.dashboards.elements(id).create()",
+    "DashboardsController_updateElement": "mgmt.context.dashboards.elements(id).update()",
+    "DashboardsController_updateLayout": "mgmt.context.dashboards.update_layout()",
     # --- Connections ---
     "ConnectionsController_list": "client.connections.list()",
     # --- Suggestions ---

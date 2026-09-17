@@ -107,6 +107,9 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "ContextFilesController_uploadUrls": {"files"},
     "ContextFilesController_uploadFromUrl": {"url", "fileName"},
     "ContextFilesController_uploadFromUrls": {"urls"},
+    "DashboardsController_createElement": {"expectedRevision", "kind", "title", "layout"},
+    "DashboardsController_updateElement": {"expectedRevision", "patch"},
+    "DashboardsController_updateLayout": {"expectedRevision", "elements"},
     # --- Scopes (/api/v1/scopes; request schemas share the generated *Skill* DTOs) ---
     "ScopesController_create": _model_wire_fields(_ScopeCreateBody),
     "ScopesController_update": _model_wire_fields(_ScopeUpdateBody),

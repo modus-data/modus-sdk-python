@@ -1,0 +1,24 @@
+{
+  "dashboardId": "00000000-0000-4000-8000-0000000000ff",
+  "draftRevision": 11,
+  "element": {
+    "id": "el10",
+    "kind": "filter",
+    "title": "<title>",
+    "filterType": "datetime",
+    "required": false,
+    "options": [],
+    "allowMultiple": false,
+    "quotation": "single",
+    "defaultValue": "today",
+    "sqlReferences": [
+      "{{ el10 }}"
+    ],
+    "layout": {
+      "h": 2,
+      "w": 4,
+      "x": 0,
+      "y": 9
+    }
+  }
+}
