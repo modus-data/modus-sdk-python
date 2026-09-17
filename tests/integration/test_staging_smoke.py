@@ -16,6 +16,7 @@ Run:
 from __future__ import annotations
 
 import os
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -89,14 +90,40 @@ def test_staging_journey() -> None:
         assert isinstance(page2.items, list)
 
     # Compose (org-wide; keep limit tiny)
+    #
+    # `is not None` passed for months while the org-wide endpoint was returning
+    # nothing, because an empty composition is still an object. Assert the
+    # contract instead, and bound the latency: the incident this smoke missed was
+    # a 90s hang that the edge turned into a 503 at 30s, which no assertion about
+    # the body can catch.
+    def assert_composition(label: str, composed: object, elapsed_s: float) -> None:
+        assert composed is not None, f"{label}: no response"
+        assert isinstance(composed.context, str), f"{label}: context"
+        assert isinstance(composed.original_count, int), f"{label}: original_count"
+        assert isinstance(composed.selected_count, int), f"{label}: selected_count"
+        assert composed.session_id, f"{label}: session_id"
+
+        # Deliberately not asserting original_count > 0: whether this org has
+        # mined context is an environment fact, and failing on it would make the
+        # check red for a data reason. Coherence is still assertable — having
+        # found items and rendered nothing is a composer bug in any org.
+        if composed.original_count > 0:
+            assert composed.context, (
+                f"{label}: found {composed.original_count} items but rendered no context"
+            )
+
+        assert elapsed_s < 25, f"{label}: took {elapsed_s:.1f}s; the edge caps at 30s"
+
+    started = time.monotonic()
     composed = client.modus.get_context("sdk staging smoke — list relevant tables", limit=3)
-    assert composed is not None
+    assert_composition("org-wide get_context", composed, time.monotonic() - started)
 
     if scope_id:
+        started = time.monotonic()
         scope_composed = client.scopes.get_context(
             scope_id, "sdk staging smoke — brief context", limit=3
         )
-        assert scope_composed is not None
+        assert_composition("scope get_context", scope_composed, time.monotonic() - started)
 
     # Management reads
     mgmt_scopes = mgmt.scopes.list(page_size=5)
