@@ -51,6 +51,8 @@ class ScopeConversationsResource:
         *,
         page_size: int = 25,
         page_token: Optional[str] = None,
+        source: Optional[str] = None,
+        source_ref: Optional[str] = None,
     ) -> Page[ConversationListItem]:
         """
         List conversation threads for this scope, newest first.
@@ -58,17 +60,31 @@ class ScopeConversationsResource:
         Args:
             page_size:  Maximum number of items to return (default 25).
             page_token: Token from a previous page's ``next_page_token``; omit for the first page.
+            source:     Restrict to conversations started from this UI surface
+                        (e.g. ``"context_chat"``, ``"dashboard_copilot"``, ``"slack"``).
+            source_ref: Narrow ``source`` to one instance of that surface — for
+                        ``"dashboard_copilot"``, a dashboard id. Requires ``source``;
+                        the API raises :class:`~modus.UnprocessableError` (422) if
+                        sent on its own. Conversations recorded before this filter
+                        shipped carry no instance key and never match it.
         """
         validate_page_size(page_size)
-        return self._list_page(page_size, page_token)
+        return self._list_page(page_size, page_token, source, source_ref)
 
     def _list_page(
         self,
         page_size: int,
         page_token: Optional[str],
+        source: Optional[str] = None,
+        source_ref: Optional[str] = None,
     ) -> Page[ConversationListItem]:
         validate_id(self._scope_id, name="scope_id")
-        params = aip_list_params(page_size, page_token)
+        extra: dict = {}
+        if source is not None:
+            extra["source"] = source
+        if source_ref is not None:
+            extra["sourceRef"] = source_ref
+        params = aip_list_params(page_size, page_token, **extra)
         data = with_retry(
             lambda: invoke_operation(
                 self._http,
@@ -82,7 +98,7 @@ class ScopeConversationsResource:
             data,
             "conversations",
             ConversationListItem,
-            lambda cur: self._list_page(page_size, cur),
+            lambda cur: self._list_page(page_size, cur, source, source_ref),
         )
 
     def get(self, thread_id: str) -> Conversation:
@@ -123,6 +139,8 @@ class AsyncScopeConversationsResource:
         *,
         page_size: int = 25,
         page_token: Optional[str] = None,
+        source: Optional[str] = None,
+        source_ref: Optional[str] = None,
     ) -> AsyncPage[ConversationListItem]:
         """
         List conversation threads for this scope, newest first.
@@ -130,17 +148,31 @@ class AsyncScopeConversationsResource:
         Args:
             page_size:  Maximum number of items to return (default 25).
             page_token: Token from a previous page's ``next_page_token``; omit for the first page.
+            source:     Restrict to conversations started from this UI surface
+                        (e.g. ``"context_chat"``, ``"dashboard_copilot"``, ``"slack"``).
+            source_ref: Narrow ``source`` to one instance of that surface — for
+                        ``"dashboard_copilot"``, a dashboard id. Requires ``source``;
+                        the API raises :class:`~modus.UnprocessableError` (422) if
+                        sent on its own. Conversations recorded before this filter
+                        shipped carry no instance key and never match it.
         """
         validate_page_size(page_size)
-        return await self._list_page(page_size, page_token)
+        return await self._list_page(page_size, page_token, source, source_ref)
 
     async def _list_page(
         self,
         page_size: int,
         page_token: Optional[str],
+        source: Optional[str] = None,
+        source_ref: Optional[str] = None,
     ) -> AsyncPage[ConversationListItem]:
         validate_id(self._scope_id, name="scope_id")
-        params = aip_list_params(page_size, page_token)
+        extra: dict = {}
+        if source is not None:
+            extra["source"] = source
+        if source_ref is not None:
+            extra["sourceRef"] = source_ref
+        params = aip_list_params(page_size, page_token, **extra)
         data = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,
@@ -154,7 +186,7 @@ class AsyncScopeConversationsResource:
             data,
             "conversations",
             ConversationListItem,
-            lambda cur: self._list_page(page_size, cur),
+            lambda cur: self._list_page(page_size, cur, source, source_ref),
         )
 
     async def get(self, thread_id: str) -> Conversation:

@@ -84,6 +84,61 @@ def test_conversations_list_sends_aip_params(client):
 
 
 @respx.mock
+def test_conversations_list_sends_source_filter(client):
+    route = respx.get(f"{BASE}/api/v1/scopes/42/conversations").mock(
+        return_value=httpx.Response(200, json={
+            "conversations": [],
+            "nextPageToken": None,
+        })
+    )
+    client.scopes.conversations(42).list(source="dashboard_copilot", source_ref="dash-1")
+    params = route.calls[0].request.url.params
+    assert params["source"] == "dashboard_copilot"
+    assert params["sourceRef"] == "dash-1"
+
+
+@respx.mock
+def test_conversations_list_preserves_source_filter_on_next_page(client):
+    route = respx.get(f"{BASE}/api/v1/scopes/42/conversations").mock(
+        side_effect=[
+            httpx.Response(
+                200,
+                json={"conversations": [], "nextPageToken": "tok_p2"},
+            ),
+            httpx.Response(
+                200,
+                json={"conversations": [], "nextPageToken": None},
+            ),
+        ]
+    )
+    page = client.scopes.conversations(42).list(
+        source="dashboard_copilot", source_ref="dash-1"
+    )
+    assert page.has_next_page()
+    page.get_next_page()
+    assert len(route.calls) == 2
+    for call in route.calls:
+        params = call.request.url.params
+        assert params["source"] == "dashboard_copilot"
+        assert params["sourceRef"] == "dash-1"
+    assert route.calls[1].request.url.params["pageToken"] == "tok_p2"
+
+
+@respx.mock
+def test_conversations_list_omits_source_filter_by_default(client):
+    route = respx.get(f"{BASE}/api/v1/scopes/42/conversations").mock(
+        return_value=httpx.Response(200, json={
+            "conversations": [],
+            "nextPageToken": None,
+        })
+    )
+    client.scopes.conversations(42).list()
+    params = route.calls[0].request.url.params
+    assert "source" not in params
+    assert "sourceRef" not in params
+
+
+@respx.mock
 def test_conversations_list_sends_page_token(client):
     route = respx.get(f"{BASE}/api/v1/scopes/42/conversations").mock(
         return_value=httpx.Response(200, json={

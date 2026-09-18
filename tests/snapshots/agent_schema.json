@@ -77,6 +77,32 @@
       "title": "AgentAccessConfigDto",
       "type": "object"
     },
+    "AgentDashboardAlertDto": {
+      "properties": {
+        "dashboardId": {
+          "description": "Id of the dashboard whose KPI alert generated this workflow.",
+          "examples": [
+            "dash_01j9z3k2"
+          ],
+          "title": "Dashboardid",
+          "type": "string"
+        },
+        "tileId": {
+          "description": "Id of the dashboard tile the alert watches.",
+          "examples": [
+            "tile_revenue"
+          ],
+          "title": "Tileid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dashboardId",
+        "tileId"
+      ],
+      "title": "AgentDashboardAlertDto",
+      "type": "object"
+    },
     "AgentGroupPermissionDto": {
       "properties": {
         "use": {
@@ -501,6 +527,18 @@
       "examples": [
         "needs_group_manage"
       ]
+    },
+    "dashboardAlert": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AgentDashboardAlertDto"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Set when a dashboard KPI alert generated this workflow. Changing its definition requires disconnectDashboardAlert."
     }
   },
   "required": [

@@ -36,6 +36,22 @@ class AccessPolicyDto(BaseModel):
     )
 
 
+class AgentDashboardAlertDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    dashboard_id: str = Field(
+        ...,
+        alias='dashboardId',
+        description='Id of the dashboard whose KPI alert generated this workflow.',
+        examples=['dash_01j9z3k2'],
+    )
+    tile_id: str = Field(
+        ...,
+        alias='tileId',
+        description='Id of the dashboard tile the alert watches.',
+        examples=['tile_revenue'],
+    )
+
+
 class AgentGroupPermissionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     use: bool = Field(
@@ -2912,6 +2928,11 @@ class WorkflowDto(BaseModel):
         description='Why `canManage` is false, for client-facing guidance: `needs_group_manage` (shared, but no group you belong to grants Manage) or `not_owner` (private, and you are not the owner). `null` when `canManage` is true. Derived server-side from the principal + accessConfig.',
         examples=['needs_group_manage'],
     )
+    dashboard_alert: AgentDashboardAlertDto | None = Field(
+        None,
+        alias='dashboardAlert',
+        description='Set when a dashboard KPI alert generated this workflow. Changing its definition requires disconnectDashboardAlert.',
+    )
 
 
 class WorkflowNodeDto(BaseModel):
@@ -3453,6 +3474,11 @@ class UpdateAgentDto(BaseModel):
         alias='accessConfig',
         description='Updated access configuration. The service rejects changes that would lock the caller out of use + manage.',
     )
+    disconnect_dashboard_alert: (
+        bool | None
+    ) = (
+        Field(None, alias='disconnectDashboardAlert', description='Acknowledge that this change disconnects the workflow from its dashboard alert. Required when name, trigger or workflowStructure change on a workflow whose dashboardAlert is set.', examples=[True])
+    )
 
 
 class UpdateSkillDto(BaseModel):
@@ -3550,7 +3576,6 @@ class RunConfigDto(BaseModel):
     connection_all_mode_ids: list[str] | None = Field(None, alias='connectionAllModeIds')
     guardrails: list[str] | None = Field(None, description='Guardrail ids applied to the run.')
     toolset: dict[str, Any] | None = Field(None, description='Map of tool name to tool config.')
-    strategies: list[str] | None = None
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
     debug: bool | None = None
     composer_file_offload: bool | None = Field(

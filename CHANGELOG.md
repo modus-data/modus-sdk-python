@@ -9,7 +9,20 @@ release, including pre-1.0 (`0.x`) releases.
 
 ## [Unreleased]
 
+### Removed
+
+- **`RunConfigDto.strategies`.** The run API no longer publishes context-composer
+  strategy IDs, so the generated `RunConfigDto` model no longer carries
+  `strategies`. These IDs are the composer's internal vocabulary and get renamed,
+  so a pinned value could silently stop doing anything. Strategy selection is
+  chosen by the service.
+
 ### Added
+
+- **Workflows linked to a dashboard alert.** Workflow responses carry `dashboard_alert`
+  (`dashboard_id`, `tile_id`) when a dashboard KPI alert generated the workflow. Updating the
+  name, trigger or workflow structure of such a workflow raises `ConflictError` unless the update
+  sets `disconnect_dashboard_alert=True`, which disconnects it from the alert.
 
 - Ingested-data uploads accept an optional source HTTP `response.status` from 100 through 599.
 
@@ -17,10 +30,14 @@ release, including pre-1.0 (`0.x`) releases.
   `AsyncModus.ingested_data.upload` store raw SQL or HTTP request-response exchanges.
   Uploading identical content again raises `ConflictError`.
 
-- **Conversation lists: optional `source_ref` filter.** Narrows `source` to one instance
-  of that surface — for `dashboard_copilot`, a single dashboard id. Requires `source`;
-  sent on its own it is rejected with a 422. Conversations recorded before the filter
-  shipped carry no instance key and do not match it.
+- **Conversation lists: optional `source` and `source_ref` filters.** `client.modus.conversations.list`
+  and `client.scopes.conversations(scope_id).list` (both sync and async) now accept `source`
+  to restrict results to one UI surface (e.g. `"context_chat"`, `"dashboard_copilot"`,
+  `"slack"`) and `source_ref` to narrow `source` to one instance of that surface — for
+  `dashboard_copilot`, a single dashboard id. `source_ref` requires `source`; sent on its
+  own it is rejected with a 422. On the org-level list, `source` may only be combined with
+  an omitted `kind` or `kind="all"` (not `kind="modus"` / `kind="scopes"`). Conversations
+  recorded before the filter shipped carry no instance key and do not match it.
 
 - **File uploads: optional `folder_path`.** `upload_from_url`, `finalize`, and directory
   uploads now accept an optional relative folder label that is stored with the file and
