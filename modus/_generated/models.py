@@ -354,6 +354,12 @@ class ComposeSkillContextResponseDto(BaseModel):
         description='Context items the composer kept for this intent.',
         examples=[12],
     )
+    context_item_uids: list[str] = Field(
+        ...,
+        alias='contextItemUids',
+        description='UIDs of the context items the composer kept, in selection order. Same length as `selectedCount`.',
+        examples=[['ctx_01HZY4M8', 'ctx_01HZY4M9']],
+    )
     session_id: str = Field(
         ...,
         alias='sessionId',
@@ -1585,6 +1591,11 @@ class ModusContextResponseDto(BaseModel):
     )
     selected_count: float = Field(
         ..., alias='selectedCount', description='Context items the composer kept for this intent.'
+    )
+    context_item_uids: list[str] = Field(
+        ...,
+        alias='contextItemUids',
+        description='UIDs of the context items the composer kept, in selection order. Same length as `selectedCount`.',
     )
     session_id: str = Field(
         ..., alias='sessionId', description='Session id used for this composition.'
