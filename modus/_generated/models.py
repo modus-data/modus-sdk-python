@@ -334,7 +334,11 @@ class ComposeSkillContextRequestDto(BaseModel):
 
 class ComposeSkillContextResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    context: str = Field(..., description='Composed context for the scope and intent (markdown from the context composer, or structured JSON fallback).', examples=['## Retrieved Context\n\n### customers\n\n...'])
+    context: str = Field(
+        ...,
+        description='Composed context for the scope and intent (markdown from the context composer, or structured JSON fallback).',
+        examples=['## Retrieved Context\n\n### customers\n\n...'],
+    )
     context_items: list[dict[str, Any]] = Field(
         ...,
         alias='contextItems',
@@ -650,7 +654,11 @@ class CreateNoteDto(BaseModel):
         description='Display title for the note. Used in the SPA list and as the s3 object filename.',
         examples=['Q3 churn analysis'],
     )
-    content: str = Field(..., description='Note body — markdown text. Stored in tenant S3 + context_items.', examples=['## Findings\n\nChurn rate increased 2.3% MoM.'])
+    content: str = Field(
+        ...,
+        description='Note body — markdown text. Stored in tenant S3 + context_items.',
+        examples=['## Findings\n\nChurn rate increased 2.3% MoM.'],
+    )
     access: AccessPolicyDto | None = None
 
 
