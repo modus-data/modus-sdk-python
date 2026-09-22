@@ -23,7 +23,7 @@ dev = [
     "respx>=0.21",
     "mypy>=1.10",
     "ruff>=0.15",
-    "datamodel-code-generator>=0.60.0,<0.61",
+    "datamodel-code-generator>=0.60.0,<0.65",
 ]
 
 [tool.pytest.ini_options]
