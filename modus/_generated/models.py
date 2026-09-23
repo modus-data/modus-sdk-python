@@ -1492,6 +1492,7 @@ class Model(str, Enum):
     claude_sonnet_5 = 'claude-sonnet-5'
     claude_sonnet_4_6 = 'claude-sonnet-4.6'
     claude_opus_4_8 = 'claude-opus-4.8'
+    claude_opus_5_5 = 'claude-opus-5.5'
     gpt_5_2 = 'gpt-5.2'
     gpt_5_5 = 'gpt-5.5'
     gpt_5_mini = 'gpt-5-mini'
@@ -1511,6 +1512,7 @@ class Model(str, Enum):
     gemini_3_flash_preview = 'gemini-3-flash-preview'
     grok_4_3_fast = 'grok-4.3-fast'
     grok_4_3 = 'grok-4.3'
+    grok_4_7 = 'grok-4.7'
     kimi_k3 = 'kimi-k3'
 
 
@@ -1529,7 +1531,7 @@ class ModusChatRequestDto(BaseModel):
     )
     model: Model = Field(
         ...,
-        description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-4.6, claude-opus-4.8, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, kimi-k3.',
+        description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-4.6, claude-opus-4.8, claude-opus-5.5, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, grok-4.7, kimi-k3.',
         examples=['claude-sonnet-4.6'],
     )
     approval_continuation: bool | None = Field(
@@ -1726,7 +1728,7 @@ class SkillChatRequestDto(BaseModel):
     )
     model: Model = Field(
         ...,
-        description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-4.6, claude-opus-4.8, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, kimi-k3.',
+        description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-4.6, claude-opus-4.8, claude-opus-5.5, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, grok-4.7, kimi-k3.',
         examples=['claude-sonnet-4.6'],
     )
 
