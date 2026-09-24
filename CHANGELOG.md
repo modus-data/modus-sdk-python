@@ -73,6 +73,13 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Changed
 
+- **Scope MCP: Get Answer works alone.** `management.scopes.patch_mcp_config` now
+  rejects a config that turns `core_tools.chat` (`get_answer`) on together with
+  `getContext`, `teachModus` or any tool exposure, with HTTP 422. The call replaces the
+  whole config and omitted keys take their defaults: `chat` off, `getContext` on,
+  `teachModus` off, every tool exposed. To turn Get Answer on, send `chat: true`,
+  `getContext: false` and an empty `subset` exposure in one call.
+
 - `modus.get_context` and `scopes.get_context` now apply `limit` to composed
   context items, including normal Markdown responses. Omitting it remains unlimited.
 

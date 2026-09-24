@@ -1759,12 +1759,12 @@ class SkillMcpInterfaceConfigDto(BaseModel):
     core_tools: dict[str, Any] | None = Field(
         None,
         alias='coreTools',
-        description='Built-in MCP tools (chat, get_context) exposed by this scope.',
+        description='Core MCP tools: chat (get_answer), getContext, teachModus. Omitted keys default to chat false, getContext true, teachModus false. chat cannot be true together with another tool.',
     )
     mcp_tool_exposure: dict[str, Any] | None = Field(
         None,
         alias='mcpToolExposure',
-        description='Outbound tool exposure for MCP clients (subset or all).',
+        description='Integration tools exposed to MCP clients: mode discovery (all) or subset with allowedIntegrationKeys. Must be an empty subset when chat is true.',
     )
 
 
@@ -3145,14 +3145,14 @@ class PatchSkillMcpConfigDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     config: SkillMcpInterfaceConfigDto = Field(
         ...,
-        description='Full MCP interface config to apply live on the published scope (and mirrored to draft when forked).',
+        description='Full MCP interface config written to the scope draft; takes effect on the next deploy.',
     )
 
 
 class PatchSkillMcpConfigResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     config: SkillMcpInterfaceConfigDto = Field(
-        ..., description='Sanitized MCP config now stored on the published variation.'
+        ..., description='Sanitized MCP config now stored on the scope draft.'
     )
 
 
