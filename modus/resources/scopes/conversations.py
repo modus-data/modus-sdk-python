@@ -84,7 +84,8 @@ class ScopeConversationsResource:
             source:     Restrict to conversations started from this UI surface
                         (e.g. ``"context_chat"``, ``"dashboard_copilot"``, ``"slack"``).
             source_ref: Narrow ``source`` to one instance of that surface — for
-                        ``"dashboard_copilot"``, a dashboard id. Requires ``source``;
+                        ``"dashboard_copilot"`` or ``"dashboard_assistant"``, a dashboard id
+                        (both scope conversation history per dashboard). Requires ``source``;
                         the API raises :class:`~modus.UnprocessableError` (422) if
                         sent on its own. Conversations recorded before this filter
                         shipped carry no instance key and never match it.

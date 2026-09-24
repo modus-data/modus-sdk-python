@@ -2377,6 +2377,7 @@ class RunSource(str, Enum):
     teams = 'teams'
     context_chat = 'context_chat'
     dashboard_copilot = 'dashboard_copilot'
+    dashboard_assistant = 'dashboard_assistant'
     other = 'other'
 
 
