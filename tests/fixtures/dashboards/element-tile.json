@@ -1,0 +1,17 @@
+{
+  "dashboardId": "00000000-0000-4000-8000-0000000000ff",
+  "draftRevision": 11,
+  "element": {
+    "id": "el2",
+    "kind": "table",
+    "title": "<title>",
+    "layout": {
+      "h": 4,
+      "w": 12,
+      "x": 0,
+      "y": 11
+    },
+    "connectionId": "00000000-0000-4000-8000-0000000000c1",
+    "sql": "SELECT <placeholder>"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "dashboardId": "00000000-0000-4000-8000-0000000000ff",
+  "draftRevision": 11,
+  "element": {
+    "id": "el12",
+    "kind": "filter",
+    "title": "<title>",
+    "filterType": "date_range",
+    "required": false,
+    "options": [],
+    "defaultValue": {
+      "end": "today",
+      "start": "last_7_days"
+    },
+    "sqlReferences": [
+      "{{ el12.start }}",
+      "{{ el12.end }}"
+    ],
+    "layout": {
+      "h": 2,
+      "w": 8,
+      "x": 4,
+      "y": 9
+    }
+  }
+}

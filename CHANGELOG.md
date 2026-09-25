@@ -9,6 +9,16 @@ release, including pre-1.0 (`0.x`) releases.
 
 ## [Unreleased]
 
+### Added
+
+- **`context_item_uids` on composed context.** `POST /modus/context` and
+  `POST /scopes/{id}/context` now return the UIDs of the context items the composer
+  kept, in selection order. Previously the response reported `selectedCount` with no
+  way to learn which items it counted — `context_items` has been an empty array for
+  some time and remains deprecated.
+- **`claude-opus-5.5` and `grok-4.7` models.** The chat request `model` enum
+  (`Model.claude_opus_5_5`, `Model.grok_4_7`) accepts the two new models.
+
 ### Removed
 
 - **`RunConfigDto.strategies`.** The run API no longer publishes context-composer
@@ -18,6 +28,22 @@ release, including pre-1.0 (`0.x`) releases.
   chosen by the service.
 
 ### Added
+
+- **Dashboard documents.** `mgmt.context.dashboards` document operations: list, get, create,
+  update_draft, publish, delete, versions, draft snapshots, access, ownership transfer
+  (`list()`, `get()`, `create()`, `update_draft()`, `publish()`, `delete()`,
+  `list_versions()`, `get_version()`, `restore_version()`, `list_draft_snapshots()`,
+  `update_access()`, `request_ownership_transfer()`, `accept_ownership_transfer()`,
+  `cancel_ownership_transfer()`). New types `DashboardVersion`, `DashboardDraftSnapshot` and
+  `DashboardPublishResult`; version definitions are returned as stored, so older versions
+  may lack newer fields. Async twins are on `AsyncModusManagement`.
+
+- **Dashboard draft elements and layout.** `mgmt.context.dashboards.elements(dashboard_id)`
+  lists, reads, creates and updates the tiles and filters of a dashboard draft
+  (`list()`, `get()`, `create()`, `update()`), and `mgmt.context.dashboards.update_layout()`
+  moves or resizes several of them in one change. Every write takes the `expected_revision`
+  it is based on and raises `ConflictError` when the draft changed. Async twins are on
+  `AsyncModusManagement`.
 
 - **Workflows linked to a dashboard alert.** Workflow responses carry `dashboard_alert`
   (`dashboard_id`, `tile_id`) when a dashboard KPI alert generated the workflow. Updating the
@@ -45,6 +71,13 @@ release, including pre-1.0 (`0.x`) releases.
   relative to the upload root, so directory structure is preserved.
 
 ### Changed
+
+- **Scope MCP: Get Answer works alone.** `management.scopes.patch_mcp_config` now
+  rejects a config that turns `core_tools.chat` (`get_answer`) on together with
+  `getContext`, `teachModus` or any tool exposure, with HTTP 422. The call replaces the
+  whole config and omitted keys take their defaults: `chat` off, `getContext` on,
+  `teachModus` off, every tool exposed. To turn Get Answer on, send `chat: true`,
+  `getContext: false` and an empty `subset` exposure in one call.
 
 - `modus.get_context` and `scopes.get_context` now apply `limit` to composed
   context items, including normal Markdown responses. Omitting it remains unlimited.

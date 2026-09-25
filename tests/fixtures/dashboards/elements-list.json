@@ -1,0 +1,135 @@
+{
+  "dashboardId": "00000000-0000-4000-8000-0000000000ff",
+  "draftRevision": 11,
+  "elements": [
+    {
+      "id": "el1",
+      "kind": "markdown",
+      "title": "<title>",
+      "layout": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "el2",
+      "kind": "table",
+      "title": "<title>",
+      "layout": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 11
+      }
+    },
+    {
+      "id": "el3",
+      "kind": "markdown",
+      "title": "<title>",
+      "layout": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      }
+    },
+    {
+      "id": "el4",
+      "kind": "chart",
+      "title": "<title>",
+      "layout": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 24
+      }
+    },
+    {
+      "id": "el5",
+      "kind": "filter",
+      "title": "<title>",
+      "layout": {
+        "h": 2,
+        "w": 3,
+        "x": 0,
+        "y": 7
+      },
+      "sqlReferences": [
+        "{{ el5 }}"
+      ]
+    },
+    {
+      "id": "el6",
+      "kind": "filter",
+      "title": "<title>",
+      "layout": {
+        "h": 2,
+        "w": 3,
+        "x": 6,
+        "y": 7
+      },
+      "sqlReferences": [
+        "{{ el6 }}"
+      ]
+    },
+    {
+      "id": "el7",
+      "kind": "filter",
+      "title": "<title>",
+      "layout": {
+        "h": 2,
+        "w": 3,
+        "x": 3,
+        "y": 7
+      },
+      "sqlReferences": [
+        "{{ el7 }}"
+      ]
+    },
+    {
+      "id": "el12",
+      "kind": "filter",
+      "title": "<title>",
+      "layout": {
+        "h": 2,
+        "w": 8,
+        "x": 4,
+        "y": 9
+      },
+      "sqlReferences": [
+        "{{ el12.start }}",
+        "{{ el12.end }}"
+      ]
+    },
+    {
+      "id": "el10",
+      "kind": "filter",
+      "title": "<title>",
+      "layout": {
+        "h": 2,
+        "w": 4,
+        "x": 0,
+        "y": 9
+      },
+      "sqlReferences": [
+        "{{ el10 }}"
+      ]
+    },
+    {
+      "id": "el11",
+      "kind": "filter",
+      "title": "<title>",
+      "layout": {
+        "h": 2,
+        "w": 3,
+        "x": 9,
+        "y": 7
+      },
+      "sqlReferences": [
+        "{{ el11 }}"
+      ]
+    }
+  ]
+}
