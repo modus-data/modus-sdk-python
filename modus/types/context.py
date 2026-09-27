@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from .._generated.models import (
+    ContextItemAncestorDto,
     ContextItemDto,
     CreatedContextItemResponseDto,
     DeleteContextItemResponseDto,
@@ -10,6 +11,7 @@ from .._generated.models import (
 )
 
 ContextItem = ContextItemDto
+ContextItemAncestor = ContextItemAncestorDto
 ContextItemLookupRow = LookupContextItemRowDto
 ContextItemDeletion = DeleteContextItemResponseDto
 
@@ -28,6 +30,8 @@ ContextType = str
 
 __all__ = [
     "ContextItem",
+    "ContextItemAncestor",
+    "ContextItemAncestorDto",
     "ContextItemDeletion",
     "ContextItemDto",
     "ContextItemLookupRow",

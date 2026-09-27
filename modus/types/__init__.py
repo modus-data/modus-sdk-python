@@ -19,7 +19,7 @@ from .agent_runs import (
 from .agents import Agent, AgentStatus, AgentType
 from .chat import ChatResult
 from .connections import Connection
-from .context import ContextItem, ContextType
+from .context import ContextItem, ContextItemAncestor, ContextType
 from .context_accessors import (
     context_item_label,
     is_verified,
@@ -67,6 +67,7 @@ __all__ = [
     "ChatResult",
     "Connection",
     "ContextItem",
+    "ContextItemAncestor",
     "ContextType",
     "HttpIngestedDataRequest",
     "IngestedDataRequest",

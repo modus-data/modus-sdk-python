@@ -403,6 +403,24 @@ class ContentProjectionDto(BaseModel):
     )
 
 
+class ContextItemAncestorDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    uid: str = Field(
+        ..., description='Stable identifier of the ancestor.', examples=['ancestor-123']
+    )
+    display_name: str | None = Field(
+        ...,
+        alias='display_name',
+        description='Human-readable label. Generic path-token ancestry copies the same platform segment as uid. Null only when an explicit entry stored no name.',
+        examples=['acme'],
+    )
+    type: str | None = Field(
+        ...,
+        description='Optional ancestor kind. Null when the source provides only platform path tokens.',
+        examples=['container'],
+    )
+
+
 class UserFeedback(str, Enum):
     negative = 'negative'
     neutral = 'neutral'
@@ -465,6 +483,10 @@ class ContextItemDto(BaseModel):
         alias='dataPath',
         description='Hierarchical path that places the item inside the data map (used for filtering by data asset).',
         examples=[['salesforce', '00000000-0000-4000-a000-000000000111', 'Account', 'Name']],
+    )
+    ancestry: list[ContextItemAncestorDto] | None = Field(
+        None,
+        description='Ordered ancestors. Omitted on older responses that do not yet include the field. Null means stored ancestry is unknown. An empty array means the item has no ancestors. Each entry uses `uid`, `display_name`, and `type`.',
     )
     created_at: str = Field(
         ...,
@@ -1438,6 +1460,10 @@ class LookupContextItemRowDto(BaseModel):
         ...,
         alias='dataPath',
         description='Hierarchical data path of the row (same as the request).',
+    )
+    ancestry: list[ContextItemAncestorDto] | None = Field(
+        None,
+        description='Ordered ancestors. Omitted on older responses that do not yet include the field. Null means stored ancestry is unknown. An empty array is stored empty ancestry.',
     )
     content: dict[str, Any] = Field(
         ...,
