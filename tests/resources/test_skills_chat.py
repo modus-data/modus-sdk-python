@@ -12,7 +12,7 @@ from modus import ModusError
 from modus.types.runs import TokenEvent
 
 BASE = "https://api.modus.com"
-MODEL = "claude-sonnet-5"
+MODEL = "claude-sonnet-5.5"
 
 
 @respx.mock

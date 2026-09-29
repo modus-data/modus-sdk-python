@@ -31,8 +31,10 @@ def validate_id(resource_id: Union[int, str], *, name: str = "id") -> None:
 # Canonical chat model ids from SkillChatRequestDto (keep in sync with the API spec).
 ALLOWED_CHAT_MODELS = frozenset({
     "claude-sonnet-5",
+    "claude-sonnet-5.5",
     "claude-sonnet-4.6",
     "claude-opus-4.8",
+    "claude-opus-5.5",
     "gpt-5.2",
     "gpt-5.5",
     "gpt-5-mini",
@@ -42,6 +44,8 @@ ALLOWED_CHAT_MODELS = frozenset({
     "qwen3-coder",
     "qwen3-32b",
     "deepseek-chat-v3.1",
+    "deepseek-v4-pro",
+    "deepseek-v4-flash-latest",
     "minimax-m2.7",
     "llama-4-maverick",
     "llama-4-scout",
@@ -50,6 +54,8 @@ ALLOWED_CHAT_MODELS = frozenset({
     "gemini-3-flash-preview",
     "grok-4.3-fast",
     "grok-4.3",
+    "grok-4.7",
+    "kimi-k3",
 })
 
 

@@ -11,6 +11,10 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Added
 
+- **`claude-sonnet-5.5` model.** The chat request `model` enum
+  (`Model.claude_sonnet_5_5`) accepts the new Anthropic model.
+- **`deepseek-v4-pro`, `deepseek-v4-flash-latest`, and `kimi-k3` models.** The
+  chat request `model` enum accepts these models.
 - **Optional `ancestry` on context items.** List, get, lookup, and custom-item
   responses may include ordered ancestors (`uid`, `display_name`, `type`). The
   field is omitted on older responses, `null` when stored ancestry is unknown,
