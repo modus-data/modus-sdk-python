@@ -2977,7 +2977,7 @@ class FileUploadResourceDto(BaseModel):
     folder_path: str | None = Field(
         None,
         alias='folderPath',
-        description='Relative folder label supplied when the upload was finalized.',
+        description='Relative folder path within Files. Null at the Files root.',
         examples=['reports/2026/Q3'],
     )
     content_type: str | None = Field(None, alias='contentType', examples=['application/pdf'])
