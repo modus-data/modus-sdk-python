@@ -315,6 +315,39 @@ class BulkUploadUrlsDto(BaseModel):
     )
 
 
+class ChatInterfaceAccessMode(str, Enum):
+    all = 'all'
+    allow_list = 'allow-list'
+    allow_org = 'allow-org'
+
+
+class ChatInterfaceConfigDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    access_mode: ChatInterfaceAccessMode | None = Field(
+        None,
+        alias='accessMode',
+        description='Who may use the interface: `all` (anyone in the workspace), `allow-list` (only `allowedEmails`), `allow-org` (members of this organization).',
+        examples=['allow-list'],
+    )
+    allowed_emails: list[str] | None = Field(
+        None,
+        alias='allowedEmails',
+        description='Emails allowed to use the interface when `accessMode` is `allow-list`.',
+        examples=[['ana@example.com']],
+    )
+    available_channel_ids: list[str] | None = Field(
+        None,
+        alias='availableChannelIds',
+        description='Channels where the interface answers. Slack channel ids look like `C0ALH2JTRR9`. Empty or absent means every channel.',
+        examples=[['C0ALH2JTRR9']],
+    )
+
+
+class ChatInterfaceType(str, Enum):
+    slack = 'slack'
+    teams = 'teams'
+
+
 class ComposeSkillContextRequestDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     message: str = Field(
@@ -1708,6 +1741,29 @@ class ManageDenial(str, Enum):
     needs_group_manage = 'needs_group_manage'
 
 
+class ScopeInterfaceDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(
+        ..., description='Interface id (UUID).', examples=['00000000-0000-4000-a000-000000000500']
+    )
+    scope_id: float = Field(..., alias='scopeId', description='Scope id.', examples=[42])
+    type: ChatInterfaceType = Field(..., examples=['slack'])
+    name: str = Field(..., description='Display name.', examples=['Slack'])
+    config: ChatInterfaceConfigDto
+    created_at: str = Field(
+        ...,
+        alias='createdAt',
+        description='Creation timestamp.',
+        examples=['2026-09-30T10:00:00.000Z'],
+    )
+    updated_at: str = Field(
+        ...,
+        alias='updatedAt',
+        description='Most recent update timestamp.',
+        examples=['2026-09-30T10:00:00.000Z'],
+    )
+
+
 class SearchMemoriesRequestDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     query: str = Field(
@@ -2146,6 +2202,14 @@ class UpdateMemoryRequestDto(BaseModel):
     )
 
 
+class UpdateScopeInterfaceDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    name: str | None = Field(
+        None, description='New display name.', examples=['Support'], max_length=200, min_length=1
+    )
+    config: ChatInterfaceConfigDto | None = Field(None, description='Replaces the whole config.')
+
+
 class UploadFromUrlDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     url: str = Field(
@@ -2450,6 +2514,21 @@ class AddAgentInterfaceDto(BaseModel):
         description='Initial config payload (interface-type-specific). Free-form JSONB.',
         examples=[{}],
     )
+
+
+class AddScopeInterfaceDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    type: ChatInterfaceType = Field(
+        ..., description='Chat platform. One interface per type per scope.', examples=['slack']
+    )
+    name: str | None = Field(
+        None,
+        description='Display name. Defaults to the chat platform name.',
+        examples=['Support'],
+        max_length=200,
+        min_length=1,
+    )
+    config: ChatInterfaceConfigDto | None = None
 
 
 class AgentAccessConfigDto(BaseModel):
@@ -3083,6 +3162,13 @@ class ListMemoriesResponseDto(BaseModel):
 class ListOrgMembersResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     members: list[OrgMemberDto]
+
+
+class ListScopeInterfacesResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    interfaces: list[ScopeInterfaceDto] = Field(
+        ..., description='Every chat interface on the scope (at most one per type).'
+    )
 
 
 class ListSuggestionQuestionsResponseDto(BaseModel):

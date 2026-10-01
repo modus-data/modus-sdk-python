@@ -13,6 +13,8 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Added
 
+- **Scope Slack/Teams interfaces.** `scopes.interfaces(scope_id)` lists, adds, updates and
+  removes the Slack and Microsoft Teams interfaces of a scope (sync and async).
 - **`claude-sonnet-5.5` model.** The chat request `model` enum
   (`Model.claude_sonnet_5_5`) accepts the new Anthropic model.
 - **`deepseek-v4-pro`, `deepseek-v4-flash-latest`, and `kimi-k3` models.** The
@@ -86,7 +88,7 @@ release, including pre-1.0 (`0.x`) releases.
 - **Scope interfaces are MCP-only.** `management.scopes.create` and
   `management.scopes.update` accept only `interfaces` entries with `type: "mcp"`;
   any other type (for example `slack` or `teams`) is rejected with HTTP 400.
-  Slack and Teams interfaces are configured on workflows.
+  Manage a scope's Slack and Teams interfaces with `scopes.interfaces(scope_id)`.
 
 - **Scope MCP: Get Answer works alone.** `management.scopes.patch_mcp_config` now
   rejects a config that turns `core_tools.chat` (`get_answer`) on together with

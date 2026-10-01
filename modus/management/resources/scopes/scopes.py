@@ -45,6 +45,7 @@ from .evaluations import (
     ScopeEvaluationsOperations,
     ScopeEvaluationsResource,
 )
+from .interfaces import AsyncScopeInterfacesResource, ScopeInterfacesResource
 from .memories import (
     SCOPE_MEMORY_OPERATIONS,
     AsyncScopeMemoriesResource,
@@ -164,6 +165,10 @@ class ScopesResource:
     def supervision(self, scope_id: Union[int, str]) -> ScopeSupervisionResource:
         """Return the supervision sub-resource scoped to ``scope_id``."""
         return ScopeSupervisionResource(self._http, self._config, scope_id)
+
+    def interfaces(self, scope_id: Union[int, str]) -> ScopeInterfacesResource:
+        """Return the Slack/Teams interfaces sub-resource scoped to ``scope_id``."""
+        return ScopeInterfacesResource(self._http, self._config, scope_id)
 
     def list(
         self,
@@ -576,6 +581,10 @@ class AsyncScopesResource:
     def supervision(self, scope_id: Union[int, str]) -> AsyncScopeSupervisionResource:
         """Return the supervision sub-resource scoped to ``scope_id``."""
         return AsyncScopeSupervisionResource(self._http, self._config, scope_id)
+
+    def interfaces(self, scope_id: Union[int, str]) -> AsyncScopeInterfacesResource:
+        """Return the Slack/Teams interfaces sub-resource scoped to ``scope_id``."""
+        return AsyncScopeInterfacesResource(self._http, self._config, scope_id)
 
     async def list(
         self,

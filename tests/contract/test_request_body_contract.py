@@ -126,6 +126,8 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "ScopeRunsController_create": _model_wire_fields(SkillRunDto),
     "ScopeSupervisionController_set": {"subordinateAgentIds"},
     "ScopeSupervisionController_setActive": {"subordinateAgentIds"},
+    "ScopeInterfacesController_add": {"type", "name", "config"},
+    "ScopeInterfacesController_update": {"name", "config"},
     "ScopesController_requestOwnershipTransfer": {"newOwnerUserId"},
     "ScopesController_patchMcpConfig": {"config"},
     # Deploy takes an optional body; the SDK sends none (empty body), which the
