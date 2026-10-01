@@ -3831,7 +3831,7 @@ class CreateSkillDto(BaseModel):
     )
     interfaces: list[dict[str, Any]] | None = Field(
         None,
-        description='Interface configuration (chat, API, webhook…). Shape is interface-specific.',
+        description='The scope\'s MCP interface configuration. Only entries with `type: "mcp"` are accepted; any other type is rejected with 400.',
         examples=[[]],
     )
     access_config: AccessConfigDto | None = Field(
@@ -4138,7 +4138,9 @@ class UpdateSkillDto(BaseModel):
         examples=[[]],
     )
     interfaces: list[dict[str, Any]] | None = Field(
-        None, description='Updated interface configuration.', examples=[[]]
+        None,
+        description='Updated MCP interface configuration. Only entries with `type: "mcp"` are accepted; any other type is rejected with 400.',
+        examples=[[]],
     )
     evaluations: list[dict[str, Any]] | None = Field(
         None,

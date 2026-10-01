@@ -83,6 +83,11 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Changed
 
+- **Scope interfaces are MCP-only.** `management.scopes.create` and
+  `management.scopes.update` accept only `interfaces` entries with `type: "mcp"`;
+  any other type (for example `slack` or `teams`) is rejected with HTTP 400.
+  Slack and Teams interfaces are configured on workflows.
+
 - **Scope MCP: Get Answer works alone.** `management.scopes.patch_mcp_config` now
   rejects a config that turns `core_tools.chat` (`get_answer`) on together with
   `getContext`, `teachModus` or any tool exposure, with HTTP 422. The call replaces the

@@ -273,7 +273,9 @@ class ScopesResource:
             model: Optional model id (for example ``\"claude-sonnet-5\"``).
             connection_set: Optional data connections for the scope.
             context_selections: Optional context selection payload.
-            interfaces: Optional interface configuration payload.
+            interfaces: Optional MCP interface configuration. Only entries with
+                ``type: "mcp"`` are accepted; any other type makes the call raise
+                ``ModusError`` (HTTP 400).
             guardrails: Runtime guardrail labels (for example ``\"no-pii\"``).
                 When set, the scope is created with these labels under the
                 organisation default sharing rules. Omit (``None``) to create
@@ -346,7 +348,9 @@ class ScopesResource:
             model: Optional model id.
             connection_set: Optional data connections for the scope.
             context_selections: Optional context selection payload.
-            interfaces: Optional interface configuration payload.
+            interfaces: Optional MCP interface configuration. Only entries with
+                ``type: "mcp"`` are accepted; any other type makes the call raise
+                ``ModusError`` (HTTP 400).
             guardrails: Runtime guardrail labels to set on the scope. Fetches
                 the current scope first and merges these labels into its access
                 configuration (an extra ``get`` request). Omit (``None``) to
