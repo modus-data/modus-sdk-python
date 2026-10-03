@@ -1151,4 +1151,3 @@ class AsyncDashboardsResource:
             self._config.max_retries,
         )
         return Dashboard.model_validate(data)
-

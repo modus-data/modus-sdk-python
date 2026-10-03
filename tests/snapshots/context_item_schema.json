@@ -1,5 +1,54 @@
 {
   "$defs": {
+    "ContextItemAncestorDto": {
+      "properties": {
+        "uid": {
+          "description": "Stable identifier of the ancestor.",
+          "examples": [
+            "ancestor-123"
+          ],
+          "title": "Uid",
+          "type": "string"
+        },
+        "display_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Human-readable label. Generic path-token ancestry copies the same platform segment as uid. Null only when an explicit entry stored no name.",
+          "examples": [
+            "acme"
+          ],
+          "title": "Display Name"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional ancestor kind. Null when the source provides only platform path tokens.",
+          "examples": [
+            "container"
+          ],
+          "title": "Type"
+        }
+      },
+      "required": [
+        "uid",
+        "display_name",
+        "type"
+      ],
+      "title": "ContextItemAncestorDto",
+      "type": "object"
+    },
     "UserFeedback": {
       "enum": [
         "negative",
@@ -125,6 +174,22 @@
       },
       "title": "Datapath",
       "type": "array"
+    },
+    "ancestry": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/ContextItemAncestorDto"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Ordered ancestors. Omitted on older responses that do not yet include the field. Null means stored ancestry is unknown. An empty array means the item has no ancestors. Each entry uses `uid`, `display_name`, and `type`.",
+      "title": "Ancestry"
     },
     "createdAt": {
       "description": "Creation timestamp.",

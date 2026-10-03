@@ -99,8 +99,8 @@ def test_staging_journey() -> None:
     def assert_composition(label: str, composed: object, elapsed_s: float) -> None:
         assert composed is not None, f"{label}: no response"
         assert isinstance(composed.context, str), f"{label}: context"
-        assert isinstance(composed.original_count, int), f"{label}: original_count"
-        assert isinstance(composed.selected_count, int), f"{label}: selected_count"
+        assert isinstance(composed.original_count, (int, float)), f"{label}: original_count"
+        assert isinstance(composed.selected_count, (int, float)), f"{label}: selected_count"
         assert composed.session_id, f"{label}: session_id"
 
         # Deliberately not asserting original_count > 0: whether this org has

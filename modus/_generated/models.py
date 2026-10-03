@@ -403,6 +403,24 @@ class ContentProjectionDto(BaseModel):
     )
 
 
+class ContextItemAncestorDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    uid: str = Field(
+        ..., description='Stable identifier of the ancestor.', examples=['ancestor-123']
+    )
+    display_name: str | None = Field(
+        ...,
+        alias='display_name',
+        description='Human-readable label. Generic path-token ancestry copies the same platform segment as uid. Null only when an explicit entry stored no name.',
+        examples=['acme'],
+    )
+    type: str | None = Field(
+        ...,
+        description='Optional ancestor kind. Null when the source provides only platform path tokens.',
+        examples=['container'],
+    )
+
+
 class UserFeedback(str, Enum):
     negative = 'negative'
     neutral = 'neutral'
@@ -465,6 +483,10 @@ class ContextItemDto(BaseModel):
         alias='dataPath',
         description='Hierarchical path that places the item inside the data map (used for filtering by data asset).',
         examples=[['salesforce', '00000000-0000-4000-a000-000000000111', 'Account', 'Name']],
+    )
+    ancestry: list[ContextItemAncestorDto] | None = Field(
+        None,
+        description='Ordered ancestors. Omitted on older responses that do not yet include the field. Null means stored ancestry is unknown. An empty array means the item has no ancestors. Each entry uses `uid`, `display_name`, and `type`.',
     )
     created_at: str = Field(
         ...,
@@ -1439,6 +1461,10 @@ class LookupContextItemRowDto(BaseModel):
         alias='dataPath',
         description='Hierarchical data path of the row (same as the request).',
     )
+    ancestry: list[ContextItemAncestorDto] | None = Field(
+        None,
+        description='Ordered ancestors. Omitted on older responses that do not yet include the field. Null means stored ancestry is unknown. An empty array is stored empty ancestry.',
+    )
     content: dict[str, Any] = Field(
         ...,
         description='Item content. When the request supplied a `contentProjection` the JSONB is shaped accordingly; otherwise the full content blob is returned.',
@@ -1490,6 +1516,7 @@ class MemoryDto(BaseModel):
 
 class Model(str, Enum):
     claude_sonnet_5 = 'claude-sonnet-5'
+    claude_sonnet_5_5 = 'claude-sonnet-5.5'
     claude_sonnet_4_6 = 'claude-sonnet-4.6'
     claude_opus_4_8 = 'claude-opus-4.8'
     claude_opus_5_5 = 'claude-opus-5.5'
@@ -1531,7 +1558,7 @@ class ModusChatRequestDto(BaseModel):
     )
     model: Model = Field(
         ...,
-        description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-4.6, claude-opus-4.8, claude-opus-5.5, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, grok-4.7, kimi-k3.',
+        description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-5.5, claude-sonnet-4.6, claude-opus-4.8, claude-opus-5.5, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, grok-4.7, kimi-k3.',
         examples=['claude-sonnet-4.6'],
     )
     approval_continuation: bool | None = Field(
@@ -1728,7 +1755,7 @@ class SkillChatRequestDto(BaseModel):
     )
     model: Model = Field(
         ...,
-        description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-4.6, claude-opus-4.8, claude-opus-5.5, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, grok-4.7, kimi-k3.',
+        description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-5.5, claude-sonnet-4.6, claude-opus-4.8, claude-opus-5.5, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, grok-4.7, kimi-k3.',
         examples=['claude-sonnet-4.6'],
     )
 
@@ -2377,6 +2404,7 @@ class RunSource(str, Enum):
     teams = 'teams'
     context_chat = 'context_chat'
     dashboard_copilot = 'dashboard_copilot'
+    dashboard_assistant = 'dashboard_assistant'
     other = 'other'
 
 
@@ -2949,7 +2977,7 @@ class FileUploadResourceDto(BaseModel):
     folder_path: str | None = Field(
         None,
         alias='folderPath',
-        description='Relative folder label supplied when the upload was finalized.',
+        description='Relative folder path within Files. Null at the Files root.',
         examples=['reports/2026/Q3'],
     )
     content_type: str | None = Field(None, alias='contentType', examples=['application/pdf'])

@@ -9,8 +9,18 @@ release, including pre-1.0 (`0.x`) releases.
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-09-30
+
 ### Added
 
+- **`claude-sonnet-5.5` model.** The chat request `model` enum
+  (`Model.claude_sonnet_5_5`) accepts the new Anthropic model.
+- **`deepseek-v4-pro`, `deepseek-v4-flash-latest`, and `kimi-k3` models.** The
+  chat request `model` enum accepts these models.
+- **Optional `ancestry` on context items.** List, get, lookup, and custom-item
+  responses may include ordered ancestors (`uid`, `display_name`, `type`). The
+  field is omitted on older responses, `null` when stored ancestry is unknown,
+  and `[]` when the item has no ancestors.
 - **`context_item_uids` on composed context.** `POST /modus/context` and
   `POST /scopes/{id}/context` now return the UIDs of the context items the composer
   kept, in selection order. Previously the response reported `selectedCount` with no
@@ -59,11 +69,12 @@ release, including pre-1.0 (`0.x`) releases.
 - **Conversation lists: optional `source` and `source_ref` filters.** `client.modus.conversations.list`
   and `client.scopes.conversations(scope_id).list` (both sync and async) now accept `source`
   to restrict results to one UI surface (e.g. `"context_chat"`, `"dashboard_copilot"`,
-  `"slack"`) and `source_ref` to narrow `source` to one instance of that surface — for
-  `dashboard_copilot`, a single dashboard id. `source_ref` requires `source`; sent on its
-  own it is rejected with a 422. On the org-level list, `source` may only be combined with
-  an omitted `kind` or `kind="all"` (not `kind="modus"` / `kind="scopes"`). Conversations
-  recorded before the filter shipped carry no instance key and do not match it.
+  `"dashboard_assistant"`, `"slack"`) and `source_ref` to narrow `source` to one instance of
+  that surface — for `dashboard_copilot` and `dashboard_assistant`, a single dashboard id.
+  `source_ref` requires `source`; sent on its own it is rejected with a 422. On the org-level
+  list, `source` may only be combined with an omitted `kind` or `kind="all"` (not
+  `kind="modus"` / `kind="scopes"`). Conversations recorded before the filter shipped carry
+  no instance key and do not match it.
 
 - **File uploads: optional `folder_path`.** `upload_from_url`, `finalize`, and directory
   uploads now accept an optional relative folder label that is stored with the file and
