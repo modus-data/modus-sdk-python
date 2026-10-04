@@ -146,7 +146,7 @@ class ContextItemsResource:
         Retrieve a context item by its UID.
 
         Args:
-            uid: The item's UUID.
+            uid: The context item UID.
 
         Returns:
             The context item.
@@ -227,8 +227,10 @@ class ContextItemsResource:
         """
         Delete a context item from the knowledge base.
 
+        Deleting a Files folder also deletes all contained files and subfolders.
+
         Args:
-            uid: The item's UUID.
+            uid: The context item UID.
 
         Returns:
             Deletion confirmation with the removed item's UID.
