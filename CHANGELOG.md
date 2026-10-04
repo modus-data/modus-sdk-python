@@ -9,6 +9,15 @@ release, including pre-1.0 (`0.x`) releases.
 
 ## [Unreleased]
 
+### Added
+
+- **Generic context item browse.** `client.context.items.list` and
+  `mgmt.context.items.list` accept optional `connection_ids`, `parent_uids`,
+  and `ancestor_uids` arrays. Omit a filter to leave it unrestricted; pass
+  `[]` for the known-empty / match-none forms. Async twins match.
+- **Upload destinations.** Sync and async upload helpers accept an optional
+  `folder_path` prefix for single files, batches, and directories.
+
 ## [0.7.0] — 2026-09-30
 
 ### Added

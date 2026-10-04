@@ -15,6 +15,7 @@ from modus.management import AsyncModusManagement, ModusManagement
 from modus.management.resources.context.files import MAX_BULK_UPLOAD_FILES
 from modus.management.types.context_files import (
     FinalizeInput,
+    UploadFileInput,
     UploadFromUrlInput,
     UploadUrlInput,
 )
@@ -846,3 +847,228 @@ async def test_async_finalize_and_finalize_many():
     assert one.upload_id == "up-9"
     assert [f.upload_id for f in many.finalized] == ["up-a"]
     assert json.loads(bulk.calls[0].request.read())["uploads"][0]["fileName"] == "a.pdf"
+
+
+@respx.mock
+def test_upload_passes_folder_path_to_finalize(tmp_path):
+    file_path = tmp_path / "report.pdf"
+    file_path.write_bytes(b"data")
+    respx.post(f"{BASE}/api/v1/context/files/uploadUrl").mock(
+        return_value=httpx.Response(201, json=_slot_json("up-dest"))
+    )
+    respx.put(S3_URL).mock(return_value=httpx.Response(200))
+    finalize_route = respx.post(f"{BASE}/api/v1/context/files/up-dest/finalize").mock(
+        return_value=httpx.Response(201, json=_file_upload_json("up-dest", "processing"))
+    )
+
+    _client().context.files.upload(file_path, folder_path="reports/2026")
+
+    assert json.loads(finalize_route.calls[0].request.read()) == {
+        "fileName": "report.pdf",
+        "folderPath": "reports/2026",
+    }
+
+
+@respx.mock
+def test_upload_omits_folder_path_when_unset(tmp_path):
+    file_path = tmp_path / "report.pdf"
+    file_path.write_bytes(b"data")
+    respx.post(f"{BASE}/api/v1/context/files/uploadUrl").mock(
+        return_value=httpx.Response(201, json=_slot_json("up-root"))
+    )
+    respx.put(S3_URL).mock(return_value=httpx.Response(200))
+    finalize_route = respx.post(f"{BASE}/api/v1/context/files/up-root/finalize").mock(
+        return_value=httpx.Response(201, json=_file_upload_json("up-root", "processing"))
+    )
+
+    _client().context.files.upload(file_path)
+
+    assert json.loads(finalize_route.calls[0].request.read()) == {"fileName": "report.pdf"}
+
+
+@respx.mock
+def test_upload_files_accepts_upload_file_input(tmp_path):
+    a = tmp_path / "a.txt"
+    a.write_text("A")
+    b = tmp_path / "b.txt"
+    b.write_text("B")
+
+    respx.post(f"{BASE}/api/v1/context/files/uploadUrls").mock(side_effect=_upload_urls_side_effect)
+    respx.put(SHARED_PUT_URL).mock(return_value=httpx.Response(200))
+    finalize = _stub_finalize()
+
+    result = _client().context.files.upload_files(
+        [a, UploadFileInput(path=b, folder_path="reports")]
+    )
+
+    assert len(result.uploaded) == 2
+    uploads = json.loads(finalize.calls[0].request.read())["uploads"]
+    by_name = {row["fileName"]: row for row in uploads}
+    assert "folderPath" not in by_name["a.txt"]
+    assert by_name["b.txt"]["folderPath"] == "reports"
+
+
+@respx.mock
+def test_upload_files_composes_prefix_with_per_file_folder_path(tmp_path):
+    docs = tmp_path / "docs"
+    nested = docs / "nested"
+    nested.mkdir(parents=True)
+    a = docs / "a.txt"
+    b = nested / "b.txt"
+    a.write_text("A")
+    b.write_text("B")
+    root = tmp_path / "root.txt"
+    root.write_text("R")
+
+    respx.post(f"{BASE}/api/v1/context/files/uploadUrls").mock(side_effect=_upload_urls_side_effect)
+    respx.put(SHARED_PUT_URL).mock(return_value=httpx.Response(200))
+    finalize = _stub_finalize()
+
+    result = _client().context.files.upload_files(
+        [
+            root,
+            UploadFileInput(path=a, folder_path="docs"),
+            UploadFileInput(path=b, folder_path="docs/nested"),
+        ],
+        folder_path="reports",
+    )
+
+    assert len(result.uploaded) == 3
+    uploads = json.loads(finalize.calls[0].request.read())["uploads"]
+    by_name = {row["fileName"]: row for row in uploads}
+    assert by_name["root.txt"]["folderPath"] == "reports"
+    assert by_name["a.txt"]["folderPath"] == "reports/docs"
+    assert by_name["b.txt"]["folderPath"] == "reports/docs/nested"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_async_upload_files_composes_prefix_with_per_file_folder_path(tmp_path):
+    docs = tmp_path / "docs"
+    nested = docs / "nested"
+    nested.mkdir(parents=True)
+    a = docs / "a.txt"
+    b = nested / "b.txt"
+    a.write_text("A")
+    b.write_text("B")
+    root = tmp_path / "root.txt"
+    root.write_text("R")
+
+    respx.post(f"{BASE}/api/v1/context/files/uploadUrls").mock(side_effect=_upload_urls_side_effect)
+    respx.put(SHARED_PUT_URL).mock(return_value=httpx.Response(200))
+    finalize = _stub_finalize()
+
+    async with AsyncModusManagement(api_key="modus_test_key", base_url=BASE) as client:
+        result = await client.context.files.upload_files(
+            [
+                root,
+                UploadFileInput(path=a, folder_path="docs"),
+                UploadFileInput(path=b, folder_path="docs/nested"),
+            ],
+            folder_path="reports",
+        )
+
+    assert len(result.uploaded) == 3
+    uploads = json.loads(finalize.calls[0].request.read())["uploads"]
+    by_name = {row["fileName"]: row for row in uploads}
+    assert by_name["root.txt"]["folderPath"] == "reports"
+    assert by_name["a.txt"]["folderPath"] == "reports/docs"
+    assert by_name["b.txt"]["folderPath"] == "reports/docs/nested"
+
+
+@respx.mock
+def test_upload_dir_prefix_joins_relative_paths(tmp_path):
+    nested = tmp_path / "nested"
+    nested.mkdir()
+    (tmp_path / "root.txt").write_text("root")
+    (nested / "child.txt").write_text("child")
+
+    respx.post(f"{BASE}/api/v1/context/files/uploadUrls").mock(side_effect=_upload_urls_side_effect)
+    respx.put(SHARED_PUT_URL).mock(return_value=httpx.Response(200))
+    finalize = _stub_finalize()
+
+    result = _client().context.files.upload_dir(tmp_path, folder_path="reports")
+
+    assert len(result.uploaded) == 2
+    uploads = json.loads(finalize.calls[0].request.read())["uploads"]
+    by_name = {row["fileName"]: row for row in uploads}
+    assert by_name["root.txt"]["folderPath"] == "reports"
+    assert by_name["child.txt"]["folderPath"] == "reports/nested"
+
+
+def test_join_folder_path_empty_prefix_is_noop_and_keeps_absolute():
+    from modus.management.resources.context.files import _join_folder_path
+
+    assert _join_folder_path(None, None) is None
+    assert _join_folder_path(None, "nested") == "nested"
+    assert _join_folder_path("reports", None) == "reports"
+    assert _join_folder_path("reports", "nested") == "reports/nested"
+    assert _join_folder_path("", None) is None
+    assert _join_folder_path("", "nested") == "nested"
+    assert _join_folder_path("/abs", None) == "/abs"
+    assert _join_folder_path("/abs", "nested") == "/abs/nested"
+
+
+@respx.mock
+def test_upload_dir_empty_prefix_is_noop(tmp_path):
+    nested = tmp_path / "nested"
+    nested.mkdir()
+    (tmp_path / "root.txt").write_text("root")
+    (nested / "child.txt").write_text("child")
+
+    respx.post(f"{BASE}/api/v1/context/files/uploadUrls").mock(side_effect=_upload_urls_side_effect)
+    respx.put(SHARED_PUT_URL).mock(return_value=httpx.Response(200))
+    finalize = _stub_finalize()
+
+    _client().context.files.upload_dir(tmp_path, folder_path="")
+
+    uploads = json.loads(finalize.calls[0].request.read())["uploads"]
+    by_name = {row["fileName"]: row for row in uploads}
+    assert "folderPath" not in by_name["root.txt"]
+    assert by_name["child.txt"]["folderPath"] == "nested"
+
+
+@respx.mock
+def test_upload_dir_without_prefix_still_omits_root_folder_path(tmp_path):
+    (tmp_path / "root.txt").write_text("root")
+    respx.post(f"{BASE}/api/v1/context/files/uploadUrls").mock(side_effect=_upload_urls_side_effect)
+    respx.put(SHARED_PUT_URL).mock(return_value=httpx.Response(200))
+    finalize = _stub_finalize()
+
+    _client().context.files.upload_dir(tmp_path)
+
+    uploads = json.loads(finalize.calls[0].request.read())["uploads"]
+    assert uploads[0]["fileName"] == "root.txt"
+    assert "folderPath" not in uploads[0]
+
+
+@respx.mock
+def test_upload_dir_empty_directory_is_noop(tmp_path):
+    upload_urls = respx.post(f"{BASE}/api/v1/context/files/uploadUrls")
+    result = _client().context.files.upload_dir(tmp_path)
+    assert result.uploaded == []
+    assert result.failed == []
+    assert not upload_urls.called
+
+
+@respx.mock
+def test_upload_dir_does_not_follow_symlink_directory(tmp_path):
+    real = tmp_path / "real"
+    real.mkdir()
+    (real / "secret.txt").write_text("secret")
+    (tmp_path / "keep.txt").write_text("keep")
+    try:
+        os.symlink(real, tmp_path / "link-dir")
+    except (OSError, NotImplementedError):
+        pytest.skip("symlinks unsupported on this platform")
+
+    respx.post(f"{BASE}/api/v1/context/files/uploadUrls").mock(side_effect=_upload_urls_side_effect)
+    respx.put(SHARED_PUT_URL).mock(return_value=httpx.Response(200))
+    _stub_finalize()
+
+    result = _client().context.files.upload_dir(tmp_path)
+    assert len(result.uploaded) == 2
+    assert not result.failed
+    upload_call = json.loads(respx.calls[0].request.read())
+    assert {f["fileName"] for f in upload_call["files"]} == {"keep.txt", "secret.txt"}
+    assert "link-dir" not in {f["fileName"] for f in upload_call["files"]}

@@ -101,11 +101,11 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "CustomContextItemsController_update": _model_wire_fields(
         UpdateCustomContextItemDto
     ),
-    "ContextFilesController_finalize": {"fileName"},
+    "ContextFilesController_finalize": {"fileName", "folderPath"},
     "ContextFilesController_finalizeMany": {"uploads"},
     "ContextFilesController_uploadUrl": {"fileName", "contentType", "fileSize"},
     "ContextFilesController_uploadUrls": {"files"},
-    "ContextFilesController_uploadFromUrl": {"url", "fileName"},
+    "ContextFilesController_uploadFromUrl": {"url", "fileName", "folderPath"},
     "ContextFilesController_uploadFromUrls": {"urls"},
     "DashboardsController_createElement": {"expectedRevision", "kind", "title", "layout"},
     "DashboardsController_updateElement": {"expectedRevision", "patch"},

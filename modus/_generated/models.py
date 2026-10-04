@@ -253,7 +253,7 @@ class BulkFinalizeItemDto(BaseModel):
     folder_path: str | None = Field(
         None,
         alias='folderPath',
-        description='Relative folder label to store with the upload.',
+        description='Root-relative folder path for this upload (for example `reports/2026`). Omit to store at the Files root. To reuse a folder created by an upload, pass its `folderPath`.',
         examples=['reports/2026/Q3'],
     )
 
@@ -274,7 +274,7 @@ class BulkUploadFromUrlItemDto(BaseModel):
     folder_path: str | None = Field(
         None,
         alias='folderPath',
-        description='Relative folder label to store with the upload.',
+        description='Root-relative folder path for this upload (for example `reports/2026`). Omit to store at the Files root. To reuse a folder created by an upload, pass its `folderPath`.',
         examples=['reports/2026/Q3'],
     )
 
@@ -1215,7 +1215,7 @@ class FinalizeUploadDto(BaseModel):
     folder_path: str | None = Field(
         None,
         alias='folderPath',
-        description='Relative folder label to store with the upload.',
+        description='Root-relative folder path for this upload (for example `reports/2026`). Omit to store at the Files root. To reuse a folder created by an upload, pass its `folderPath`.',
         examples=['reports/2026/Q3'],
     )
 
@@ -2226,7 +2226,7 @@ class UploadFromUrlDto(BaseModel):
     folder_path: str | None = Field(
         None,
         alias='folderPath',
-        description='Relative folder label to store with the upload.',
+        description='Root-relative folder path for this upload (for example `reports/2026`). Omit to store at the Files root. To reuse a folder created by an upload, pass its `folderPath`.',
         examples=['reports/2026/Q3'],
     )
 

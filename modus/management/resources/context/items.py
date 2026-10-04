@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from modus._config import ModusConfig
 from modus._http import AsyncHttpClient, HttpClient
@@ -29,10 +29,19 @@ def _context_list_params(
     page_size: int,
     page_token: Optional[str],
     context_type: Optional[str],
+    parent_uids: Optional[Sequence[str]] = None,
+    ancestor_uids: Optional[Sequence[str]] = None,
+    connection_ids: Optional[Sequence[str]] = None,
 ) -> Dict[str, Any]:
     extra: Dict[str, Any] = {}
     if context_type is not None:
         extra["contextTypes"] = [context_type]
+    if parent_uids is not None:
+        extra["parentUids"] = list(parent_uids) if len(parent_uids) > 0 else ""
+    if ancestor_uids is not None:
+        extra["ancestorUids"] = list(ancestor_uids) if len(ancestor_uids) > 0 else ""
+    if connection_ids is not None:
+        extra["connectionIds"] = list(connection_ids) if len(connection_ids) > 0 else ""
     return aip_list_params(page_size, page_token, **extra)
 
 
@@ -47,6 +56,9 @@ class ContextItemsResource:
         page_size: int = 25,
         page_token: Optional[str] = None,
         context_type: Optional[str] = None,
+        parent_uids: Optional[Sequence[str]] = None,
+        ancestor_uids: Optional[Sequence[str]] = None,
+        connection_ids: Optional[Sequence[str]] = None,
     ) -> Page[ContextItem]:
         """
         List context items in the knowledge base.
@@ -55,6 +67,17 @@ class ContextItemsResource:
             page_size:    Items per page (default 25).
             page_token:   Opaque token from a previous page's ``next_page_token``.
             context_type: Filter by type, e.g. ``"note"``, ``"link"``, ``"saved_query"``.
+            parent_uids:  Exact ordered native ancestry chain for direct children.
+                          Omit to leave parent unrestricted; pass ``[]`` for the
+                          known-empty root. Native UIDs are exact tokens; for a
+                          folder's children send ancestry UIDs plus the last
+                          ``data_path`` token, not the hashed context-item ``uid``.
+            ancestor_uids: Ordered UID ancestry prefix for strict descendants.
+                          Omit to leave unrestricted; pass ``[]`` for every item
+                          with non-null ancestry.
+            connection_ids: Restrict to these connection ids. Omit to leave
+                          unfiltered; pass ``[]`` to match none. The Files root
+                          is ``connection_ids=["files"]`` with ``parent_uids=[]``.
 
         Returns:
             Page of context items.
@@ -64,17 +87,40 @@ class ContextItemsResource:
             ...     context_type="note", page_size=25
             ... ).auto_paging_iter():
             ...     print(item.uid, item.description)
+
+            >>> folders = mgmt.context.items.list(
+            ...     connection_ids=["files"],
+            ...     context_type="file_folder_metadata",
+            ...     parent_uids=[],
+            ... )
         """
         validate_page_size(page_size)
-        return self._list_page(page_size, page_token, context_type)
+        return self._list_page(
+            page_size,
+            page_token,
+            context_type,
+            parent_uids,
+            ancestor_uids,
+            connection_ids,
+        )
 
     def _list_page(
         self,
         page_size: int,
         page_token: Optional[str],
         context_type: Optional[str],
+        parent_uids: Optional[Sequence[str]] = None,
+        ancestor_uids: Optional[Sequence[str]] = None,
+        connection_ids: Optional[Sequence[str]] = None,
     ) -> Page[ContextItem]:
-        params = _context_list_params(page_size, page_token, context_type)
+        params = _context_list_params(
+            page_size,
+            page_token,
+            context_type,
+            parent_uids,
+            ancestor_uids,
+            connection_ids,
+        )
         data = with_retry(
             lambda: invoke_operation(
                 self._http, "ContextItemsController_list", query=params
@@ -85,7 +131,14 @@ class ContextItemsResource:
             data,
             "contextItems",
             ContextItem,
-            lambda cur: self._list_page(page_size, cur, context_type),
+            lambda cur: self._list_page(
+                page_size,
+                cur,
+                context_type,
+                parent_uids,
+                ancestor_uids,
+                connection_ids,
+            ),
         )
 
     def get(self, uid: str) -> ContextItem:
@@ -205,18 +258,38 @@ class AsyncContextItemsResource:
         page_size: int = 25,
         page_token: Optional[str] = None,
         context_type: Optional[str] = None,
+        parent_uids: Optional[Sequence[str]] = None,
+        ancestor_uids: Optional[Sequence[str]] = None,
+        connection_ids: Optional[Sequence[str]] = None,
     ) -> AsyncPage[ContextItem]:
         """List context items in the knowledge base. See the sync ``list`` for argument details."""
         validate_page_size(page_size)
-        return await self._list_page(page_size, page_token, context_type)
+        return await self._list_page(
+            page_size,
+            page_token,
+            context_type,
+            parent_uids,
+            ancestor_uids,
+            connection_ids,
+        )
 
     async def _list_page(
         self,
         page_size: int,
         page_token: Optional[str],
         context_type: Optional[str],
+        parent_uids: Optional[Sequence[str]] = None,
+        ancestor_uids: Optional[Sequence[str]] = None,
+        connection_ids: Optional[Sequence[str]] = None,
     ) -> AsyncPage[ContextItem]:
-        params = _context_list_params(page_size, page_token, context_type)
+        params = _context_list_params(
+            page_size,
+            page_token,
+            context_type,
+            parent_uids,
+            ancestor_uids,
+            connection_ids,
+        )
         data = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http, "ContextItemsController_list", query=params
@@ -227,7 +300,14 @@ class AsyncContextItemsResource:
             data,
             "contextItems",
             ContextItem,
-            lambda cur: self._list_page(page_size, cur, context_type),
+            lambda cur: self._list_page(
+                page_size,
+                cur,
+                context_type,
+                parent_uids,
+                ancestor_uids,
+                connection_ids,
+            ),
         )
 
     async def get(self, uid: str) -> ContextItem:

@@ -4,7 +4,8 @@ client-side value types for the ``upload()`` / ``upload_dir()`` helpers."""
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, List, Optional
+from pathlib import Path
+from typing import Callable, List, Optional, Union
 
 
 @dataclass(frozen=True)
@@ -34,12 +35,22 @@ from .._generated.models import (
 FileUpload = FileUploadResourceDto
 FileUploadStatus = FileUploadResourceStatus
 UploadUrlSlot = UploadUrlResponseDto
+
+
 BulkUploadUrlsResult = BulkUploadUrlsResponseDto
 BulkUploadFromUrlsResult = BulkUploadFromUrlsResponseDto
 FailedUploadUrl = FailedUploadUrlDto
 FailedUploadFromUrl = FailedUploadFromUrlDto
 BulkFinalizeResult = BulkFinalizeResponseDto
 FinalizeFailure = FailedFinalizeDto
+
+
+@dataclass(frozen=True)
+class UploadFileInput:
+    """A local file and optional folder label for ``upload_files()``."""
+
+    path: Union[str, Path]
+    folder_path: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -88,6 +99,7 @@ __all__ = [
     "FinalizeInput",
     "UploadDirFailure",
     "UploadDirResult",
+    "UploadFileInput",
     "UploadFromUrlInput",
     "UploadProgress",
     "UploadProgressCallback",
