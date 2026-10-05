@@ -15,6 +15,10 @@ Create and update context items (``mgmt.context``).
    :members:
    :exclude-members: __init__
 
+.. autoclass:: modus.management.resources.context.items.AsyncContextItemsResource
+   :members:
+   :exclude-members: __init__
+
 .. autoclass:: modus.management.resources.context.custom_items.CustomContextItemsResource
    :members:
    :exclude-members: __init__

@@ -8,12 +8,14 @@ from .._generated.models import (
     CreatedContextItemResponseDto,
     DeleteContextItemResponseDto,
     LookupContextItemRowDto,
+    MoveContextItemResponseDto,
 )
 
 ContextItem = ContextItemDto
 ContextItemAncestor = ContextItemAncestorDto
 ContextItemLookupRow = LookupContextItemRowDto
 ContextItemDeletion = DeleteContextItemResponseDto
+ContextItemMove = MoveContextItemResponseDto
 
 
 class CreatedContextItem(CreatedContextItemResponseDto):
@@ -33,6 +35,7 @@ __all__ = [
     "ContextItemAncestor",
     "ContextItemAncestorDto",
     "ContextItemDeletion",
+    "ContextItemMove",
     "ContextItemDto",
     "ContextItemLookupRow",
     "ContextType",

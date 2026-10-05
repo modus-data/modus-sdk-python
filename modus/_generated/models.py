@@ -1673,6 +1673,27 @@ class ModusContextResponseDto(BaseModel):
     )
 
 
+class MoveContextItemDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    destination_folder_uid: str | None = Field(
+        ...,
+        alias='destinationFolderUid',
+        description='Stored context-item uid of an existing Files folder, or null to move to the Files root. The destination must already exist. Move does not rename or merge folders.',
+        examples=[None],
+    )
+
+
+class MoveContextItemResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    moved_items: int = Field(
+        ...,
+        alias='movedItems',
+        description='Number of context items whose parent changed. Zero is a successful same-parent no-op.',
+        examples=[3],
+        ge=0,
+    )
+
+
 class OrgMemberDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     user_id: str

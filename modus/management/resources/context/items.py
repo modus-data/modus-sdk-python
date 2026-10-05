@@ -20,6 +20,7 @@ from modus.types.pagination import AsyncPage, Page
 from ...types.context import (
     ContextItem,
     ContextItemDeletion,
+    ContextItemMove,
     ContextItemUpdate,
     UserFeedback,
 )
@@ -248,6 +249,48 @@ class ContextItemsResource:
         )
         return ContextItemDeletion.model_validate(raw)
 
+    def move(self, uid: str, *, destination_folder_uid: Optional[str]) -> ContextItemMove:
+        """
+        Move a live file or Files folder.
+
+        Pass ``destination_folder_uid=None`` to move to the Files root. The
+        destination folder must already exist. Same-parent moves succeed as a
+        no-op. Does not rename or merge folders.
+
+        Args:
+            uid: Stored context-item uid of the file or folder to move.
+            destination_folder_uid: Stored context-item uid of the destination
+                folder, or ``None`` for the Files root.
+
+        Returns:
+            How many items changed parent (``0`` is a successful no-op).
+
+        Raises:
+            NotFoundError: The source is missing or not visible.
+            ModusError: The destination is missing, not a Files folder, or the
+                move would create a cycle (HTTP 400).
+            PermissionDeniedError: The destination exists but is not writable
+                for this caller.
+            ConflictError: A sibling with the same name already exists.
+
+        Example:
+            >>> moved = mgmt.context.items.move(
+            ...     "PLACEHOLDER_UID",
+            ...     destination_folder_uid="PLACEHOLDER_FOLDER_UID",
+            ... )
+            >>> print(moved.moved_items)
+        """
+        raw = with_retry(
+            lambda: invoke_operation(
+                self._http,
+                "ContextItemsController_move",
+                path_params={"uid": uid},
+                json_body={"destinationFolderUid": destination_folder_uid},
+            ),
+            self._config.max_retries,
+        )
+        return ContextItemMove.model_validate(raw)
+
 
 class AsyncContextItemsResource:
     def __init__(self, http: AsyncHttpClient, config: ModusConfig) -> None:
@@ -369,3 +412,31 @@ class AsyncContextItemsResource:
             self._config.max_retries,
         )
         return ContextItemDeletion.model_validate(raw)
+
+    async def move(self, uid: str, *, destination_folder_uid: Optional[str]) -> ContextItemMove:
+        """Move a live file or Files folder asynchronously.
+
+        Args:
+            uid: Stored context-item uid of the file or folder to move.
+            destination_folder_uid: Existing destination folder uid, or ``None``
+                for the Files root.
+
+        Returns:
+            How many items changed parent; ``0`` is a same-parent no-op.
+
+        Example:
+            >>> moved = await mgmt.context.items.move(
+            ...     "PLACEHOLDER_UID", destination_folder_uid=None
+            ... )
+            >>> print(moved.moved_items)
+        """
+        raw = await async_with_retry(
+            lambda: invoke_operation_async(
+                self._http,
+                "ContextItemsController_move",
+                path_params={"uid": uid},
+                json_body={"destinationFolderUid": destination_folder_uid},
+            ),
+            self._config.max_retries,
+        )
+        return ContextItemMove.model_validate(raw)

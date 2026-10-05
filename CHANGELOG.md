@@ -13,6 +13,8 @@ release, including pre-1.0 (`0.x`) releases.
 
 - **`gpt-5.6-luna` model.** The chat request `model` union accepts the new
   OpenAI model.
+- **Move Files items.** `mgmt.context.items.move(uid, destination_folder_uid=...)`
+  relocates a live file or folder. Pass `None` for the Files root.
 - **Generic context item browse.** `client.context.items.list` and
   `mgmt.context.items.list` accept optional `connection_ids`, `parent_uids`,
   and `ancestor_uids` arrays. Omit a filter to leave it unrestricted; pass

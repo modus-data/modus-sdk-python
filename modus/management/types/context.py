@@ -7,6 +7,7 @@ from modus._generated.models import UserFeedback as UserFeedbackEnum
 from modus.types.context import (
     ContextItem,
     ContextItemDeletion,
+    ContextItemMove,
     ContextType,
     CreatedContextItem,
 )
@@ -17,6 +18,7 @@ UserFeedback = UserFeedbackEnum
 __all__ = [
     "ContextItem",
     "ContextItemDeletion",
+    "ContextItemMove",
     "ContextItemUpdate",
     "ContextType",
     "CreatedContextItem",

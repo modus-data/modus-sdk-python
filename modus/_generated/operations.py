@@ -188,6 +188,16 @@ OPERATIONS: dict[str, OperationSpec] = {
         "request_schema": 'LookupContextItemDto',
         "response_schema": 'LookupContextItemResponseDto',
     },
+    "ContextItemsController_move": {
+        "method": "POST",
+        "path": '/api/v1/context/items/{uid}/move',
+        "service": 'modus-api',
+        "server_url": 'https://api.getmodus.com',
+        "path_params": ('uid',),
+        "query_params": (),
+        "request_schema": 'MoveContextItemDto',
+        "response_schema": 'MoveContextItemResponseDto',
+    },
     "ContextItemsController_update": {
         "method": "PATCH",
         "path": '/api/v1/context/items/{uid}',

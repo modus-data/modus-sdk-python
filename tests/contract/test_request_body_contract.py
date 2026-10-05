@@ -60,6 +60,7 @@ def _model_wire_fields(model: Type[BaseModel]) -> Set[str]:
 SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "IngestedDataController_upload": {"integration_type", "request", "response"},
     "ContextItemsController_update": _model_wire_fields(ContextItemUpdate),
+    "ContextItemsController_move": {"destinationFolderUid"},
     "ModusChatController_chat": _model_wire_fields(ModusChatRequestDto),
     "ModusContextController_compose": _model_wire_fields(ModusContextRequestDto),
     "SuggestionsController_recordEvent": {

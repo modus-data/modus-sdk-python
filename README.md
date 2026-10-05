@@ -187,6 +187,12 @@ root_folders = mgmt.context.items.list(
 )
 print(len(root_folders.items))
 
+moved = mgmt.context.items.move(
+    root_folders.items[0].uid,
+    destination_folder_uid=None,
+)
+print(moved.moved_items)
+
 upserted = mgmt.context.custom_items.create_relations([
     {
         "from_uid": note.uid,
