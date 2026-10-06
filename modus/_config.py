@@ -51,6 +51,7 @@ class ModusConfig:
     agent_host: Optional[str] = None
     organization_id: Optional[str] = None
     base_urls: Mapping[str, str] = field(default_factory=dict)
+    default_headers: Optional[Mapping[str, str]] = None
 
     def __post_init__(self) -> None:
         # Reject obviously-bad max_retries early — negative/non-int would later
@@ -67,6 +68,7 @@ class ModusConfig:
         if self.organization_id is not None:
             object.__setattr__(self, "organization_id", self.organization_id.strip() or None)
         object.__setattr__(self, "base_urls", _normalize_base_urls(self.base_urls))
+        object.__setattr__(self, "default_headers", MappingProxyType(dict(self.default_headers or {})))
 
     def __repr__(self) -> str:
         masked = f"{self.api_key[:10]}***" if len(self.api_key) > 10 else "***"

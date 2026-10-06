@@ -202,6 +202,15 @@ def _sse_body_preview_from_lines(lines: Iterator[str], limit: int = 200) -> str:
     return preview
 
 
+def _client_headers(config: ModusConfig) -> httpx.Headers:
+    headers = httpx.Headers(
+        {"Accept": "application/json", "User-Agent": _USER_AGENT, "X-Modus-Client": "sdk"}
+    )
+    headers.update(config.default_headers)
+    headers.update(auth_headers(config.api_key))
+    return headers
+
+
 # ---------------------------------------------------------------------------
 # Sync client
 # ---------------------------------------------------------------------------
@@ -219,11 +228,7 @@ class HttpClient:
         self._config = config
         self._client = httpx.Client(
             base_url=config.base_url,
-            headers={
-                **auth_headers(config.api_key),
-                "Accept": "application/json",
-                "User-Agent": _USER_AGENT,
-            },
+            headers=_client_headers(config),
             timeout=config.timeout,
         )
 
@@ -379,11 +384,7 @@ class AsyncHttpClient:
         self._config = config
         self._client = httpx.AsyncClient(
             base_url=config.base_url,
-            headers={
-                **auth_headers(config.api_key),
-                "Accept": "application/json",
-                "User-Agent": _USER_AGENT,
-            },
+            headers=_client_headers(config),
             timeout=config.timeout,
         )
 

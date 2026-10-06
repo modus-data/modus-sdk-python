@@ -11,6 +11,10 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Added
 
+- **`default_headers` client option.** `Modus`, `AsyncModus`, `ModusManagement` and
+  `AsyncModusManagement` accept headers to send on every request. They override the
+  SDK's own defaults, except `Authorization`, which always comes from `api_key`.
+- **`X-Modus-Client: sdk` request header.** Every request names the SDK as the client.
 - **`gpt-6-luna` model.** The chat request `model` enum
   (`Model.gpt_6_luna`) accepts the new OpenAI model.
 - **`gpt-5.6-luna` model.** The chat request `model` union accepts the new
