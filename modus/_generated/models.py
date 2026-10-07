@@ -1932,7 +1932,7 @@ class ToolCatalogActionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     name: str = Field(
         ...,
-        description='Stable action id — the exact string to put in `toolset.<id>.actions`.',
+        description='Stable action id: the exact string to list in `toolset.<id>.byConnection.<connectionId>.actions` (or `toolset.<id>.actions`, which binds to the newest workspace connection).',
         examples=['list_dags'],
     )
     display_name: str = Field(
@@ -3914,7 +3914,7 @@ class CreateSkillDto(BaseModel):
     )
     toolset: ToolsetDto | None = Field(
         None,
-        description='Toolset configuration (tools this scope may invoke). Service sanitizes the shape on write.',
+        description="Toolset configuration (tools this scope may invoke). Service sanitizes the shape on write. A connected integration given as `{actions, rules?}` is bound to the organization's newest workspace connection of that integration and returned as `{byConnection: {<connectionId>: {actions, rules?}}}`.",
     )
     model: str | None = Field(
         None,
@@ -4223,7 +4223,10 @@ class UpdateSkillDto(BaseModel):
         description='Updated instruction fragments. Replaces the prior list when present.',
         examples=[['You are a senior data analyst.']],
     )
-    toolset: ToolsetDto | None = Field(None, description='Updated toolset configuration.')
+    toolset: ToolsetDto | None = Field(
+        None,
+        description="Updated toolset configuration. A connected integration given as `{actions, rules?}` is bound to the organization's newest workspace connection of that integration and returned as `{byConnection: {<connectionId>: {actions, rules?}}}`.",
+    )
     model: str | None = Field(
         None,
         description='Updated model id. Pass `null` (explicit) to clear and use the org default.',
