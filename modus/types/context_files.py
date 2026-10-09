@@ -5,7 +5,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Union
+
+from pydantic import Field
 
 
 @dataclass(frozen=True)
@@ -34,10 +36,18 @@ from .._generated.models import (
 
 FileUpload = FileUploadResourceDto
 FileUploadStatus = FileUploadResourceStatus
-UploadUrlSlot = UploadUrlResponseDto
 
 
-BulkUploadUrlsResult = BulkUploadUrlsResponseDto
+class UploadUrlSlot(UploadUrlResponseDto):
+    # Servers released before `headers` existed omit it; their PUT needs only Content-Type.
+    headers: Dict[str, str] = Field(default_factory=dict)
+
+
+class BulkUploadUrlsResult(BulkUploadUrlsResponseDto):
+    # Narrowing a pydantic field to a subclass is safe; mypy reads it as an invariant list override.
+    uploaded: List[UploadUrlSlot]  # type: ignore[assignment]
+
+
 BulkUploadFromUrlsResult = BulkUploadFromUrlsResponseDto
 FailedUploadUrl = FailedUploadUrlDto
 FailedUploadFromUrl = FailedUploadFromUrlDto

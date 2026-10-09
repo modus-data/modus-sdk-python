@@ -38,6 +38,7 @@ def _slot_json(upload_id: str = "up-1", *, upload_url: str = S3_URL, file_name: 
         "s3Key": f"context_uploads/{upload_id}/{file_name}",
         "fileName": file_name,
         "contentType": "application/pdf",
+        "headers": {"Content-Type": "application/pdf"},
         "expiresAt": "2026-08-12T14:15:00.000Z",
     }
 
@@ -223,6 +224,38 @@ def test_upload_puts_bytes_and_polls_until_processing(tmp_path):
     assert not get_route.called
     assert put_route.calls[0].request.read() == b"%PDF-1.4 fake content"
     assert put_route.calls[0].request.headers["content-type"] == "application/pdf"
+
+
+@pytest.mark.parametrize(
+    ("slot_headers", "expected"),
+    [
+        (
+            {"x-ms-blob-type": "BlockBlob", "Content-Type": "application/pdf"},
+            {"x-ms-blob-type": "BlockBlob", "content-type": "application/pdf"},
+        ),
+        (None, {"content-type": "application/pdf"}),
+    ],
+    ids=["slot-headers-verbatim", "older-server-without-headers"],
+)
+@respx.mock
+def test_upload_put_sends_slot_headers(tmp_path, slot_headers, expected):
+    file_path = tmp_path / "report.pdf"
+    file_path.write_bytes(b"data")
+    slot = _slot_json("up-7")
+    if slot_headers is None:
+        del slot["headers"]
+    else:
+        slot["headers"] = slot_headers
+    respx.post(f"{BASE}/api/v1/context/files/uploadUrl").mock(return_value=httpx.Response(201, json=slot))
+    put_route = respx.put(S3_URL).mock(return_value=httpx.Response(200))
+    respx.post(f"{BASE}/api/v1/context/files/up-7/finalize").mock(
+        return_value=httpx.Response(201, json=_file_upload_json("up-7", "processing"))
+    )
+
+    _client().context.files.upload(file_path)
+
+    sent = put_route.calls[0].request.headers
+    assert {name: sent.get(name) for name in expected} == expected
 
 
 @respx.mock
