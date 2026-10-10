@@ -61,6 +61,9 @@ class Modus:
         timeout:     Request timeout as seconds or httpx.Timeout. Default is
                      5s connect and 300s read.
         max_retries: Number of automatic retries on 429/5xx (default 2).
+        default_headers: Headers sent on every request. They override the SDK's
+                     own defaults, except Authorization, which always comes
+                     from api_key.
     """
 
     def __init__(
@@ -73,6 +76,7 @@ class Modus:
         base_urls: Optional[Mapping[str, str]] = None,
         timeout: Union[float, httpx.Timeout, None] = None,
         max_retries: Optional[int] = None,
+        default_headers: Optional[Mapping[str, str]] = None,
     ) -> None:
         resolved_key = resolve_api_key(api_key)
         resolved_url = resolve_base_url(base_url) or DEFAULT_BASE_URL
@@ -95,6 +99,7 @@ class Modus:
             base_url=resolved_url,
             timeout=resolved_timeout,
             max_retries=resolved_retries,
+            default_headers=default_headers,
             agent_host=resolved_agent_host,
             organization_id=resolved_org,
             base_urls=base_urls or {},
@@ -106,6 +111,7 @@ class Modus:
             base_url=resolved_agent_host,
             timeout=resolved_timeout,
             max_retries=resolved_retries,
+            default_headers=default_headers,
             agent_host=resolved_agent_host,
             organization_id=resolved_org,
         )
@@ -150,6 +156,9 @@ class AsyncModus:
         timeout:     Request timeout as seconds or httpx.Timeout. Default is
                      5s connect and 300s read.
         max_retries: Retries on 429/5xx (default 2).
+        default_headers: Headers sent on every request. They override the SDK's
+                     own defaults, except Authorization, which always comes
+                     from api_key.
     """
 
     def __init__(
@@ -162,6 +171,7 @@ class AsyncModus:
         base_urls: Optional[Mapping[str, str]] = None,
         timeout: Union[float, httpx.Timeout, None] = None,
         max_retries: Optional[int] = None,
+        default_headers: Optional[Mapping[str, str]] = None,
     ) -> None:
         resolved_key = resolve_api_key(api_key)
         resolved_url = resolve_base_url(base_url) or DEFAULT_BASE_URL
@@ -184,6 +194,7 @@ class AsyncModus:
             base_url=resolved_url,
             timeout=resolved_timeout,
             max_retries=resolved_retries,
+            default_headers=default_headers,
             agent_host=resolved_agent_host,
             organization_id=resolved_org,
             base_urls=base_urls or {},
@@ -194,6 +205,7 @@ class AsyncModus:
             base_url=resolved_agent_host,
             timeout=resolved_timeout,
             max_retries=resolved_retries,
+            default_headers=default_headers,
             agent_host=resolved_agent_host,
             organization_id=resolved_org,
         )

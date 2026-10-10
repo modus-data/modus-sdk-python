@@ -35,6 +35,10 @@ OPERATIONS: dict[str, str] = {
     "ScopeSupervisionController_get": "mgmt.scopes.supervision(id).get()",
     "ScopeSupervisionController_set": "mgmt.scopes.supervision(id).set()",
     "ScopeSupervisionController_setActive": "mgmt.scopes.supervision(id).set_active()",
+    "ScopeInterfacesController_list": "mgmt.scopes.interfaces(id).list()",
+    "ScopeInterfacesController_add": "mgmt.scopes.interfaces(id).create()",
+    "ScopeInterfacesController_update": "mgmt.scopes.interfaces(id).update()",
+    "ScopeInterfacesController_delete": "mgmt.scopes.interfaces(id).delete()",
     "EvaluationsController_getConfig": "mgmt.scopes.evaluations(id).get_config()",
     "EvaluationsController_updateConfig": "mgmt.scopes.evaluations(id).update_config()",
     "EvaluationsController_triggerRun": "mgmt.scopes.evaluations(id).trigger_run()",
@@ -86,6 +90,7 @@ OPERATIONS: dict[str, str] = {
         "mgmt.context.items.update(); convenience: update_note, update_link, update_saved_query"
     ),
     "ContextItemsController_delete": "mgmt.context.items.delete()",
+    "ContextItemsController_move": "mgmt.context.items.move()",
     "ContextItemsController_lookup": "client.context.items.lookup()",
     "ContextItemsController_listValues": "client.context.items.list_values()",
     "ContextCreatorsController_createNote": "mgmt.context.create_note()",

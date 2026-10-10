@@ -39,6 +39,7 @@ ALLOWED_CHAT_MODELS = frozenset({
     "gpt-5.5",
     "gpt-5-mini",
     "gpt-5.6-luna",
+    "gpt-6-luna",
     "gpt-oss-120b",
     "gpt-oss-20b",
     "qwen3-235b-a22b-2507",

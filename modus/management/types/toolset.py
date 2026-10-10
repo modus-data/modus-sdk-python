@@ -86,6 +86,8 @@ class Toolset(BaseModel):
         Args:
             name:    Integration name, e.g. ``"slack"`` or ``"clickup"``. See ``INTEGRATIONS``.
             actions: The action names the skill may call on that integration.
+                     The API binds the entry to the organization's newest workspace
+                     connection of that integration and returns it as ``byConnection``.
             rules:   Optional per-integration restrictions (for example, a Slack
                      channel allow-list).
 

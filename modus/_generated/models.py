@@ -253,7 +253,7 @@ class BulkFinalizeItemDto(BaseModel):
     folder_path: str | None = Field(
         None,
         alias='folderPath',
-        description='Relative folder label to store with the upload.',
+        description='Root-relative folder path for this upload (for example `reports/2026`). Omit to store at the Files root. To reuse a folder created by an upload, pass its `folderPath`.',
         examples=['reports/2026/Q3'],
     )
 
@@ -274,7 +274,7 @@ class BulkUploadFromUrlItemDto(BaseModel):
     folder_path: str | None = Field(
         None,
         alias='folderPath',
-        description='Relative folder label to store with the upload.',
+        description='Root-relative folder path for this upload (for example `reports/2026`). Omit to store at the Files root. To reuse a folder created by an upload, pass its `folderPath`.',
         examples=['reports/2026/Q3'],
     )
 
@@ -313,6 +313,39 @@ class BulkUploadUrlsDto(BaseModel):
     files: list[BulkUploadUrlItemDto] = Field(
         ..., description='Files to create presigned upload URLs for. Max 100 per request.'
     )
+
+
+class ChatInterfaceAccessMode(str, Enum):
+    all = 'all'
+    allow_list = 'allow-list'
+    allow_org = 'allow-org'
+
+
+class ChatInterfaceConfigDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    access_mode: ChatInterfaceAccessMode | None = Field(
+        None,
+        alias='accessMode',
+        description='Who may use the interface: `all` (anyone in the workspace), `allow-list` (only `allowedEmails`), `allow-org` (members of this organization).',
+        examples=['allow-list'],
+    )
+    allowed_emails: list[str] | None = Field(
+        None,
+        alias='allowedEmails',
+        description='Emails allowed to use the interface when `accessMode` is `allow-list`.',
+        examples=[['ana@example.com']],
+    )
+    available_channel_ids: list[str] | None = Field(
+        None,
+        alias='availableChannelIds',
+        description='Channels where the interface answers. Slack channel ids look like `C0ALH2JTRR9`. Empty or absent means every channel.',
+        examples=[['C0ALH2JTRR9']],
+    )
+
+
+class ChatInterfaceType(str, Enum):
+    slack = 'slack'
+    teams = 'teams'
 
 
 class ComposeSkillContextRequestDto(BaseModel):
@@ -1182,7 +1215,7 @@ class FinalizeUploadDto(BaseModel):
     folder_path: str | None = Field(
         None,
         alias='folderPath',
-        description='Relative folder label to store with the upload.',
+        description='Root-relative folder path for this upload (for example `reports/2026`). Omit to store at the Files root. To reuse a folder created by an upload, pass its `folderPath`.',
         examples=['reports/2026/Q3'],
     )
 
@@ -1524,6 +1557,7 @@ class Model(str, Enum):
     gpt_5_5 = 'gpt-5.5'
     gpt_5_mini = 'gpt-5-mini'
     gpt_5_6_luna = 'gpt-5.6-luna'
+    gpt_6_luna = 'gpt-6-luna'
     gpt_oss_120b = 'gpt-oss-120b'
     gpt_oss_20b = 'gpt-oss-20b'
     qwen3_235b_a22b_2507 = 'qwen3-235b-a22b-2507'
@@ -1559,7 +1593,7 @@ class ModusChatRequestDto(BaseModel):
     )
     model: Model = Field(
         ...,
-        description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-5.5, claude-sonnet-4.6, claude-opus-4.8, claude-opus-5.5, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-5.6-luna, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, grok-4.7, kimi-k3.',
+        description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-5.5, claude-sonnet-4.6, claude-opus-4.8, claude-opus-5.5, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-5.6-luna, gpt-6-luna, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, grok-4.7, kimi-k3.',
         examples=['claude-sonnet-4.6'],
     )
     approval_continuation: bool | None = Field(
@@ -1640,6 +1674,27 @@ class ModusContextResponseDto(BaseModel):
     )
 
 
+class MoveContextItemDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    destination_folder_uid: str | None = Field(
+        ...,
+        alias='destinationFolderUid',
+        description='Stored context-item uid of an existing Files folder, or null to move to the Files root. The destination must already exist. Move does not rename or merge folders.',
+        examples=[None],
+    )
+
+
+class MoveContextItemResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    moved_items: int = Field(
+        ...,
+        alias='movedItems',
+        description='Number of context items whose parent changed. Zero is a successful same-parent no-op.',
+        examples=[3],
+        ge=0,
+    )
+
+
 class OrgMemberDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     user_id: str
@@ -1709,6 +1764,29 @@ class ManageDenial(str, Enum):
     needs_group_manage = 'needs_group_manage'
 
 
+class ScopeInterfaceDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(
+        ..., description='Interface id (UUID).', examples=['00000000-0000-4000-a000-000000000500']
+    )
+    scope_id: float = Field(..., alias='scopeId', description='Scope id.', examples=[42])
+    type: ChatInterfaceType = Field(..., examples=['slack'])
+    name: str = Field(..., description='Display name.', examples=['Slack'])
+    config: ChatInterfaceConfigDto
+    created_at: str = Field(
+        ...,
+        alias='createdAt',
+        description='Creation timestamp.',
+        examples=['2026-09-30T10:00:00.000Z'],
+    )
+    updated_at: str = Field(
+        ...,
+        alias='updatedAt',
+        description='Most recent update timestamp.',
+        examples=['2026-09-30T10:00:00.000Z'],
+    )
+
+
 class SearchMemoriesRequestDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     query: str = Field(
@@ -1756,7 +1834,7 @@ class SkillChatRequestDto(BaseModel):
     )
     model: Model = Field(
         ...,
-        description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-5.5, claude-sonnet-4.6, claude-opus-4.8, claude-opus-5.5, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-5.6-luna, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, grok-4.7, kimi-k3.',
+        description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-5.5, claude-sonnet-4.6, claude-opus-4.8, claude-opus-5.5, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-5.6-luna, gpt-6-luna, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, grok-4.7, kimi-k3.',
         examples=['claude-sonnet-4.6'],
     )
 
@@ -1854,7 +1932,7 @@ class ToolCatalogActionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     name: str = Field(
         ...,
-        description='Stable action id — the exact string to put in `toolset.<id>.actions`.',
+        description='Stable action id: the exact string to list in `toolset.<id>.byConnection.<connectionId>.actions` (or `toolset.<id>.actions`, which binds to the newest workspace connection).',
         examples=['list_dags'],
     )
     display_name: str = Field(
@@ -2147,6 +2225,14 @@ class UpdateMemoryRequestDto(BaseModel):
     )
 
 
+class UpdateScopeInterfaceDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    name: str | None = Field(
+        None, description='New display name.', examples=['Support'], max_length=200, min_length=1
+    )
+    config: ChatInterfaceConfigDto | None = Field(None, description='Replaces the whole config.')
+
+
 class UploadFromUrlDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     url: str = Field(
@@ -2163,7 +2249,7 @@ class UploadFromUrlDto(BaseModel):
     folder_path: str | None = Field(
         None,
         alias='folderPath',
-        description='Relative folder label to store with the upload.',
+        description='Root-relative folder path for this upload (for example `reports/2026`). Omit to store at the Files root. To reuse a folder created by an upload, pass its `folderPath`.',
         examples=['reports/2026/Q3'],
     )
 
@@ -2451,6 +2537,21 @@ class AddAgentInterfaceDto(BaseModel):
         description='Initial config payload (interface-type-specific). Free-form JSONB.',
         examples=[{}],
     )
+
+
+class AddScopeInterfaceDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    type: ChatInterfaceType = Field(
+        ..., description='Chat platform. One interface per type per scope.', examples=['slack']
+    )
+    name: str | None = Field(
+        None,
+        description='Display name. Defaults to the chat platform name.',
+        examples=['Support'],
+        max_length=200,
+        min_length=1,
+    )
+    config: ChatInterfaceConfigDto | None = None
 
 
 class AgentAccessConfigDto(BaseModel):
@@ -3084,6 +3185,13 @@ class ListMemoriesResponseDto(BaseModel):
 class ListOrgMembersResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     members: list[OrgMemberDto]
+
+
+class ListScopeInterfacesResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    interfaces: list[ScopeInterfaceDto] = Field(
+        ..., description='Every chat interface on the scope (at most one per type).'
+    )
 
 
 class ListSuggestionQuestionsResponseDto(BaseModel):
@@ -3806,7 +3914,7 @@ class CreateSkillDto(BaseModel):
     )
     toolset: ToolsetDto | None = Field(
         None,
-        description='Toolset configuration (tools this scope may invoke). Service sanitizes the shape on write.',
+        description="Toolset configuration (tools this scope may invoke). Service sanitizes the shape on write. A connected integration given as `{actions, rules?}` is bound to the organization's newest workspace connection of that integration and returned as `{byConnection: {<connectionId>: {actions, rules?}}}`.",
     )
     model: str | None = Field(
         None,
@@ -3832,7 +3940,7 @@ class CreateSkillDto(BaseModel):
     )
     interfaces: list[dict[str, Any]] | None = Field(
         None,
-        description='Interface configuration (chat, API, webhook…). Shape is interface-specific.',
+        description='The scope\'s MCP interface configuration. Only entries with `type: "mcp"` are accepted; any other type is rejected with 400.',
         examples=[[]],
     )
     access_config: AccessConfigDto | None = Field(
@@ -4115,7 +4223,10 @@ class UpdateSkillDto(BaseModel):
         description='Updated instruction fragments. Replaces the prior list when present.',
         examples=[['You are a senior data analyst.']],
     )
-    toolset: ToolsetDto | None = Field(None, description='Updated toolset configuration.')
+    toolset: ToolsetDto | None = Field(
+        None,
+        description="Updated toolset configuration. A connected integration given as `{actions, rules?}` is bound to the organization's newest workspace connection of that integration and returned as `{byConnection: {<connectionId>: {actions, rules?}}}`.",
+    )
     model: str | None = Field(
         None,
         description='Updated model id. Pass `null` (explicit) to clear and use the org default.',
@@ -4139,7 +4250,9 @@ class UpdateSkillDto(BaseModel):
         examples=[[]],
     )
     interfaces: list[dict[str, Any]] | None = Field(
-        None, description='Updated interface configuration.', examples=[[]]
+        None,
+        description='Updated MCP interface configuration. Only entries with `type: "mcp"` are accepted; any other type is rejected with 400.',
+        examples=[[]],
     )
     evaluations: list[dict[str, Any]] | None = Field(
         None,

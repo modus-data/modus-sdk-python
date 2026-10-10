@@ -69,6 +69,45 @@ def test_context_items_list_filter_by_type(client):
 
 
 @respx.mock
+def test_context_items_list_browse_selectors(client):
+    route = respx.get(f"{BASE}/api/v1/context/items").mock(
+        return_value=httpx.Response(200, json={"contextItems": [], "nextPageToken": None})
+    )
+    client.context.items.list(
+        parent_uids=[],
+        ancestor_uids=["native-folder"],
+        connection_ids=["files", "conn-a"],
+    )
+    params = route.calls[0].request.url.params
+    assert params.get_list("parentUids") == [""]
+    assert params.get_list("ancestorUids") == ["native-folder"]
+    assert params.get_list("connectionIds") == ["files", "conn-a"]
+    assert "parentUid" not in params
+    assert "ancestorUid" not in params
+
+    client.context.items.list(context_type="note")
+    omitted = route.calls[1].request.url
+    assert "parentUids" not in omitted.params
+    assert "ancestorUids" not in omitted.params
+    assert "connectionIds" not in omitted.params
+    assert "contextTypes" in omitted.params
+
+
+@respx.mock
+def test_context_items_list_preserves_native_uid_order_and_whitespace(client):
+    route = respx.get(f"{BASE}/api/v1/context/items").mock(
+        return_value=httpx.Response(200, json={"contextItems": [], "nextPageToken": None})
+    )
+    long_uid = "native " + ("x" * 260)
+    client.context.items.list(parent_uids=["db-a", " PUBLIC ", long_uid])
+    assert route.calls[0].request.url.params.get_list("parentUids") == [
+        "db-a",
+        " PUBLIC ",
+        long_uid,
+    ]
+
+
+@respx.mock
 def test_context_items_get(client, sample_context_item):
     uid = sample_context_item["uid"]
     respx.get(f"{BASE}/api/v1/context/items/{uid}").mock(

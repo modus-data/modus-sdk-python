@@ -5,6 +5,7 @@ from .agents import Agent, AgentStatus, AgentType
 from .context import (
     ContextItem,
     ContextItemDeletion,
+    ContextItemMove,
     ContextItemUpdate,
     ContextType,
     CreatedContextItem,
@@ -37,6 +38,7 @@ __all__ = [
     "AsyncPage",
     "ContextItem",
     "ContextItemDeletion",
+    "ContextItemMove",
     "ContextItemUpdate",
     "ContextType",
     "Conversation",

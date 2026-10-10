@@ -90,7 +90,8 @@
         "command": "bash scripts/check-snyk-requirements-drift.sh",
         "cwd": "{workspaceRoot}/distribution/clients/python"
       },
-      "cache": false
+      "cache": true,
+      "inputs": ["{workspaceRoot}/distribution/clients/python/**"]
     },
     "generate": {
       "executor": "nx:run-commands",
@@ -111,6 +112,29 @@
         "{workspaceRoot}/distribution/clients/python/scripts/emit-openapi-operations.py"
       ],
       "outputs": ["{projectRoot}/modus/_generated/**"]
+    },
+    "contract-check": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "install",
+        { "projects": ["openapi-portal"], "target": "build" },
+        { "projects": ["modus-sdk-typescript"], "target": "contract-check" }
+      ],
+      "options": {
+        "command": "bash distribution/clients/python/scripts/check-contract.sh",
+        "cwd": "{workspaceRoot}"
+      },
+      "cache": true,
+      "inputs": [
+        "default",
+        "{workspaceRoot}/apps/services/*/openapi/v1.json",
+        { "dependentTasksOutputFiles": "**/*.js" },
+        "{workspaceRoot}/distribution/clients/python/scripts/**"
+      ]
+    },
+    "sdk:check": {
+      "executor": "nx:noop",
+      "dependsOn": ["test", "lint", "check-docstrings", "requirements-drift", "contract-check"]
     },
     "openapi-impact": {
       "executor": "nx:run-commands",

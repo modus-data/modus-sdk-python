@@ -60,6 +60,7 @@ def _model_wire_fields(model: Type[BaseModel]) -> Set[str]:
 SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "IngestedDataController_upload": {"integration_type", "request", "response"},
     "ContextItemsController_update": _model_wire_fields(ContextItemUpdate),
+    "ContextItemsController_move": {"destinationFolderUid"},
     "ModusChatController_chat": _model_wire_fields(ModusChatRequestDto),
     "ModusContextController_compose": _model_wire_fields(ModusContextRequestDto),
     "SuggestionsController_recordEvent": {
@@ -101,11 +102,11 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "CustomContextItemsController_update": _model_wire_fields(
         UpdateCustomContextItemDto
     ),
-    "ContextFilesController_finalize": {"fileName"},
+    "ContextFilesController_finalize": {"fileName", "folderPath"},
     "ContextFilesController_finalizeMany": {"uploads"},
     "ContextFilesController_uploadUrl": {"fileName", "contentType", "fileSize"},
     "ContextFilesController_uploadUrls": {"files"},
-    "ContextFilesController_uploadFromUrl": {"url", "fileName"},
+    "ContextFilesController_uploadFromUrl": {"url", "fileName", "folderPath"},
     "ContextFilesController_uploadFromUrls": {"urls"},
     "DashboardsController_createElement": {"expectedRevision", "kind", "title", "layout"},
     "DashboardsController_updateElement": {"expectedRevision", "patch"},
@@ -126,6 +127,8 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "ScopeRunsController_create": _model_wire_fields(SkillRunDto),
     "ScopeSupervisionController_set": {"subordinateAgentIds"},
     "ScopeSupervisionController_setActive": {"subordinateAgentIds"},
+    "ScopeInterfacesController_add": {"type", "name", "config"},
+    "ScopeInterfacesController_update": {"name", "config"},
     "ScopesController_requestOwnershipTransfer": {"newOwnerUserId"},
     "ScopesController_patchMcpConfig": {"config"},
     # Deploy takes an optional body; the SDK sends none (empty body), which the

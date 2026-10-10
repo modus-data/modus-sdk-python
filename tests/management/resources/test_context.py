@@ -9,6 +9,7 @@ from modus.management import ModusManagement
 from modus.management.types.context import (
     ContextItem,
     ContextItemDeletion,
+    ContextItemMove,
     CreatedContextItem,
 )
 from tests.fixtures.context_content import (
@@ -155,6 +156,47 @@ def test_context_items_delete(client):
     result = client.context.items.delete(uid)
     assert isinstance(result, ContextItemDeletion)
     assert result.uid == uid
+
+
+@respx.mock
+def test_context_items_move(client):
+    uid = "7a3f9d2c-1111-4000-a000-000000000abc"
+    route = respx.post(f"{BASE}/api/v1/context/items/{uid}/move").mock(
+        return_value=httpx.Response(200, json={"movedItems": 2})
+    )
+    result = client.context.items.move(uid, destination_folder_uid="folder-uid")
+    assert isinstance(result, ContextItemMove)
+    assert result.moved_items == 2
+    body = json.loads(route.calls[0].request.read())
+    assert body == {"destinationFolderUid": "folder-uid"}
+
+
+@respx.mock
+def test_context_items_move_root_sends_json_null(client):
+    uid = "7a3f9d2c-1111-4000-a000-000000000abc"
+    route = respx.post(f"{BASE}/api/v1/context/items/{uid}/move").mock(
+        return_value=httpx.Response(200, json={"movedItems": 0})
+    )
+    result = client.context.items.move(uid, destination_folder_uid=None)
+    assert isinstance(result, ContextItemMove)
+    assert result.moved_items == 0
+    body = json.loads(route.calls[0].request.read())
+    assert body == {"destinationFolderUid": None}
+
+
+@respx.mock
+async def test_context_items_move_async(async_client):
+    uid = "7a3f9d2c-1111-4000-a000-000000000abc"
+    route = respx.post(f"{BASE}/api/v1/context/items/{uid}/move").mock(
+        return_value=httpx.Response(200, json={"movedItems": 1})
+    )
+    result = await async_client.context.items.move(
+        uid, destination_folder_uid=None
+    )
+    assert isinstance(result, ContextItemMove)
+    assert result.moved_items == 1
+    body = json.loads(route.calls[0].request.read())
+    assert body == {"destinationFolderUid": None}
 
 
 @respx.mock

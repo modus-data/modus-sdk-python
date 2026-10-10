@@ -35,9 +35,11 @@ class ContextResource:
     Full knowledge base access for modus.management.ModusManagement.
 
     mgmt.context.items.list()               → Page[ContextItem]
+    mgmt.context.items.list(connection_ids=["files"], parent_uids=[]) → Files root
     mgmt.context.items.get(uid)             → ContextItem
     mgmt.context.items.update(uid, ...)     → ContextItem
     mgmt.context.items.delete(uid)          → ContextItemDeletion
+    mgmt.context.items.move(uid, destination_folder_uid=...) → ContextItemMove
     mgmt.context.create_note(title, content)              → CreatedContextItem
     mgmt.context.update_note(uid, title=..., body=...)    → ContextItem
     mgmt.context.create_saved_query(name, query, ...)     → CreatedContextItem

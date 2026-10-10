@@ -5,7 +5,7 @@ AsyncModusManagement — asynchronous client for the same.
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Mapping, Optional, Union
 
 import httpx
 
@@ -43,6 +43,9 @@ class ModusManagement:
         timeout:     Request timeout as seconds or httpx.Timeout. Default is
                      5s connect and 300s read.
         max_retries: Retries on 429/5xx (default 2).
+        default_headers: Headers sent on every request. They override the SDK's
+                     own defaults, except Authorization, which always comes
+                     from api_key.
     """
 
     def __init__(
@@ -52,6 +55,7 @@ class ModusManagement:
         base_url: Optional[str] = None,
         timeout: Union[float, httpx.Timeout, None] = None,
         max_retries: Optional[int] = None,
+        default_headers: Optional[Mapping[str, str]] = None,
     ) -> None:
         resolved_key = resolve_api_key(api_key)
         resolved_url = resolve_base_url(base_url) or DEFAULT_BASE_URL
@@ -66,6 +70,7 @@ class ModusManagement:
             base_url=resolved_url,
             timeout=resolved_timeout,
             max_retries=resolved_retries,
+            default_headers=default_headers,
         )
         self._http = HttpClient(self._config)
 
@@ -101,6 +106,9 @@ class AsyncModusManagement:
         timeout:     Request timeout as seconds or httpx.Timeout. Default is
                      5s connect and 300s read.
         max_retries: Retries on 429/5xx (default 2).
+        default_headers: Headers sent on every request. They override the SDK's
+                     own defaults, except Authorization, which always comes
+                     from api_key.
     """
 
     def __init__(
@@ -110,6 +118,7 @@ class AsyncModusManagement:
         base_url: Optional[str] = None,
         timeout: Union[float, httpx.Timeout, None] = None,
         max_retries: Optional[int] = None,
+        default_headers: Optional[Mapping[str, str]] = None,
     ) -> None:
         resolved_key = resolve_api_key(api_key)
         resolved_url = resolve_base_url(base_url) or DEFAULT_BASE_URL
@@ -124,6 +133,7 @@ class AsyncModusManagement:
             base_url=resolved_url,
             timeout=resolved_timeout,
             max_retries=resolved_retries,
+            default_headers=default_headers,
         )
         self._http = AsyncHttpClient(self._config)
 

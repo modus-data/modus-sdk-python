@@ -31,6 +31,7 @@ from ...types.context_files import (
     FinalizeInput,
     UploadDirFailure,
     UploadDirResult,
+    UploadFileInput,
     UploadFromUrlInput,
     UploadProgress,
     UploadProgressCallback,
@@ -117,6 +118,32 @@ def _folder_path_for(root: Path, file_path: Path) -> Optional[str]:
     return None if str(relative_parent) == "." else relative_parent.as_posix()
 
 
+def _join_folder_path(prefix: Optional[str], relative: Optional[str]) -> Optional[str]:
+    # Concatenate only. Empty prefix is a no-op. Do not strip leading slashes
+    # or collapse segments — the server owns normalizeFolderPath.
+    head = None if prefix is None or prefix == "" else prefix
+    tail = None if relative is None or relative == "" else relative
+    if head is not None and tail is not None:
+        return f"{head}/{tail}"
+    return head if head is not None else tail
+
+
+def _as_upload_path(item: Union[str, Path, UploadFileInput]) -> _UploadPath:
+    if isinstance(item, UploadFileInput):
+        return (Path(item.path), item.folder_path)
+    return (Path(item), None)
+
+
+def _prefixed_upload_paths(
+    items: Sequence[Union[str, Path, UploadFileInput]],
+    folder_path: Optional[str],
+) -> List[_UploadPath]:
+    return [
+        (path, _join_folder_path(folder_path, relative))
+        for path, relative in (_as_upload_path(item) for item in items)
+    ]
+
+
 def _raise_for_put_error(response: httpx.Response) -> None:
     if response.is_error:
         raise ModusError(
@@ -178,7 +205,7 @@ def _upload_from_urls_payload(urls: Sequence[UploadFromUrlInput]) -> dict:
             {
                 "url": u.url,
                 **({"fileName": u.file_name} if u.file_name else {}),
-                **({"folderPath": u.folder_path} if u.folder_path else {}),
+                **({"folderPath": u.folder_path} if u.folder_path is not None else {}),
             }
             for u in urls
         ]
@@ -239,6 +266,7 @@ class ContextFilesResource:
     mgmt.context.files.upload_from_urls([...])     → BulkUploadFromUrlsResult
     mgmt.context.files.get(upload_id)              → FileUpload
     mgmt.context.files.list()                      → Page[FileUpload]
+    Hierarchy browsing is available through mgmt.context.items.list.
     """
 
     def __init__(self, http: HttpClient, config: ModusConfig) -> None:
@@ -304,7 +332,9 @@ class ContextFilesResource:
             url:       Source URL to fetch (SSRF-guarded, 50MB cap, same MIME
                        allow-list as ``create_upload_url``).
             file_name: Override file name. Inferred from the URL path when omitted.
-            folder_path: Relative folder label stored with the upload.
+            folder_path: Root-relative destination for the fetched file. Omit
+                         to land at the Files root. Does not need to exist
+                         beforehand.
 
         Returns:
             File upload resource with status ``processing`` — parsing continues async.
@@ -434,8 +464,9 @@ class ContextFilesResource:
 
     def upload_files(
         self,
-        paths: Sequence[Union[str, Path]],
+        paths: Sequence[Union[str, Path, UploadFileInput]],
         *,
+        folder_path: Optional[str] = None,
         concurrency: int = 10,
         wait_until: WaitUntil = "processing",
         on_progress: Optional[UploadProgressCallback] = None,
@@ -443,14 +474,29 @@ class ContextFilesResource:
         """Upload an explicit list of local files.
 
         Same machinery as ``upload_dir`` without the directory walk.
+        Each entry may be a path or ``UploadFileInput`` with a per-file
+        ``folder_path``. Pass ``folder_path`` to prefix every entry's
+        destination the same way ``upload_dir`` does.
 
         Args:
+            paths:       Local files to upload.
+            folder_path: Root-relative destination prefix. Combined with any
+                         per-file ``UploadFileInput.folder_path``.
+            concurrency: Max concurrent PUT+poll operations.
+            wait_until:  ``"processing"`` (default) or ``"ready"``.
             on_progress: Optional callback after each file settles. Receives
                 cumulative ``completed``, ``total``, ``succeeded``, and ``failed``
                 counts. The SDK never prints; wire this for CLI/UI progress.
+
+        Example:
+            >>> result = mgmt.context.files.upload_files(
+            ...     ["./q3.pdf", "./notes.md"],
+            ...     folder_path="reports/2026",
+            ... )
+            >>> print(len(result.uploaded), len(result.failed))
         """
         return self._upload_paths(
-            [(Path(p), None) for p in paths],
+            _prefixed_upload_paths(paths, folder_path),
             concurrency=concurrency,
             wait_until=wait_until,
             on_progress=on_progress,
@@ -460,17 +506,22 @@ class ContextFilesResource:
         self,
         path: Union[str, Path],
         *,
+        folder_path: Optional[str] = None,
         wait_until: WaitUntil = "processing",
         poll_interval_s: float = 0.5,
         timeout_s: float = 120,
     ) -> FileUpload:
         """Upload a local file and wait for it to reach ``processing`` or ``ready``.
 
-        Gets a presigned URL, PUTs the file bytes, then polls ``get()`` until the
-        upload leaves ``pending`` (or reaches ``ready``/``failed``).
+        Gets a presigned URL, PUTs the file bytes, then polls ``get()``
+        until the upload leaves ``pending`` (or reaches ``ready``/``failed``).
 
         Args:
             path:            Path to a local file.
+            folder_path:     Root-relative destination for this file (for
+                             example ``reports/2026``). Omit to land at the
+                             Files root. The destination does not need to
+                             exist beforehand.
             wait_until:      ``"processing"`` (parsing started, default) or
                               ``"ready"`` (parsing finished).
             poll_interval_s: Seconds between status polls.
@@ -485,6 +536,8 @@ class ContextFilesResource:
         Example:
             >>> upload = mgmt.context.files.upload("./arr-definition.pdf")
             >>> print(upload.upload_id, upload.status)
+            >>> nested = mgmt.context.files.upload("./q3.pdf", folder_path="reports/2026")
+            >>> print(nested.folder_path)
         """
         _validate_wait_until(wait_until)
         file_path = Path(path)
@@ -499,7 +552,11 @@ class ContextFilesResource:
         _put_bytes_sync(slot.upload_url, file_path.read_bytes(), content_type, _DEFAULT_PUT_TIMEOUT_S)
         # Finalize returns the resource already at `processing`, so it replaces
         # the first poll rather than adding a round trip.
-        finalized = self.finalize(slot.upload_id, file_name=slot.file_name or file_path.name)
+        finalized = self.finalize(
+            slot.upload_id,
+            file_name=slot.file_name or file_path.name,
+            folder_path=folder_path,
+        )
         if _status_satisfies(_status_value(finalized), wait_until):
             return finalized
         return self._poll_until(
@@ -526,6 +583,7 @@ class ContextFilesResource:
         self,
         path: Union[str, Path],
         *,
+        folder_path: Optional[str] = None,
         recursive: bool = True,
         concurrency: int = 10,
         wait_until: WaitUntil = "processing",
@@ -538,8 +596,16 @@ class ContextFilesResource:
         polls each file with up to ``concurrency`` in flight at once. A failure on
         one file does not stop the others — check ``result.failed``.
 
+        Nested files keep their path relative to ``path``. Pass ``folder_path``
+        as a root-relative destination prefix; the server creates any missing
+        folders on finalize. Files at the top of ``path`` still omit a folder
+        label unless ``folder_path`` is set. Empty directories are skipped.
+
         Args:
             path:        Path to a local directory.
+            folder_path: Root-relative destination prefix prepended to each
+                         file's relative folder. Does not need to exist
+                         beforehand.
             recursive:   Recurse into subdirectories (default ``True``).
             concurrency: Max concurrent PUT+poll operations.
             wait_until:  ``"processing"`` (default) or ``"ready"`` — same as ``upload()``.
@@ -551,6 +617,12 @@ class ContextFilesResource:
             ``UploadDirResult`` with every successful ``FileUpload`` and every
             per-file failure (slot creation or PUT/poll), each tagged with its
             local path.
+
+        Example:
+            >>> result = mgmt.context.files.upload_dir("./reports", folder_path="finance")
+            >>> print(len(result.uploaded), len(result.failed))
+            >>> for row in result.uploaded:
+            ...     print(row.file_name, row.folder_path)
         """
         _validate_wait_until(wait_until)
         if concurrency < 1:
@@ -561,7 +633,7 @@ class ContextFilesResource:
 
         return self._upload_paths(
             [
-                (file_path, _folder_path_for(dir_path, file_path))
+                (file_path, _join_folder_path(folder_path, _folder_path_for(dir_path, file_path)))
                 for file_path in _walk_files(dir_path, recursive=recursive)
             ],
             concurrency=concurrency,
@@ -832,8 +904,9 @@ class AsyncContextFilesResource:
 
     async def upload_files(
         self,
-        paths: Sequence[Union[str, Path]],
+        paths: Sequence[Union[str, Path, UploadFileInput]],
         *,
+        folder_path: Optional[str] = None,
         concurrency: int = 10,
         wait_until: WaitUntil = "processing",
         on_progress: Optional[UploadProgressCallback] = None,
@@ -841,12 +914,14 @@ class AsyncContextFilesResource:
         """Async twin of the sync ``upload_files``.
 
         Args:
+            folder_path: Root-relative destination prefix composed with any
+                         per-file ``UploadFileInput.folder_path``.
             on_progress: Optional callback after each file settles. Receives
                 cumulative ``completed``, ``total``, ``succeeded``, and ``failed``
                 counts. The SDK never prints; wire this for CLI/UI progress.
         """
         return await self._upload_paths(
-            [(Path(p), None) for p in paths],
+            _prefixed_upload_paths(paths, folder_path),
             concurrency=concurrency,
             wait_until=wait_until,
             on_progress=on_progress,
@@ -856,6 +931,7 @@ class AsyncContextFilesResource:
         self,
         path: Union[str, Path],
         *,
+        folder_path: Optional[str] = None,
         wait_until: WaitUntil = "processing",
         poll_interval_s: float = 0.5,
         timeout_s: float = 120,
@@ -872,7 +948,11 @@ class AsyncContextFilesResource:
         )
         content_type = _slot_content_type(slot, file_path.name)
         await _put_bytes_async(slot.upload_url, file_path.read_bytes(), content_type, _DEFAULT_PUT_TIMEOUT_S)
-        finalized = await self.finalize(slot.upload_id, file_name=slot.file_name or file_path.name)
+        finalized = await self.finalize(
+            slot.upload_id,
+            file_name=slot.file_name or file_path.name,
+            folder_path=folder_path,
+        )
         if _status_satisfies(_status_value(finalized), wait_until):
             return finalized
         return await self._poll_until(
@@ -899,6 +979,7 @@ class AsyncContextFilesResource:
         self,
         path: Union[str, Path],
         *,
+        folder_path: Optional[str] = None,
         recursive: bool = True,
         concurrency: int = 10,
         wait_until: WaitUntil = "processing",
@@ -920,7 +1001,7 @@ class AsyncContextFilesResource:
 
         return await self._upload_paths(
             [
-                (file_path, _folder_path_for(dir_path, file_path))
+                (file_path, _join_folder_path(folder_path, _folder_path_for(dir_path, file_path)))
                 for file_path in _walk_files(dir_path, recursive=recursive)
             ],
             concurrency=concurrency,

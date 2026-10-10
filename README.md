@@ -174,8 +174,24 @@ print(note.context_item_id, note.uid)  # same UUID
 upload = mgmt.context.files.upload("report.pdf")
 print(upload.upload_id, upload.status)
 
-result = mgmt.context.files.upload_dir("./reports")
+result = mgmt.context.files.upload_dir("./reports", folder_path="finance")
 print(len(result.uploaded), len(result.failed))
+file = mgmt.context.files.get(upload.upload_id)
+files = mgmt.context.files.list()
+print(file.status, len(files.items))
+
+root_folders = mgmt.context.items.list(
+    connection_ids=["files"],
+    context_type="file_folder_metadata",
+    parent_uids=[],
+)
+print(len(root_folders.items))
+
+moved = mgmt.context.items.move(
+    root_folders.items[0].uid,
+    destination_folder_uid=None,
+)
+print(moved.moved_items)
 
 upserted = mgmt.context.custom_items.create_relations([
     {
