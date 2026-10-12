@@ -3935,8 +3935,13 @@ class CreateSkillDto(BaseModel):
     context_selections: list[dict[str, Any]] | None = Field(
         None,
         alias='contextSelections',
-        description='Selected context items (sources / docs) the scope may read.',
+        description="Selected context items (sources / docs) the scope may read. The scope's own learnings are added unless `includeOwnLearnings` is false or these selections already mention learnings.",
         examples=[[]],
+    )
+    include_own_learnings: bool | None = Field(
+        True,
+        alias='includeOwnLearnings',
+        description="Whether the scope reads what is taught while using it: learnings, facts, glossary terms and preferences. Defaults to true. Set false to create the scope without them; it can be included later in the scope's context selections.",
     )
     interfaces: list[dict[str, Any]] | None = Field(
         None,
@@ -4246,7 +4251,7 @@ class UpdateSkillDto(BaseModel):
     context_selections: list[dict[str, Any]] | None = Field(
         None,
         alias='contextSelections',
-        description='Updated context selections (sources / docs the scope may read).',
+        description="Updated context selections (sources / docs the scope may read). Replaces the whole list, so send every selection to keep, including the scope's own learnings.",
         examples=[[]],
     )
     interfaces: list[dict[str, Any]] | None = Field(
