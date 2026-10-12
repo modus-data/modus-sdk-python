@@ -11,6 +11,8 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Added
 
+- **`include_own_learnings` on `scopes.create`.** A new scope reads what is taught while
+  using it by default; pass `False` to create it without its own learnings.
 - **`default_headers` client option.** `Modus`, `AsyncModus`, `ModusManagement` and
   `AsyncModusManagement` accept headers to send on every request. They override the
   SDK's own defaults, except `Authorization`, which always comes from `api_key`.

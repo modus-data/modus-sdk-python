@@ -51,6 +51,16 @@ def test_skills_create_sends_only_provided_fields():
     assert set(body.keys()) == {"name", "description"}
 
 
+@respx.mock
+def test_skills_create_can_opt_out_of_own_learnings():
+    route = respx.post(f"{BASE}/api/v1/scopes").mock(
+        return_value=httpx.Response(201, json=SKILL_RESP)
+    )
+    _client().scopes.create(name="Test", include_own_learnings=False)
+    body = json.loads(route.calls[0].request.read())
+    assert body == {"name": "Test", "includeOwnLearnings": False}
+
+
 
 @respx.mock
 def test_skills_create_guardrails_sends_full_access_config():

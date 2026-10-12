@@ -17,6 +17,7 @@ class _ScopeCreateBody(BaseModel):
     model: Optional[str] = None
     connection_set: Optional[List[Dict[str, Any]]] = None
     context_selections: Optional[List[Dict[str, Any]]] = None
+    include_own_learnings: Optional[bool] = None
     interfaces: Optional[List[Dict[str, Any]]] = None
     access_config: Optional[Dict[str, Any]] = None
 
