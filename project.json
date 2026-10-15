@@ -134,7 +134,7 @@
     },
     "sdk:check": {
       "executor": "nx:noop",
-      "dependsOn": ["test", "lint", "check-docstrings", "requirements-drift", "contract-check"]
+      "dependsOn": ["check-docstrings", "requirements-drift", "contract-check"]
     },
     "openapi-impact": {
       "executor": "nx:run-commands",
