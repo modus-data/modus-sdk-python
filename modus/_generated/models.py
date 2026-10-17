@@ -2314,6 +2314,11 @@ class UploadUrlResponseDto(BaseModel):
         description='ISO timestamp when the presigned URL expires (15 minutes from creation).',
         examples=['2026-08-12T14:15:00.000Z'],
     )
+    headers: dict[str, str] = Field(
+        ...,
+        description='Headers to send unchanged with the upload PUT request.',
+        examples=[{'Content-Type': 'application/pdf'}],
+    )
 
 
 class UsageBucketDto(BaseModel):

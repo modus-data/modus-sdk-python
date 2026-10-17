@@ -6,7 +6,7 @@ import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Callable, Iterator, List, Literal, Optional, Sequence, Tuple, Union
+from typing import Callable, Dict, Iterator, List, Literal, Optional, Sequence, Tuple, Union
 
 import httpx
 
@@ -76,11 +76,8 @@ def _validate_bulk_size(count: int, *, name: str) -> None:
         raise ValueError(f"{name} must have at most {MAX_BULK_UPLOAD_FILES} entries, got {count}")
 
 
-def _slot_content_type(slot: UploadUrlSlot, file_name: str) -> str:
-    # `content_type` is required on the wire; the generated type is `str | None`
-    # only due to codegen field-name reuse across DTOs. Fall back to the
-    # defer-to-server sentinel rather than guessing.
-    return slot.content_type or DEFER_CONTENT_TYPE_TO_SERVER
+def _put_headers(slot: UploadUrlSlot) -> Dict[str, str]:
+    return {"Content-Type": slot.content_type, **slot.headers}
 
 
 def _status_value(item: FileUpload) -> str:
@@ -153,14 +150,14 @@ def _raise_for_put_error(response: httpx.Response) -> None:
         )
 
 
-def _put_bytes_sync(url: str, data: bytes, content_type: str, timeout: float) -> None:
-    response = httpx.put(url, content=data, headers={"Content-Type": content_type}, timeout=timeout)
+def _put_bytes_sync(slot: UploadUrlSlot, data: bytes, timeout: float) -> None:
+    response = httpx.put(slot.upload_url, content=data, headers=_put_headers(slot), timeout=timeout)
     _raise_for_put_error(response)
 
 
-async def _put_bytes_async(url: str, data: bytes, content_type: str, timeout: float) -> None:
+async def _put_bytes_async(slot: UploadUrlSlot, data: bytes, timeout: float) -> None:
     async with httpx.AsyncClient(timeout=timeout) as client:
-        response = await client.put(url, content=data, headers={"Content-Type": content_type})
+        response = await client.put(slot.upload_url, content=data, headers=_put_headers(slot))
     _raise_for_put_error(response)
 
 
@@ -284,7 +281,7 @@ class ContextFilesResource:
 
         Returns:
             Presigned upload slot. PUT the raw bytes to ``upload_url`` within 15
-            minutes, then call
+            minutes, sending ``headers`` unchanged, then call
             ``finalize(slot.upload_id, file_name=slot.file_name)``.
 
             Pass the slot's own ``file_name`` rather than your local basename:
@@ -548,8 +545,7 @@ class ContextFilesResource:
             content_type=DEFER_CONTENT_TYPE_TO_SERVER,
             file_size=file_path.stat().st_size,
         )
-        content_type = _slot_content_type(slot, file_path.name)
-        _put_bytes_sync(slot.upload_url, file_path.read_bytes(), content_type, _DEFAULT_PUT_TIMEOUT_S)
+        _put_bytes_sync(slot, file_path.read_bytes(), _DEFAULT_PUT_TIMEOUT_S)
         # Finalize returns the resource already at `processing`, so it replaces
         # the first poll rather than adding a round trip.
         finalized = self.finalize(
@@ -725,8 +721,7 @@ class ContextFilesResource:
         def put(entry: _SlotAssignment) -> Union[_SlotAssignment, UploadDirFailure]:
             file_path, _folder_path, slot = entry
             try:
-                content_type = _slot_content_type(slot, file_path.name)
-                _put_bytes_sync(slot.upload_url, file_path.read_bytes(), content_type, _DEFAULT_PUT_TIMEOUT_S)
+                _put_bytes_sync(slot, file_path.read_bytes(), _DEFAULT_PUT_TIMEOUT_S)
                 return entry
             except Exception as exc:  # continue-on-error: one bad file must not sink the batch
                 return UploadDirFailure(path=str(file_path), error=str(exc))
@@ -946,8 +941,7 @@ class AsyncContextFilesResource:
             content_type=DEFER_CONTENT_TYPE_TO_SERVER,
             file_size=file_path.stat().st_size,
         )
-        content_type = _slot_content_type(slot, file_path.name)
-        await _put_bytes_async(slot.upload_url, file_path.read_bytes(), content_type, _DEFAULT_PUT_TIMEOUT_S)
+        await _put_bytes_async(slot, file_path.read_bytes(), _DEFAULT_PUT_TIMEOUT_S)
         finalized = await self.finalize(
             slot.upload_id,
             file_name=slot.file_name or file_path.name,
@@ -1094,10 +1088,7 @@ class AsyncContextFilesResource:
             file_path, _folder_path, slot = entry
             async with semaphore:
                 try:
-                    content_type = _slot_content_type(slot, file_path.name)
-                    await _put_bytes_async(
-                        slot.upload_url, file_path.read_bytes(), content_type, _DEFAULT_PUT_TIMEOUT_S
-                    )
+                    await _put_bytes_async(slot, file_path.read_bytes(), _DEFAULT_PUT_TIMEOUT_S)
                     return entry
                 except Exception as exc:  # continue-on-error: one bad file must not sink the batch
                     return UploadDirFailure(path=str(file_path), error=str(exc))
