@@ -52,3 +52,26 @@ def test_skills_get_context_omits_limit_when_none(client):
 
     body = json.loads(route.calls.last.request.content)
     assert "limit" not in body
+
+
+@respx.mock
+def test_skills_get_context_preserves_bounded_preview(client):
+    preview = "Summary: first 4,096 characters… [truncated]"
+    respx.post(f"{BASE}/api/v1/scopes/42/context").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "context": preview,
+                "contextItems": [],
+                "originalCount": 1,
+                "contextItemUids": ["upload-1"],
+                "selectedCount": 1,
+                "sessionId": "sess-preview",
+            },
+        )
+    )
+
+    result = client.scopes.get_context(42, "Summarize the upload")
+
+    assert result.context == preview
+    assert "Fetch with get_context_data" not in result.context

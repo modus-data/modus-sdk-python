@@ -369,7 +369,7 @@ class ComposeSkillContextResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     context: str = Field(
         ...,
-        description='Composed context for the scope and intent (markdown from the context composer, or structured JSON fallback).',
+        description='Composed context text for the scope and intent. Usually Markdown; older or non-rendered results may use a JSON fallback. Large bodies are bounded inline previews and REST does not expose full-content access.',
         examples=['## Retrieved Context\n\n### customers\n\n...'],
     )
     context_items: list[dict[str, Any]] = Field(
