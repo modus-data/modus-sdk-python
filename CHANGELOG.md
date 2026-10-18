@@ -9,6 +9,13 @@ release, including pre-1.0 (`0.x`) releases.
 
 ## [Unreleased]
 
+### Removed
+
+- **Breaking: evaluation Slack `nangoConnectionId`.** Send `connectionId`, the
+  Slack connection's Modus UUID, in notification settings instead. Generated
+  models expose `connection_id` (UUID) instead of `nango_connection_id`; JSON
+  requests use `connectionId`. No deprecation window; requires a major release.
+
 ### Added
 
 - **Service account tokens.** `api_key` accepts an organization-owned service account

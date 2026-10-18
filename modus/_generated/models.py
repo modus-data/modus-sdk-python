@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from enum import Enum
 from typing import Any, Literal
+from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, RootModel
 from pydantic.alias_generators import to_camel
@@ -1137,8 +1138,8 @@ class EvaluationRunWithResultsDto(BaseModel):
 
 class EvaluationSlackChannelDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    nango_connection_id: str = Field(
-        ..., alias='nangoConnectionId', description='Nango connection ID for Slack'
+    connection_id: UUID = Field(
+        ..., alias='connectionId', description='Modus connection UUID for Slack'
     )
     slack_user_id_by_recipient: dict[str, Any] = Field(
         ..., alias='slackUserIdByRecipient', description='Mapping of Clerk user ID to Slack user ID'
