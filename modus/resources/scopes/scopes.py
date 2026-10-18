@@ -335,8 +335,10 @@ class ScopesResource:
                       selected items.
 
         Returns:
-            Composition metadata (counts / session id). Use ``chat`` when you need
-            an assistant reply.
+            Composed context text and selection metadata. The text is usually
+            Markdown but may be the documented JSON fallback. Large bodies are
+            bounded inline previews; this REST method has no file-reference or
+            full-content fetch operation.
 
         Example:
             >>> ctx = client.scopes.get_context(

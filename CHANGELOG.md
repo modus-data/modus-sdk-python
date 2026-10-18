@@ -41,6 +41,8 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Changed
 
+- **Scope context file handling.** `scopes.get_context` returns bounded inline
+  previews for large bodies; full file content is not available through this REST method.
 - **Connected-integration toolset entries bind to a connection.** A scope toolset entry
   given as `{"actions": [...], "rules": ...}` (what `Toolset.integration` and its
   shortcuts build) is bound on create/update to the organization's newest workspace
