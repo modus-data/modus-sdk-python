@@ -2411,6 +2411,12 @@ class StreamProtocolVersion(float, Enum):
     number_2 = 2
 
 
+class ApprovalTargetDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    tool_name: str = Field(..., alias='toolName')
+    args: dict[str, Any]
+
+
 class CancelRunDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     organization_id: str | None = Field(
@@ -4564,6 +4570,11 @@ class ResumeRunDto(BaseModel):
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
     debug: bool | None = None
     decision: Decision = Field(..., description='Decision that resumes the interrupted run.')
+    approval_target: ApprovalTargetDto | None = Field(
+        None,
+        alias='approvalTarget',
+        description='The paused call an approval decision answers. Only that call is resolved and any other paused write is rejected; without it the first pending approval is resolved.',
+    )
 
 
 class EditQueuedRunDto(BaseModel):
