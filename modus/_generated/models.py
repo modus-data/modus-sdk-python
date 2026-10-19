@@ -3670,7 +3670,12 @@ class SupplementalContextDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     text: str = Field(
         ...,
-        description='Background context (e.g. Slack/Teams thread + channel history) to prepend to the system prompt.',
+        description='Background context (e.g. Slack/Teams thread + channel history) for a conversation with no saved history yet.',
+    )
+    follow_up_text: str | None = Field(
+        None,
+        alias='followUpText',
+        description='Only the background that is new since the previous turn, used once the conversation has saved history. Empty when nothing is new.',
     )
     source: SupplementalContextSource = Field(
         ..., description='Producer that supplied the supplemental context.'
