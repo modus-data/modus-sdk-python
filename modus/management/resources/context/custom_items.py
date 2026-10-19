@@ -88,7 +88,8 @@ class CustomContextItemsResource:
         Args:
             page_size: Maximum items per page.
             page_token: Cursor from a previous page.
-            search_query: Optional free-text filter.
+            search_query: Word search: returns rows that contain every word of
+                the query, case-insensitive.
             topics: Optional topic filters.
 
         Returns:
@@ -316,7 +317,8 @@ class AsyncCustomContextItemsResource:
         Args:
             page_size: Maximum items per page.
             page_token: Cursor from a previous page.
-            search_query: Optional free-text filter.
+            search_query: Word search: returns rows that contain every word of
+                the query, case-insensitive.
             topics: Optional topic filters.
 
         Returns:
