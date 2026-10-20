@@ -339,7 +339,7 @@ class ChatInterfaceConfigDto(BaseModel):
     available_channel_ids: list[str] | None = Field(
         None,
         alias='availableChannelIds',
-        description='Channels where the interface answers. Slack channel ids look like `C0ALH2JTRR9`. Empty or absent means every channel.',
+        description='Channels where the interface answers. Channel ids look like `C0ALH2JTRR9`. Empty or absent means every channel.',
         examples=[['C0ALH2JTRR9']],
     )
 
@@ -2098,7 +2098,7 @@ class UpdateAgentInterfaceDto(BaseModel):
     )
     config: dict[str, Any] | None = Field(
         None,
-        description='New config payload (interface-type-specific). Free-form JSONB. Replaces the prior config.',
+        description='Replacement chat interface settings (`accessMode`, `allowedEmails`, `availableChannelIds`). An MCP interface accepts no config keys. Replaces the stored config.',
         examples=[{}],
     )
 
@@ -2546,7 +2546,7 @@ class AddAgentInterfaceDto(BaseModel):
     )
     config: dict[str, Any] | None = Field(
         None,
-        description='Initial config payload (interface-type-specific). Free-form JSONB.',
+        description='Chat interface settings. `accessMode` is `all`, `allow-list`, or `allow-org`. `allowedEmails` lists email addresses. `availableChannelIds` lists channel ids; empty or absent means every channel. An MCP interface accepts no config keys.',
         examples=[{}],
     )
 
