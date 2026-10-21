@@ -406,22 +406,24 @@ class ComposeSkillContextResponseDto(BaseModel):
     )
 
 
-class ConnectionDto(BaseModel):
+class ConnectionSelectionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    id: str = Field(
+    path: list[str] = Field(
         ...,
-        description='Integration connection UUID.',
-        examples=['7a3f9d2c-1111-4000-a000-000000000abc'],
+        description='Path of the unit, from the connection down to the unit itself.',
+        examples=[['acme/widgets']],
     )
-    name: str | None = Field(
+    object_type: str = Field(
         ...,
-        description='Human-readable connection name configured in the org.',
-        examples=['Production Warehouse'],
+        alias='objectType',
+        description='Kind of unit, such as repository or schema.',
+        examples=['repository'],
     )
-    type: str | None = Field(
+    display_name: str | None = Field(
         ...,
-        description='Effective integration category for the connection (e.g. postgresql, bigquery).',
-        examples=['postgresql'],
+        alias='displayName',
+        description='Human-readable name, when the connection has one.',
+        examples=['widgets'],
     )
 
 
@@ -1348,11 +1350,10 @@ class ListAutomationRunsResponseDto(BaseModel):
     )
 
 
-class ListConnectionsResponseDto(BaseModel):
+class ListConnectionSelectionsResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    connections: list[ConnectionDto] = Field(
-        ...,
-        description='Page of integration connections the caller can `use`. Connections the caller cannot access are filtered out (not enumerated).',
+    selections: list[ConnectionSelectionDto] = Field(
+        ..., description='Page of selectable units on this connection.'
     )
     next_page_token: str | None = Field(
         ...,
@@ -1807,6 +1808,24 @@ class SearchMemoriesRequestDto(BaseModel):
         examples=[10],
         ge=1.0,
         le=1000.0,
+    )
+
+
+class DepthBelowRoot(float, Enum):
+    number_0 = 0
+    number_1 = 1
+
+
+class SelectionModelRootDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    object_type: str = Field(
+        ...,
+        alias='objectType',
+        description='Kind of unit, such as repository or schema.',
+        examples=['repository'],
+    )
+    arity: float = Field(
+        ..., description='Number of path segments in a unit of this kind.', examples=[1]
     )
 
 
@@ -3326,6 +3345,25 @@ class RecordSuggestionEventDto(BaseModel):
     metadata: dict[str, Any] | None = Field(None, description='Event metadata.')
 
 
+class SelectionModelDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    unit_term: str = Field(
+        ...,
+        alias='unitTerm',
+        description='What one selectable unit is called.',
+        examples=['Repository'],
+    )
+    roots: list[SelectionModelRootDto] = Field(
+        ..., description='The kinds of unit a scope may select on this connection.'
+    )
+    depth_below_root: DepthBelowRoot = Field(
+        ...,
+        alias='depthBelowRoot',
+        description='How many levels below a unit a scope may still name. 0 means the unit itself only.',
+        examples=[0],
+    )
+
+
 class SharedUserDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     email: str = Field(
@@ -3817,6 +3855,30 @@ class BulkUploadFromUrlsResponseDto(BaseModel):
     )
 
 
+class ConnectionDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(
+        ...,
+        description='Integration connection UUID.',
+        examples=['7a3f9d2c-1111-4000-a000-000000000abc'],
+    )
+    name: str | None = Field(
+        ...,
+        description='Human-readable connection name configured in the org.',
+        examples=['Production Warehouse'],
+    )
+    type: str | None = Field(
+        ...,
+        description='Effective integration category for the connection (e.g. postgresql, bigquery).',
+        examples=['postgresql'],
+    )
+    selection_model: SelectionModelDto | None = Field(
+        None,
+        alias='selectionModel',
+        description='How a scope selects units on this connection. Omitted when the connection has none.',
+    )
+
+
 class ConversationDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     thread_id: str = Field(
@@ -4030,6 +4092,19 @@ class ListAgentsResponseDto(BaseModel):
     workflows: list[WorkflowDto] = Field(
         ...,
         description='Page of workflows the caller can at least `use`. Workflows the caller cannot see are filtered out (not enumerated).',
+    )
+    next_page_token: str | None = Field(
+        ...,
+        alias='nextPageToken',
+        description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
+    )
+
+
+class ListConnectionsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    connections: list[ConnectionDto] = Field(
+        ...,
+        description='Page of integration connections the caller can `use`. Connections the caller cannot access are filtered out (not enumerated).',
     )
     next_page_token: str | None = Field(
         ...,

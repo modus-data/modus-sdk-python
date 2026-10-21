@@ -18,7 +18,7 @@ from .agent_runs import (
 )
 from .agents import Agent, AgentStatus, AgentType
 from .chat import ChatResult
-from .connections import Connection
+from .connections import Connection, ConnectionSelection
 from .context import ContextItem, ContextItemAncestor, ContextType
 from .context_accessors import (
     context_item_label,
@@ -66,6 +66,7 @@ __all__ = [
     "AsyncPage",
     "ChatResult",
     "Connection",
+    "ConnectionSelection",
     "ContextItem",
     "ContextItemAncestor",
     "ContextType",

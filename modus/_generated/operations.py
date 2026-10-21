@@ -28,6 +28,16 @@ OPERATIONS: dict[str, OperationSpec] = {
         "request_schema": None,
         "response_schema": 'ListConnectionsResponseDto',
     },
+    "ConnectionsController_listSelections": {
+        "method": "GET",
+        "path": '/api/v1/connections/{connectionId}/selections',
+        "service": 'modus-api',
+        "server_url": 'https://api.getmodus.com',
+        "path_params": ('connectionId',),
+        "query_params": ('pageToken', 'pageSize'),
+        "request_schema": None,
+        "response_schema": 'ListConnectionSelectionsResponseDto',
+    },
     "ContextCreatorsController_createLink": {
         "method": "POST",
         "path": '/api/v1/context/links',

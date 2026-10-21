@@ -128,6 +128,18 @@ for item in client.context.items.list():
     print(item.uid, modus.context_item_label(item))
 ```
 
+### Connections
+
+`list_selections` returns one page of the units a scope can select on a connection
+(`ConnectionSelection`: `path`, `object_type`, `display_name`); `iter_selections` follows every page:
+
+```python
+connection = client.connections.find(name="GitHub")  # None when no connection has that name
+if connection is not None:
+    for unit in client.connections.iter_selections(connection.id):
+        print(unit.object_type, unit.display_name, unit.path)
+```
+
 ### Ingested data
 
 Upload the exact SQL request and CSV response through the regular `Modus` client. The
