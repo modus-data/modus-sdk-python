@@ -122,6 +122,20 @@ def test_memories_update_rejects_empty_memory_id(client) -> None:
 
 
 @respx.mock
+def test_memories_list_rejects_empty_scope_id(client) -> None:
+    with pytest.raises(ValueError, match="scope_id"):
+        client.scopes.memories("").list()
+    assert not respx.calls
+
+
+@respx.mock
+async def test_async_memories_list_rejects_empty_scope_id(async_client) -> None:
+    with pytest.raises(ValueError, match="scope_id"):
+        await async_client.scopes.memories("").list()
+    assert not respx.calls
+
+
+@respx.mock
 def test_memories_delete(client) -> None:
     route = respx.delete(f"{MEMORIES_BASE}/mem_01").mock(
         return_value=httpx.Response(204)

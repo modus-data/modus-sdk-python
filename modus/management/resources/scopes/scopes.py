@@ -46,12 +46,7 @@ from .evaluations import (
     ScopeEvaluationsResource,
 )
 from .interfaces import AsyncScopeInterfacesResource, ScopeInterfacesResource
-from .memories import (
-    SCOPE_MEMORY_OPERATIONS,
-    AsyncScopeMemoriesResource,
-    ScopeMemoriesOperations,
-    ScopeMemoriesResource,
-)
+from .memories import AsyncScopeMemoriesResource, ScopeMemoriesResource
 from .supervision import AsyncScopeSupervisionResource, ScopeSupervisionResource
 
 
@@ -77,7 +72,6 @@ class ManagementScopesOperations:
     patch_mcp_config: str
     get_variation: str
     conversations: ScopeConversationsOperations
-    memories: ScopeMemoriesOperations
     evaluations: ScopeEvaluationsOperations
 
 
@@ -95,7 +89,6 @@ MANAGEMENT_SCOPE_OPERATIONS = ManagementScopesOperations(
     patch_mcp_config="ScopesController_patchMcpConfig",
     get_variation="ScopesController_getVariation",
     conversations=SCOPE_CONVERSATION_OPERATIONS,
-    memories=SCOPE_MEMORY_OPERATIONS,
     evaluations=SCOPE_EVALUATION_OPERATIONS,
 )
 
@@ -156,7 +149,7 @@ class ScopesResource:
 
     def memories(self, scope_id: Union[int, str]) -> ScopeMemoriesResource:
         """Return the memories sub-resource scoped to ``scope_id``."""
-        return ScopeMemoriesResource(self._http, self._config, scope_id, self._ops.memories)
+        return ScopeMemoriesResource(self._http, self._config, scope_id)
 
     def evaluations(self, scope_id: Union[int, str]) -> ScopeEvaluationsResource:
         """Return the evaluations sub-resource scoped to ``scope_id``."""
@@ -580,7 +573,7 @@ class AsyncScopesResource:
 
     def memories(self, scope_id: Union[int, str]) -> AsyncScopeMemoriesResource:
         """Return the memories sub-resource scoped to ``scope_id``."""
-        return AsyncScopeMemoriesResource(self._http, self._config, scope_id, self._ops.memories)
+        return AsyncScopeMemoriesResource(self._http, self._config, scope_id)
 
     def supervision(self, scope_id: Union[int, str]) -> AsyncScopeSupervisionResource:
         """Return the supervision sub-resource scoped to ``scope_id``."""

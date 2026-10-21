@@ -111,7 +111,9 @@
         "{workspaceRoot}/apps/services/*/openapi/v1.json",
         "{workspaceRoot}/packages/openapi-portal/src/**/*.ts",
         "{workspaceRoot}/distribution/clients/python/scripts/generate-sdk-from-openapi.py",
-        "{workspaceRoot}/distribution/clients/python/scripts/emit-openapi-operations.py"
+        "{workspaceRoot}/distribution/clients/python/scripts/emit-openapi-operations.py",
+        "{workspaceRoot}/distribution/clients/python/scripts/emit_sdk_resources.py",
+        "{workspaceRoot}/distribution/clients/sdk-surface.json"
       ],
       "outputs": ["{projectRoot}/modus/_generated/**"]
     },
@@ -131,7 +133,9 @@
         "default",
         "{workspaceRoot}/apps/services/*/openapi/v1.json",
         { "dependentTasksOutputFiles": "**/*.js" },
-        "{workspaceRoot}/distribution/clients/python/scripts/**"
+        "{workspaceRoot}/distribution/clients/python/scripts/**",
+        "{workspaceRoot}/distribution/clients/sdk-surface.json",
+        "{workspaceRoot}/distribution/clients/typescript/modus-sdk/src/_generated/public-openapi.json"
       ]
     },
     "sdk:check": {
