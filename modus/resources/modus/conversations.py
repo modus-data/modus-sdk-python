@@ -5,6 +5,10 @@ from __future__ import annotations
 from typing import Literal, Optional
 
 from ..._config import ModusConfig
+from ..._generated.resources.consumption.modus.conversations import (
+    _AsyncModusConversationsResourceBase,
+    _ModusConversationsResourceBase,
+)
 from ..._http import AsyncHttpClient, HttpClient
 from ..._openapi_invoke import invoke_operation, invoke_operation_async
 from ..._pagination import (
@@ -13,8 +17,8 @@ from ..._pagination import (
     build_async_aip_page,
 )
 from ..._retry import async_with_retry, with_retry
-from ..._validation import validate_id, validate_page_size
-from ...types.conversations import Conversation, ConversationListItem
+from ..._validation import validate_page_size
+from ...types.conversations import ConversationListItem
 from ...types.pagination import AsyncPage, Page
 
 ConversationKind = Literal["all", "modus", "scopes"]
@@ -40,10 +44,9 @@ def _list_params(
     return aip_list_params(page_size, page_token, **extra)
 
 
-class ModusConversationsResource:
+class ModusConversationsResource(_ModusConversationsResourceBase):
     def __init__(self, http: HttpClient, config: ModusConfig) -> None:
-        self._http = http
-        self._config = config
+        super().__init__(http, config)
 
     def list(
         self,
@@ -101,24 +104,10 @@ class ModusConversationsResource:
             lambda cur: self._list_page(page_size, cur, kind, source, source_ref),
         )
 
-    def get(self, thread_id: str) -> Conversation:
-        """Retrieve a conversation thread with full message history."""
-        validate_id(thread_id, name="thread_id")
-        data = with_retry(
-            lambda: invoke_operation(
-                self._http,
-                "ModusConversationsController_get",
-                path_params={"threadId": thread_id},
-            ),
-            self._config.max_retries,
-        )
-        return Conversation.model_validate(data)
 
-
-class AsyncModusConversationsResource:
+class AsyncModusConversationsResource(_AsyncModusConversationsResourceBase):
     def __init__(self, http: AsyncHttpClient, config: ModusConfig) -> None:
-        self._http = http
-        self._config = config
+        super().__init__(http, config)
 
     async def list(
         self,
@@ -156,16 +145,3 @@ class AsyncModusConversationsResource:
             ConversationListItem,
             lambda cur: self._list_page(page_size, cur, kind, source, source_ref),
         )
-
-    async def get(self, thread_id: str) -> Conversation:
-        """Retrieve a conversation thread with full message history. See the sync ``get`` for argument details."""
-        validate_id(thread_id, name="thread_id")
-        data = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                "ModusConversationsController_get",
-                path_params={"threadId": thread_id},
-            ),
-            self._config.max_retries,
-        )
-        return Conversation.model_validate(data)

@@ -12,16 +12,14 @@ import httpx
 
 from modus._config import ModusConfig
 from modus._exceptions import ModusError
+from modus._generated.resources.management.context.files import (
+    _AsyncContextFilesResourceBase,
+    _ContextFilesResourceBase,
+)
 from modus._http import AsyncHttpClient, HttpClient
 from modus._openapi_invoke import invoke_operation, invoke_operation_async
-from modus._pagination import (
-    aip_list_params,
-    build_aip_page,
-    build_async_aip_page,
-)
 from modus._retry import async_with_retry, with_retry
-from modus._validation import validate_id, validate_page_size
-from modus.types.pagination import AsyncPage, Page
+from modus._validation import validate_id
 
 from ...types.context_files import (
     BulkFinalizeResult,
@@ -42,7 +40,6 @@ from ...types.context_files import (
 # Bulk `create_upload_urls` / `upload_from_urls` request cap — matches the backend.
 MAX_BULK_UPLOAD_FILES = 100
 
-_DEFAULT_LIST_PAGE_SIZE = 50
 _DEFAULT_PUT_TIMEOUT_S = 60.0
 # `pending` is gone from the public enum: an upload has no resource until it is
 # finalized. Kept at rank 0 so an older server still reporting it is ordered
@@ -251,7 +248,7 @@ def _assign_slots(
     return [(path, folder_path, slot) for (path, folder_path), slot in zip(remaining, uploaded)]
 
 
-class ContextFilesResource:
+class ContextFilesResource(_ContextFilesResourceBase):
     """
     Durable file uploads for modus.management.ModusManagement.
 
@@ -267,8 +264,7 @@ class ContextFilesResource:
     """
 
     def __init__(self, http: HttpClient, config: ModusConfig) -> None:
-        self._http = http
-        self._config = config
+        super().__init__(http, config)
 
     def create_upload_url(self, *, file_name: str, content_type: str, file_size: int) -> UploadUrlSlot:
         """Get a presigned S3 PUT URL for one file.
@@ -367,54 +363,6 @@ class ContextFilesResource:
             self._config.max_retries,
         )
         return BulkUploadFromUrlsResult.model_validate(data)
-
-    def get(self, upload_id: str) -> FileUpload:
-        """Fetch one file upload by its id.
-
-        Args:
-            upload_id: Upload id returned by ``create_upload_url`` / ``upload_from_url``.
-
-        Returns:
-            The file upload resource, including its processing ``status``.
-
-        Example:
-            >>> upload = mgmt.context.files.get("PLACEHOLDER_UPLOAD_ID")
-            >>> print(upload.status, upload.file_name)
-        """
-        validate_id(upload_id, name="upload_id")
-        data = with_retry(
-            lambda: invoke_operation(
-                self._http, "ContextFilesController_get", path_params={"uploadId": upload_id}
-            ),
-            self._config.max_retries,
-        )
-        return FileUpload.model_validate(data)
-
-    def list(self, *, page_size: int = _DEFAULT_LIST_PAGE_SIZE, page_token: Optional[str] = None) -> Page[FileUpload]:
-        """List durable file uploads.
-
-        Args:
-            page_size:  Items per page (default 50).
-            page_token: Opaque token from a previous page's ``next_page_token``.
-
-        Returns:
-            Page of file uploads. Uploads that only have a pending row (not yet
-            landed) aren't included here — use ``get(upload_id)`` for those.
-
-        Example:
-            >>> for row in mgmt.context.files.list(page_size=25).auto_paging_iter():
-            ...     print(row.upload_id, row.file_name, row.status)
-        """
-        validate_page_size(page_size, max_page_size=200)
-        return self._list_page(page_size, page_token)
-
-    def _list_page(self, page_size: int, page_token: Optional[str]) -> Page[FileUpload]:
-        params = aip_list_params(page_size, page_token)
-        data = with_retry(
-            lambda: invoke_operation(self._http, "ContextFilesController_list", query=params),
-            self._config.max_retries,
-        )
-        return build_aip_page(data, "files", FileUpload, lambda cur: self._list_page(page_size, cur))
 
     def finalize(
         self,
@@ -778,12 +726,11 @@ class ContextFilesResource:
         return out
 
 
-class AsyncContextFilesResource:
+class AsyncContextFilesResource(_AsyncContextFilesResourceBase):
     """Async twin of ``ContextFilesResource``."""
 
     def __init__(self, http: AsyncHttpClient, config: ModusConfig) -> None:
-        self._http = http
-        self._config = config
+        super().__init__(http, config)
 
     async def create_upload_url(self, *, file_name: str, content_type: str, file_size: int) -> UploadUrlSlot:
         """Get a presigned S3 PUT URL for one file. See the sync ``create_upload_url`` for argument details."""
@@ -836,32 +783,6 @@ class AsyncContextFilesResource:
             self._config.max_retries,
         )
         return BulkUploadFromUrlsResult.model_validate(data)
-
-    async def get(self, upload_id: str) -> FileUpload:
-        """Fetch one file upload by its id. See the sync ``get`` for argument details."""
-        validate_id(upload_id, name="upload_id")
-        data = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http, "ContextFilesController_get", path_params={"uploadId": upload_id}
-            ),
-            self._config.max_retries,
-        )
-        return FileUpload.model_validate(data)
-
-    async def list(
-        self, *, page_size: int = _DEFAULT_LIST_PAGE_SIZE, page_token: Optional[str] = None
-    ) -> AsyncPage[FileUpload]:
-        """List durable file uploads. See the sync ``list`` for argument details."""
-        validate_page_size(page_size, max_page_size=200)
-        return await self._list_page(page_size, page_token)
-
-    async def _list_page(self, page_size: int, page_token: Optional[str]) -> AsyncPage[FileUpload]:
-        params = aip_list_params(page_size, page_token)
-        data = await async_with_retry(
-            lambda: invoke_operation_async(self._http, "ContextFilesController_list", query=params),
-            self._config.max_retries,
-        )
-        return build_async_aip_page(data, "files", FileUpload, lambda cur: self._list_page(page_size, cur))
 
     async def finalize(
         self,

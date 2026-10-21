@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Union
 
 from modus._config import ModusConfig
@@ -13,19 +12,16 @@ from modus._generated.models import (
     SkillMcpInterfaceConfigDto,
     TransferOwnershipDto,
 )
+from modus._generated.resources.management.scopes import (
+    _AsyncScopesResourceBase,
+    _ScopesResourceBase,
+)
 from modus._http import AsyncHttpClient, HttpClient
 from modus._openapi_invoke import invoke_operation, invoke_operation_async
-from modus._pagination import (
-    aip_list_params,
-    build_aip_page_mapped,
-    build_async_aip_page_mapped,
-)
 from modus._query import update_mask_query
 from modus._retry import async_with_retry, with_retry
-from modus._validation import validate_id, validate_page_size
-from modus.types.pagination import AsyncPage, Page
+from modus._validation import validate_id
 from modus.types.skills import Skill
-from modus.types.views import VariationView
 
 from ...types.json_blob import JsonObjectListInput, dump_json_object_list
 from ...types.toolset import ToolsetInput, dump_toolset
@@ -35,62 +31,15 @@ from .._access_config_write import (
 )
 from ._update_body import _ScopeCreateBody, _ScopeUpdateBody
 from .conversations import (
-    SCOPE_CONVERSATION_OPERATIONS,
     AsyncScopeConversationsResource,
-    ScopeConversationsOperations,
     ScopeConversationsResource,
 )
 from .evaluations import (
-    SCOPE_EVALUATION_OPERATIONS,
-    ScopeEvaluationsOperations,
     ScopeEvaluationsResource,
 )
 from .interfaces import AsyncScopeInterfacesResource, ScopeInterfacesResource
 from .memories import AsyncScopeMemoriesResource, ScopeMemoriesResource
 from .supervision import AsyncScopeSupervisionResource, ScopeSupervisionResource
-
-
-@dataclass(frozen=True)
-class ManagementScopesOperations:
-    """Which operationIds a management scopes-shaped resource calls.
-
-    Drives the ``/api/v1/scopes`` surface: the CRUD/lifecycle logic reads the
-    canonical ``ScopesController_*`` operationIds from
-    :data:`MANAGEMENT_SCOPE_OPERATIONS`.
-    """
-
-    list: str
-    get: str
-    create: str
-    update: str
-    deploy: str
-    delete: str
-    restore: str
-    request_ownership_transfer: str
-    cancel_ownership_transfer: str
-    accept_ownership_transfer: str
-    patch_mcp_config: str
-    get_variation: str
-    conversations: ScopeConversationsOperations
-    evaluations: ScopeEvaluationsOperations
-
-
-MANAGEMENT_SCOPE_OPERATIONS = ManagementScopesOperations(
-    list="ScopesController_list",
-    get="ScopesController_get",
-    create="ScopesController_create",
-    update="ScopesController_update",
-    deploy="ScopesController_deploy",
-    delete="ScopesController_delete",
-    restore="ScopesController_restore",
-    request_ownership_transfer="ScopesController_requestOwnershipTransfer",
-    cancel_ownership_transfer="ScopesController_cancelOwnershipTransfer",
-    accept_ownership_transfer="ScopesController_acceptOwnershipTransfer",
-    patch_mcp_config="ScopesController_patchMcpConfig",
-    get_variation="ScopesController_getVariation",
-    conversations=SCOPE_CONVERSATION_OPERATIONS,
-    evaluations=SCOPE_EVALUATION_OPERATIONS,
-)
 
 
 def _parse_scope(raw: dict) -> Skill:
@@ -102,24 +51,7 @@ def _parse_deploy_scope(raw: Any) -> Skill:
     return DeployResponseDto.model_validate(raw).scope
 
 
-def _scopes_list_params(
-    page_size: int,
-    page_token: Optional[str],
-    search: Optional[str],
-    view: Optional[VariationView],
-    manager_id: Optional[int],
-) -> dict:
-    extra: dict = {}
-    if search is not None:
-        extra["search"] = search
-    if view is not None:
-        extra["view"] = view
-    if manager_id is not None:
-        extra["managerId"] = manager_id
-    return aip_list_params(page_size, page_token, **extra)
-
-
-class ScopesResource:
+class ScopesResource(_ScopesResourceBase):
     """
     Full CRUD access to Modus scopes.
 
@@ -137,15 +69,12 @@ class ScopesResource:
         self,
         http: HttpClient,
         config: ModusConfig,
-        ops: ManagementScopesOperations = MANAGEMENT_SCOPE_OPERATIONS,
     ) -> None:
-        self._http = http
-        self._config = config
-        self._ops = ops
+        super().__init__(http, config)
 
     def conversations(self, scope_id: Union[int, str]) -> ScopeConversationsResource:
         """Return the conversations sub-resource scoped to ``scope_id``."""
-        return ScopeConversationsResource(self._http, self._config, scope_id, self._ops.conversations)
+        return ScopeConversationsResource(self._http, self._config, scope_id)
 
     def memories(self, scope_id: Union[int, str]) -> ScopeMemoriesResource:
         """Return the memories sub-resource scoped to ``scope_id``."""
@@ -153,7 +82,7 @@ class ScopesResource:
 
     def evaluations(self, scope_id: Union[int, str]) -> ScopeEvaluationsResource:
         """Return the evaluations sub-resource scoped to ``scope_id``."""
-        return ScopeEvaluationsResource(self._http, self._config, scope_id, self._ops.evaluations)
+        return ScopeEvaluationsResource(self._http, self._config, scope_id)
 
     def supervision(self, scope_id: Union[int, str]) -> ScopeSupervisionResource:
         """Return the supervision sub-resource scoped to ``scope_id``."""
@@ -162,89 +91,6 @@ class ScopesResource:
     def interfaces(self, scope_id: Union[int, str]) -> ScopeInterfacesResource:
         """Return the Slack/Teams interfaces sub-resource scoped to ``scope_id``."""
         return ScopeInterfacesResource(self._http, self._config, scope_id)
-
-    def list(
-        self,
-        *,
-        page_size: int = 25,
-        page_token: Optional[str] = None,
-        search: Optional[str] = None,
-        view: Optional[VariationView] = None,
-        manager_id: Optional[int] = None,
-    ) -> Page[Skill]:
-        """
-        List all Modus scopes in the organisation.
-
-        Args:
-            page_size:   Maximum number of items to return (default 25).
-            page_token:  Token from a previous page's ``next_page_token``; omit for the first page.
-            search:      Case-insensitive substring filter on the scope name.
-            view:        Variation view — ``"active"`` (deployed) or ``"draft"``.
-            manager_id:  Return only scopes supervised by this manager scope id.
-
-        Returns:
-            ``Page[Skill]``. Use ``.auto_paging_iter()`` to walk all pages.
-
-        Example:
-            >>> for scope in mgmt.scopes.list().auto_paging_iter():
-            ...     print(scope.id, scope.name, scope.status)
-        """
-        validate_page_size(page_size)
-        return self._list_page(page_size, page_token, search, view, manager_id)
-
-    def _list_page(
-        self,
-        page_size: int,
-        page_token: Optional[str],
-        search: Optional[str] = None,
-        view: Optional[VariationView] = None,
-        manager_id: Optional[int] = None,
-    ) -> Page[Skill]:
-        params = _scopes_list_params(page_size, page_token, search, view, manager_id)
-        data = with_retry(
-            lambda: invoke_operation(
-                self._http, self._ops.list, query=params
-            ),
-            self._config.max_retries,
-        )
-        return build_aip_page_mapped(
-            data,
-            "scopes",
-            _parse_scope,
-            lambda cur: self._list_page(page_size, cur, search, view, manager_id),
-        )
-
-    def get(
-        self,
-        scope_id: Union[int, str],
-        *,
-        view: Optional[VariationView] = None,
-    ) -> Skill:
-        """Retrieve a Modus scope with full configuration (instructions, model, and related fields).
-
-        Args:
-            scope_id: Scope numeric id or slug string.
-            view:     Variation view — ``"active"`` (deployed) or ``"draft"``.
-
-        Returns:
-            Scope record (``id``, ``name``, ``status``, …).
-
-        Example:
-            >>> scope = mgmt.scopes.get("PLACEHOLDER_SCOPE_ID")
-            >>> print(scope.name, scope.status)
-        """
-        validate_id(scope_id, name="scope_id")
-        query = {} if view is None else {"view": view}
-        data = with_retry(
-            lambda: invoke_operation(
-                self._http,
-                self._ops.get,
-                path_params={"id": scope_id},
-                query=query or None,
-            ),
-            self._config.max_retries,
-        )
-        return _parse_scope(data)
 
     def create(
         self,
@@ -308,7 +154,7 @@ class ScopesResource:
         ).model_dump(by_alias=True, exclude_none=True)
         raw = with_retry(
             lambda: invoke_operation(
-                self._http, self._ops.create, json_body=body
+                self._http, "ScopesController_create", json_body=body
             ),
             self._config.max_retries,
         )
@@ -380,7 +226,7 @@ class ScopesResource:
             lambda: with_retry(
                 lambda: invoke_operation(
                     self._http,
-                    self._ops.get,
+                    "ScopesController_get",
                     path_params={"id": scope_id},
                 ),
                 self._config.max_retries,
@@ -404,7 +250,7 @@ class ScopesResource:
         raw = with_retry(
             lambda: invoke_operation(
                 self._http,
-                self._ops.update,
+                "ScopesController_update",
                 path_params={"id": scope_id},
                 query=update_mask_query(update_mask),
                 json_body=body,
@@ -431,7 +277,7 @@ class ScopesResource:
         raw = with_retry(
             lambda: invoke_operation(
                 self._http,
-                self._ops.deploy,
+                "ScopesController_deploy",
                 path_params={"id": scope_id},
                 json_body={},
             ),
@@ -439,29 +285,6 @@ class ScopesResource:
             retry_not_found_on_deploy=True,
         )
         return _parse_deploy_scope(raw)
-
-    def delete(self, scope_id: Union[int, str]) -> None:
-        """Delete a Modus scope.
-
-        Args:
-            scope_id: Scope to remove.
-
-        Returns:
-            ``None``.
-
-        Example:
-            >>> mgmt = modus.management.ModusManagement()
-            >>> mgmt.scopes.delete("PLACEHOLDER_SCOPE_ID")
-        """
-        validate_id(scope_id, name="scope_id")
-        with_retry(
-            lambda: invoke_operation(
-                self._http,
-                self._ops.delete,
-                path_params={"id": scope_id},
-            ),
-            self._config.max_retries,
-        )
 
     def request_ownership_transfer(
         self, scope_id: Union[int, str], *, new_owner_user_id: str,
@@ -472,50 +295,9 @@ class ScopesResource:
         raw = with_retry(
             lambda: invoke_operation(
                 self._http,
-                self._ops.request_ownership_transfer,
+                "ScopesController_requestOwnershipTransfer",
                 path_params={"id": scope_id},
                 json_body=body.model_dump(by_alias=True, exclude_none=True),
-            ),
-            self._config.max_retries,
-        )
-        return _parse_scope(raw)
-
-    def cancel_ownership_transfer(self, scope_id: Union[int, str]) -> Skill:
-        """Cancel a pending scope ownership transfer."""
-        validate_id(scope_id, name="scope_id")
-        raw = with_retry(
-            lambda: invoke_operation(
-                self._http,
-                self._ops.cancel_ownership_transfer,
-                path_params={"id": scope_id},
-            ),
-            self._config.max_retries,
-        )
-        return _parse_scope(raw)
-
-    def accept_ownership_transfer(self, scope_id: Union[int, str]) -> Skill:
-        """Accept a pending scope ownership transfer."""
-        validate_id(scope_id, name="scope_id")
-        raw = with_retry(
-            lambda: invoke_operation(
-                self._http,
-                self._ops.accept_ownership_transfer,
-                path_params={"id": scope_id},
-                json_body={},
-            ),
-            self._config.max_retries,
-        )
-        return _parse_scope(raw)
-
-    def restore(self, scope_id: Union[int, str]) -> Skill:
-        """Restore a deleted scope."""
-        validate_id(scope_id, name="scope_id")
-        raw = with_retry(
-            lambda: invoke_operation(
-                self._http,
-                self._ops.restore,
-                path_params={"id": scope_id},
-                json_body={},
             ),
             self._config.max_retries,
         )
@@ -532,7 +314,7 @@ class ScopesResource:
         with_retry(
             lambda: invoke_operation(
                 self._http,
-                self._ops.patch_mcp_config,
+                "ScopesController_patchMcpConfig",
                 path_params={"id": scope_id},
                 json_body=body.model_dump(by_alias=True, exclude_none=True),
             ),
@@ -548,7 +330,7 @@ class ScopesResource:
         raw = with_retry(
             lambda: invoke_operation(
                 self._http,
-                self._ops.get_variation,
+                "ScopesController_getVariation",
                 path_params={"id": scope_id, "variationUid": variation_uid},
             ),
             self._config.max_retries,
@@ -556,20 +338,17 @@ class ScopesResource:
         return _parse_scope(raw)
 
 
-class AsyncScopesResource:
+class AsyncScopesResource(_AsyncScopesResourceBase):
     def __init__(
         self,
         http: AsyncHttpClient,
         config: ModusConfig,
-        ops: ManagementScopesOperations = MANAGEMENT_SCOPE_OPERATIONS,
     ) -> None:
-        self._http = http
-        self._config = config
-        self._ops = ops
+        super().__init__(http, config)
 
     def conversations(self, scope_id: Union[int, str]) -> AsyncScopeConversationsResource:
         """Return the conversations sub-resource scoped to ``scope_id``."""
-        return AsyncScopeConversationsResource(self._http, self._config, scope_id, self._ops.conversations)
+        return AsyncScopeConversationsResource(self._http, self._config, scope_id)
 
     def memories(self, scope_id: Union[int, str]) -> AsyncScopeMemoriesResource:
         """Return the memories sub-resource scoped to ``scope_id``."""
@@ -582,70 +361,6 @@ class AsyncScopesResource:
     def interfaces(self, scope_id: Union[int, str]) -> AsyncScopeInterfacesResource:
         """Return the Slack/Teams interfaces sub-resource scoped to ``scope_id``."""
         return AsyncScopeInterfacesResource(self._http, self._config, scope_id)
-
-    async def list(
-        self,
-        *,
-        page_size: int = 25,
-        page_token: Optional[str] = None,
-        search: Optional[str] = None,
-        view: Optional[VariationView] = None,
-        manager_id: Optional[int] = None,
-    ) -> AsyncPage[Skill]:
-        """
-        List all Modus scopes in the organisation.
-
-        Args:
-            page_size:   Maximum number of items to return (default 25).
-            page_token:  Token from a previous page's ``next_page_token``; omit for the first page.
-            search:      Case-insensitive substring filter on the scope name.
-            view:        Variation view — ``"active"`` (deployed) or ``"draft"``.
-            manager_id:  Return only scopes supervised by this manager scope id.
-        """
-        validate_page_size(page_size)
-        return await self._list_page(page_size, page_token, search, view, manager_id)
-
-    async def _list_page(
-        self,
-        page_size: int,
-        page_token: Optional[str],
-        search: Optional[str] = None,
-        view: Optional[VariationView] = None,
-        manager_id: Optional[int] = None,
-    ) -> AsyncPage[Skill]:
-        params = _scopes_list_params(page_size, page_token, search, view, manager_id)
-        data = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http, self._ops.list, query=params
-            ),
-            self._config.max_retries,
-        )
-        return build_async_aip_page_mapped(
-            data,
-            "scopes",
-            _parse_scope,
-            lambda cur: self._list_page(page_size, cur, search, view, manager_id),
-        )
-
-    async def get(
-        self,
-        scope_id: Union[int, str],
-        *,
-        view: Optional[VariationView] = None,
-    ) -> Skill:
-        """Retrieve a Modus scope with full configuration (instructions, model, and related fields)."""
-        validate_id(scope_id, name="scope_id")
-        query = {} if view is None else {"view": view}
-        data = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                self._ops.get,
-                path_params={"id": scope_id},
-                query=query or None,
-            ),
-            self._config.max_retries,
-        )
-        return _parse_scope(data)
 
     async def create(
         self, name: str, *,
@@ -684,7 +399,7 @@ class AsyncScopesResource:
         ).model_dump(by_alias=True, exclude_none=True)
         raw = await async_with_retry(
             lambda: invoke_operation_async(
-                self._http, self._ops.create, json_body=body
+                self._http, "ScopesController_create", json_body=body
             ),
             self._config.max_retries,
         )
@@ -723,7 +438,7 @@ class AsyncScopesResource:
             existing = await async_with_retry(
                 lambda: invoke_operation_async(
                     self._http,
-                    self._ops.get,
+                    "ScopesController_get",
                     path_params={"id": scope_id},
                 ),
                 self._config.max_retries,
@@ -749,7 +464,7 @@ class AsyncScopesResource:
         raw = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,
-                self._ops.update,
+                "ScopesController_update",
                 path_params={"id": scope_id},
                 query=update_mask_query(update_mask),
                 json_body=body,
@@ -764,7 +479,7 @@ class AsyncScopesResource:
         raw = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,
-                self._ops.deploy,
+                "ScopesController_deploy",
                 path_params={"id": scope_id},
                 json_body={},
             ),
@@ -772,18 +487,6 @@ class AsyncScopesResource:
             retry_not_found_on_deploy=True,
         )
         return _parse_deploy_scope(raw)
-
-    async def delete(self, scope_id: Union[int, str]) -> None:
-        """Delete a Modus scope. See the sync ``delete`` for argument details."""
-        validate_id(scope_id, name="scope_id")
-        await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                self._ops.delete,
-                path_params={"id": scope_id},
-            ),
-            self._config.max_retries,
-        )
 
     async def request_ownership_transfer(
         self, scope_id: Union[int, str], *, new_owner_user_id: str,
@@ -794,50 +497,9 @@ class AsyncScopesResource:
         raw = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,
-                self._ops.request_ownership_transfer,
+                "ScopesController_requestOwnershipTransfer",
                 path_params={"id": scope_id},
                 json_body=body.model_dump(by_alias=True, exclude_none=True),
-            ),
-            self._config.max_retries,
-        )
-        return _parse_scope(raw)
-
-    async def cancel_ownership_transfer(self, scope_id: Union[int, str]) -> Skill:
-        """Cancel a pending scope ownership transfer."""
-        validate_id(scope_id, name="scope_id")
-        raw = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                self._ops.cancel_ownership_transfer,
-                path_params={"id": scope_id},
-            ),
-            self._config.max_retries,
-        )
-        return _parse_scope(raw)
-
-    async def accept_ownership_transfer(self, scope_id: Union[int, str]) -> Skill:
-        """Accept a pending scope ownership transfer."""
-        validate_id(scope_id, name="scope_id")
-        raw = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                self._ops.accept_ownership_transfer,
-                path_params={"id": scope_id},
-                json_body={},
-            ),
-            self._config.max_retries,
-        )
-        return _parse_scope(raw)
-
-    async def restore(self, scope_id: Union[int, str]) -> Skill:
-        """Restore a deleted scope."""
-        validate_id(scope_id, name="scope_id")
-        raw = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                self._ops.restore,
-                path_params={"id": scope_id},
-                json_body={},
             ),
             self._config.max_retries,
         )
@@ -854,7 +516,7 @@ class AsyncScopesResource:
         await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,
-                self._ops.patch_mcp_config,
+                "ScopesController_patchMcpConfig",
                 path_params={"id": scope_id},
                 json_body=body.model_dump(by_alias=True, exclude_none=True),
             ),
@@ -870,7 +532,7 @@ class AsyncScopesResource:
         raw = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,
-                self._ops.get_variation,
+                "ScopesController_getVariation",
                 path_params={"id": scope_id, "variationUid": variation_uid},
             ),
             self._config.max_retries,

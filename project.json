@@ -30,6 +30,7 @@
         "default",
         "{workspaceRoot}/apps/services/*/openapi/v1.json",
         "{workspaceRoot}/packages/openapi-portal/src/**/*.ts",
+        "{workspaceRoot}/distribution/clients/python/scripts/**",
         "{workspaceRoot}/distribution/clients/sdk-surface.json",
         "{workspaceRoot}/distribution/clients/sdk-surface.schema.json"
       ],
@@ -98,8 +99,7 @@
     "generate": {
       "executor": "nx:run-commands",
       "dependsOn": [
-        { "projects": ["modus-api", "agent-service"], "target": "openapi:generate" },
-        { "projects": ["openapi-portal"], "target": "build" },
+        { "projects": ["modus-sdk-typescript"], "target": "generate-spec" },
         "install"
       ],
       "options": {
@@ -150,6 +150,15 @@
         "cwd": "{projectRoot}"
       },
       "outputs": ["{projectRoot}/tests/snapshots/public_surface.json"],
+      "cache": false
+    },
+    "public-surface-check": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install"],
+      "options": {
+        "command": "bash ../../../../scripts/sdk-python/ensure-uv.sh run python ../scripts/emit_public_surface.py --check",
+        "cwd": "{projectRoot}"
+      },
       "cache": false
     },
     "openapi-impact": {

@@ -5,18 +5,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Union
 
+from modus._generated.resources.consumption.scopes.conversations import (
+    _AsyncScopesConversationsResourceBase,
+    _ScopesConversationsResourceBase,
+)
+
 from ..._config import ModusConfig
 from ..._http import AsyncHttpClient, HttpClient
 from ..._openapi_invoke import invoke_operation, invoke_operation_async
-from ..._pagination import (
-    aip_list_params,
-    build_aip_page,
-    build_async_aip_page,
-)
 from ..._retry import async_with_retry, with_retry
-from ..._validation import validate_id, validate_page_size
-from ...types.conversations import Conversation, ConversationListItem
-from ...types.pagination import AsyncPage, Page
+from ..._validation import validate_id
+from ...types.conversations import Conversation
 
 
 @dataclass(frozen=True)
@@ -47,7 +46,7 @@ def _get_query(
     return query or None
 
 
-class ScopeConversationsResource:
+class ScopeConversationsResource(_ScopesConversationsResourceBase):
     """
     Prior chat threads for one published scope.
 
@@ -62,76 +61,8 @@ class ScopeConversationsResource:
         scope_id: Union[int, str],
         ops: ScopeConversationsOperations = SCOPE_CONVERSATION_OPERATIONS,
     ) -> None:
-        self._http = http
-        self._config = config
-        self._scope_id = scope_id
-        self._ops = ops
-
-    def list(
-        self,
-        *,
-        page_size: int = 25,
-        page_token: Optional[str] = None,
-        source: Optional[str] = None,
-        source_ref: Optional[str] = None,
-    ) -> Page[ConversationListItem]:
-        """
-        List conversation threads for this scope, newest first.
-
-        Args:
-            page_size:  Items per page (default 25).
-            page_token: Opaque token from a previous page's ``next_page_token``.
-            source:     Restrict to conversations started from this UI surface
-                        (e.g. ``"context_chat"``, ``"dashboard_copilot"``, ``"slack"``).
-            source_ref: Narrow ``source`` to one instance of that surface — for
-                        ``"dashboard_copilot"`` or ``"dashboard_assistant"``, a dashboard id
-                        (both scope conversation history per dashboard). Requires ``source``;
-                        the API raises :class:`~modus.UnprocessableError` (422) if
-                        sent on its own. Conversations recorded before this filter
-                        shipped carry no instance key and never match it.
-
-        Returns:
-            Page[ConversationListItem] — lightweight summaries with
-            ``first_message`` and ``message_count``. Call ``.get(thread_id)``
-            for the full message history. Use ``.auto_paging_iter()`` to walk
-            all pages.
-
-        Example:
-            >>> for row in client.scopes.conversations(scope_id).list(page_size=10):
-            ...     print(row.thread_id, row.first_message, row.message_count)
-        """
-        validate_page_size(page_size)
-        return self._list_page(page_size, page_token, source, source_ref)
-
-    def _list_page(
-        self,
-        page_size: int,
-        page_token: Optional[str],
-        source: Optional[str] = None,
-        source_ref: Optional[str] = None,
-    ) -> Page[ConversationListItem]:
-        validate_id(self._scope_id, name="scope_id")
-        extra: dict = {}
-        if source is not None:
-            extra["source"] = source
-        if source_ref is not None:
-            extra["sourceRef"] = source_ref
-        params = aip_list_params(page_size, page_token, **extra)
-        data = with_retry(
-            lambda: invoke_operation(
-                self._http,
-                self._ops.list,
-                path_params={"id": self._scope_id},
-                query=params,
-            ),
-            self._config.max_retries,
-        )
-        return build_aip_page(
-            data,
-            "conversations",
-            ConversationListItem,
-            lambda cur: self._list_page(page_size, cur, source, source_ref),
-        )
+        super().__init__(http, config, scope_id, ops)
+        self._ops: ScopeConversationsOperations = ops
 
     def get(
         self,
@@ -175,7 +106,7 @@ class ScopeConversationsResource:
         return Conversation.model_validate(data)
 
 
-class AsyncScopeConversationsResource:
+class AsyncScopeConversationsResource(_AsyncScopesConversationsResourceBase):
     def __init__(
         self,
         http: AsyncHttpClient,
@@ -183,52 +114,8 @@ class AsyncScopeConversationsResource:
         scope_id: Union[int, str],
         ops: ScopeConversationsOperations = SCOPE_CONVERSATION_OPERATIONS,
     ) -> None:
-        self._http = http
-        self._config = config
-        self._scope_id = scope_id
-        self._ops = ops
-
-    async def list(
-        self,
-        *,
-        page_size: int = 25,
-        page_token: Optional[str] = None,
-        source: Optional[str] = None,
-        source_ref: Optional[str] = None,
-    ) -> AsyncPage[ConversationListItem]:
-        """List conversation threads for this scope. See ScopeConversationsResource.list."""
-        validate_page_size(page_size)
-        return await self._list_page(page_size, page_token, source, source_ref)
-
-    async def _list_page(
-        self,
-        page_size: int,
-        page_token: Optional[str],
-        source: Optional[str] = None,
-        source_ref: Optional[str] = None,
-    ) -> AsyncPage[ConversationListItem]:
-        validate_id(self._scope_id, name="scope_id")
-        extra: dict = {}
-        if source is not None:
-            extra["source"] = source
-        if source_ref is not None:
-            extra["sourceRef"] = source_ref
-        params = aip_list_params(page_size, page_token, **extra)
-        data = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                self._ops.list,
-                path_params={"id": self._scope_id},
-                query=params,
-            ),
-            self._config.max_retries,
-        )
-        return build_async_aip_page(
-            data,
-            "conversations",
-            ConversationListItem,
-            lambda cur: self._list_page(page_size, cur, source, source_ref),
-        )
+        super().__init__(http, config, scope_id, ops)
+        self._ops: ScopeConversationsOperations = ops
 
     async def get(
         self,

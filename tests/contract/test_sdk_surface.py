@@ -171,7 +171,7 @@ def test_every_type_points_at_a_module_that_exports_it() -> None:
     missing = [
         f"{name} ({location['py']})"
         for name, location in _SURFACE["types"].items()
-        if not hasattr(importlib.import_module(location["py"]), name)
+        if not hasattr(importlib.import_module(location["py"]), location.get("pyName", name))
     ]
     assert not missing, f"Types not exported from their declared module: {missing}"
 
@@ -249,3 +249,10 @@ def test_async_gaps_name_known_operations() -> None:
     """A renamed operationId would leave a dead entry that suppresses nothing, silently."""
     unknown = sorted(_ASYNC_GAPS - set(_SURFACE["operations"]))
     assert not unknown, f"_ASYNC_GAPS names operationIds absent from sdk-surface.json: {unknown}"
+
+
+def test_sync_only_hints_match_the_exact_expected_async_gaps() -> None:
+    assert {
+        operation_id for operation_id, exposure in _exposures()
+        if exposure.get("pyAsync") is False
+    } == _ASYNC_GAPS

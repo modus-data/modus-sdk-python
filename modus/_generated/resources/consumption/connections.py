@@ -39,7 +39,7 @@ class _ConnectionsResourceBase:
         **Requires:** ``context:read``
 
         Args:
-            page_size: Max items per page. Defaults to 25, clamped to 100.
+            page_size: Items per page. Defaults to 25.
             page_token: Opaque page token from a previous response's ``next_page_token``. Omit for
                 the first page.
             type: Filter by effective integration category (case-sensitive exact match).
@@ -100,7 +100,7 @@ class _AsyncConnectionsResourceBase:
         **Requires:** ``context:read``
 
         Args:
-            page_size: Max items per page. Defaults to 25, clamped to 100.
+            page_size: Items per page. Defaults to 25.
             page_token: Opaque page token from a previous response's ``next_page_token``. Omit for
                 the first page.
             type: Filter by effective integration category (case-sensitive exact match).

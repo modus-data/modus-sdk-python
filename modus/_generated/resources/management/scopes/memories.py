@@ -44,8 +44,7 @@ class _ScopesMemoriesResourceBase:
         **Requires:** ``scopes:read``
 
         Args:
-            page_size: Items per page. Defaults to 100 when no pagination params are sent (legacy);
-                otherwise 25, clamped to 100.
+            page_size: Items per page. Defaults to 25.
             page_token: Opaque page token from a previous response's ``next_page_token``. Omit for
                 the first page.
             user_id: Narrow results to memories tagged with this end-user id.
@@ -200,8 +199,7 @@ class _AsyncScopesMemoriesResourceBase:
         **Requires:** ``scopes:read``
 
         Args:
-            page_size: Items per page. Defaults to 100 when no pagination params are sent (legacy);
-                otherwise 25, clamped to 100.
+            page_size: Items per page. Defaults to 25.
             page_token: Opaque page token from a previous response's ``next_page_token``. Omit for
                 the first page.
             user_id: Narrow results to memories tagged with this end-user id.
