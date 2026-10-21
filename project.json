@@ -136,6 +136,16 @@
       "executor": "nx:noop",
       "dependsOn": ["check-docstrings", "requirements-drift", "contract-check"]
     },
+    "public-surface": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install"],
+      "options": {
+        "command": "bash ../../../../scripts/sdk-python/ensure-uv.sh run python ../scripts/emit_public_surface.py --write",
+        "cwd": "{projectRoot}"
+      },
+      "outputs": ["{projectRoot}/tests/snapshots/public_surface.json"],
+      "cache": false
+    },
     "openapi-impact": {
       "executor": "nx:run-commands",
       "dependsOn": ["install"],
