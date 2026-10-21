@@ -29,7 +29,9 @@
       "inputs": [
         "default",
         "{workspaceRoot}/apps/services/*/openapi/v1.json",
-        "{workspaceRoot}/packages/openapi-portal/src/**/*.ts"
+        "{workspaceRoot}/packages/openapi-portal/src/**/*.ts",
+        "{workspaceRoot}/distribution/clients/sdk-surface.json",
+        "{workspaceRoot}/distribution/clients/sdk-surface.schema.json"
       ],
       "outputs": ["{projectRoot}/reports"]
     },
