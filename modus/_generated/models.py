@@ -1789,6 +1789,10 @@ class ScopeInterfaceDto(BaseModel):
     )
 
 
+class ScopeMcpInterfaceType(str, Enum):
+    mcp = 'mcp'
+
+
 class SearchMemoriesRequestDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     query: str = Field(
@@ -3345,6 +3349,38 @@ class RecordSuggestionEventDto(BaseModel):
     metadata: dict[str, Any] | None = Field(None, description='Event metadata.')
 
 
+class ScopeMcpInterfaceDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(
+        ..., description='Interface id.', examples=['00000000-0000-4000-a000-000000000500']
+    )
+    type: ScopeMcpInterfaceType = Field(
+        ..., description='Interface type. A scope has an MCP interface only.', examples=['mcp']
+    )
+    name: str = Field(..., description='Display name.', examples=['MCP Server'])
+    config: SkillMcpInterfaceConfigDto = Field(
+        ..., description='Core tools and the integrations this interface exposes.'
+    )
+
+
+class ScopeMcpInterfaceInputDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str | None = Field(
+        None,
+        description='Interface id. Assigned when omitted.',
+        examples=['00000000-0000-4000-a000-000000000500'],
+    )
+    type: ScopeMcpInterfaceType = Field(
+        ..., description='Interface type. A scope has an MCP interface only.', examples=['mcp']
+    )
+    name: str | None = Field(
+        None, description='Display name. Assigned when omitted.', examples=['MCP Server']
+    )
+    config: SkillMcpInterfaceConfigDto | None = Field(
+        None, description='Core tools and the integrations this interface exposes.'
+    )
+
+
 class SelectionModelDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     unit_term: str = Field(
@@ -3438,9 +3474,9 @@ class SkillVariationDto(BaseModel):
         ...,
         description='Evaluation entries (task + expected-output pairs) saved for this variation.',
     )
-    interfaces: list[dict[str, Any]] = Field(
+    interfaces: list[ScopeMcpInterfaceDto] = Field(
         ...,
-        description='Interface entries attached to the variation (chat, slack, webhook, etc.). Each is a builder-managed object.',
+        description='MCP interface for this scope. Each row has an id, type mcp, a name, and a config.',
     )
     supervision_subordinate_ids: list[str] = Field(
         ...,
@@ -4022,10 +4058,9 @@ class CreateSkillDto(BaseModel):
         alias='includeOwnLearnings',
         description="Whether the scope reads what is taught while using it: learnings, facts, glossary terms and preferences. Defaults to true. Set false to create the scope without them; it can be included later in the scope's context selections.",
     )
-    interfaces: list[dict[str, Any]] | None = Field(
+    interfaces: list[ScopeMcpInterfaceInputDto] | None = Field(
         None,
-        description='The scope\'s MCP interface configuration. Only entries with `type: "mcp"` are accepted; any other type is rejected with 400.',
-        examples=[[]],
+        description='MCP interface rows for this scope. Each row has type mcp, an optional id and name, and a config of core tools and exposed integrations. Omitted id and name are assigned.',
     )
     access_config: AccessConfigDto | None = Field(
         None,
@@ -4346,10 +4381,9 @@ class UpdateSkillDto(BaseModel):
         description="Updated context selections (sources / docs the scope may read). Replaces the whole list, so send every selection to keep, including the scope's own learnings.",
         examples=[[]],
     )
-    interfaces: list[dict[str, Any]] | None = Field(
+    interfaces: list[ScopeMcpInterfaceInputDto] | None = Field(
         None,
-        description='Updated MCP interface configuration. Only entries with `type: "mcp"` are accepted; any other type is rejected with 400.',
-        examples=[[]],
+        description='Updated MCP interface rows. Each row has type mcp, an optional id and name, and a config of core tools and exposed integrations. Omitted id and name are assigned. Replaces the whole list.',
     )
     evaluations: list[dict[str, Any]] | None = Field(
         None,

@@ -228,6 +228,52 @@
       "title": "ResourceLifecycleStatus",
       "type": "string"
     },
+    "ScopeMcpInterfaceDto": {
+      "properties": {
+        "id": {
+          "description": "Interface id.",
+          "examples": [
+            "00000000-0000-4000-a000-000000000500"
+          ],
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/ScopeMcpInterfaceType",
+          "description": "Interface type. A scope has an MCP interface only.",
+          "examples": [
+            "mcp"
+          ]
+        },
+        "name": {
+          "description": "Display name.",
+          "examples": [
+            "MCP Server"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "config": {
+          "$ref": "#/$defs/SkillMcpInterfaceConfigDto",
+          "description": "Core tools and the integrations this interface exposes."
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "name",
+        "config"
+      ],
+      "title": "ScopeMcpInterfaceDto",
+      "type": "object"
+    },
+    "ScopeMcpInterfaceType": {
+      "enum": [
+        "mcp"
+      ],
+      "title": "ScopeMcpInterfaceType",
+      "type": "string"
+    },
     "SharedUserDto": {
       "properties": {
         "email": {
@@ -315,6 +361,40 @@
       ],
       "title": "SharedUserPermission",
       "type": "string"
+    },
+    "SkillMcpInterfaceConfigDto": {
+      "properties": {
+        "coreTools": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Core MCP tools: chat (get_answer), getContext, teachModus. Omitted keys default to chat false, getContext true, teachModus false. chat cannot be true together with another tool.",
+          "title": "Coretools"
+        },
+        "mcpToolExposure": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Integration tools exposed to MCP clients: mode discovery (all) or subset with allowedIntegrationKeys. Must be an empty subset when chat is true.",
+          "title": "Mcptoolexposure"
+        }
+      },
+      "title": "SkillMcpInterfaceConfigDto",
+      "type": "object"
     },
     "SkillVariationDto": {
       "properties": {
@@ -404,10 +484,9 @@
           "type": "array"
         },
         "interfaces": {
-          "description": "Interface entries attached to the variation (chat, slack, webhook, etc.). Each is a builder-managed object.",
+          "description": "MCP interface for this scope. Each row has an id, type mcp, a name, and a config.",
           "items": {
-            "additionalProperties": true,
-            "type": "object"
+            "$ref": "#/$defs/ScopeMcpInterfaceDto"
           },
           "title": "Interfaces",
           "type": "array"
