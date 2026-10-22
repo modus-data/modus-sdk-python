@@ -56,6 +56,47 @@ def test_parse_trigger_schedule_without_client_validation() -> None:
     assert trigger.schedule.time_of_day is None
 
 
+def test_parse_trigger_from_get_model_serializes_snake_case_request() -> None:
+    """GET returns WorkflowTriggerResponseDto; update still sends snake_case keys."""
+    from modus._generated.models import AgentVariationDto
+
+    manual = AgentVariationDto.model_validate(
+        {"trigger": {"trigger_type": "manual", "schedule": None}}
+    )
+    assert manual.trigger is not None
+    manual_trigger = parse_trigger(manual.trigger)
+    assert isinstance(manual_trigger, ManualTrigger)
+    assert dump_trigger(manual_trigger) == {"trigger_type": "manual"}
+
+    scheduled = AgentVariationDto.model_validate(
+        {
+            "trigger": {
+                "trigger_type": "schedule",
+                "schedule": {
+                    "frequency": "daily",
+                    "time_of_day": "09:00",
+                    "timezone": "UTC",
+                    "weekdays": None,
+                    "day_of_month": None,
+                    "cron_expressions": None,
+                    "cron_description": None,
+                },
+            }
+        }
+    )
+    assert scheduled.trigger is not None
+    schedule_trigger = parse_trigger(scheduled.trigger)
+    assert isinstance(schedule_trigger, ScheduleTrigger)
+    dumped = dump_trigger(schedule_trigger)
+    assert dumped is not None
+    assert dumped["trigger_type"] == "schedule"
+    assert dumped["schedule"]["frequency"] == "daily"
+    assert dumped["schedule"]["time_of_day"] == "09:00"
+    assert dumped["schedule"]["timezone"] == "UTC"
+    assert "timeOfDay" not in dumped["schedule"]
+    assert "triggerType" not in dumped
+
+
 def test_parse_trigger_round_trip() -> None:
     raw = {
         "triggerType": "schedule",

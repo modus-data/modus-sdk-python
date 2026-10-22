@@ -77,7 +77,7 @@
       "title": "AgentAccessConfigDto",
       "type": "object"
     },
-    "AgentDashboardAlertDto": {
+    "AgentDashboardAlertResponseDto": {
       "properties": {
         "dashboardId": {
           "description": "Id of the dashboard whose KPI alert generated this workflow.",
@@ -100,7 +100,7 @@
         "dashboardId",
         "tileId"
       ],
-      "title": "AgentDashboardAlertDto",
+      "title": "AgentDashboardAlertResponseDto",
       "type": "object"
     },
     "AgentGroupPermissionDto": {
@@ -127,6 +127,124 @@
         "manage"
       ],
       "title": "AgentGroupPermissionDto",
+      "type": "object"
+    },
+    "AgentSelectionEntryDto": {
+      "properties": {
+        "agentId": {
+          "description": "Numeric scope (workflow) id to invoke at this step.",
+          "examples": [
+            17
+          ],
+          "minimum": 1.0,
+          "title": "Agentid",
+          "type": "number"
+        },
+        "priorityOrder": {
+          "description": "Execution order (1-indexed).",
+          "examples": [
+            1
+          ],
+          "minimum": 1.0,
+          "title": "Priorityorder",
+          "type": "number"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional role label.",
+          "examples": [
+            "researcher"
+          ],
+          "title": "Role"
+        },
+        "instructions": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Per-step instructions added to the prompt.",
+          "examples": [
+            "Focus on the last 30 days of data"
+          ],
+          "title": "Instructions"
+        },
+        "toolRestrictions": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional allowlist of tools the step may call.",
+          "title": "Toolrestrictions"
+        }
+      },
+      "required": [
+        "agentId",
+        "priorityOrder"
+      ],
+      "title": "AgentSelectionEntryDto",
+      "type": "object"
+    },
+    "AgentSelectionResponseDto": {
+      "properties": {
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Override model name for the orchestration step.",
+          "title": "Model"
+        },
+        "modelSettings": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ModelSettingsDto"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Model-specific runtime controls such as reasoning effort and context window."
+        },
+        "agents": {
+          "description": "Ordered list of scopes to invoke. Writes must contain at least one entry; a GET response may contain an empty list when the selection is cleared.",
+          "items": {
+            "$ref": "#/$defs/AgentSelectionEntryDto"
+          },
+          "title": "Agents",
+          "type": "array"
+        }
+      },
+      "required": [
+        "agents"
+      ],
+      "title": "AgentSelectionResponseDto",
       "type": "object"
     },
     "AgentSharedUserDto": {
@@ -207,48 +325,53 @@
         "trigger": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/$defs/WorkflowTriggerResponseDto"
             },
             {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "`{trigger_type, schedule?}` blob. `trigger_type` is one of `schedule | webhook | api | slack | manual`.",
-          "title": "Trigger"
+          "description": "`trigger_type` is `schedule`, `webhook`, `api`, `slack`, or `manual`. `schedule` is present only for a schedule trigger. Null until a trigger is saved."
         },
         "workflowStructure": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/$defs/WorkflowStructureResponseDto"
             },
             {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "Workflow graph (`{nodes, edges}`) when `type` is `workflow`. Null when `type` is `task`.",
-          "title": "Workflowstructure"
+          "description": "Workflow graph (`nodes` and `edges`) when `type` is `workflow`. Null when `type` is `task`."
         },
         "agentSelection": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/$defs/AgentSelectionResponseDto"
             },
             {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "Selected scopes + per-step config (`{agents, model?}`) when `type` is `task`. Null when `type` is `workflow`.",
-          "title": "Agentselection"
+          "description": "Selected scopes and per-step config (`agents`, optional `model`) when `type` is `task`. Null when `type` is `workflow`."
         }
       },
       "title": "AgentVariationDto",
       "type": "object"
+    },
+    "Frequency": {
+      "enum": [
+        "hourly",
+        "daily",
+        "weekly",
+        "monthly",
+        "custom"
+      ],
+      "title": "Frequency",
+      "type": "string"
     },
     "ManageDenial": {
       "enum": [
@@ -257,6 +380,38 @@
       ],
       "title": "ManageDenial",
       "type": "string"
+    },
+    "ModelSettingsDto": {
+      "properties": {
+        "reasoningEffort": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReasoningEffort"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional reasoning effort for models that support it."
+        },
+        "contextWindow": {
+          "anyOf": [
+            {
+              "minimum": 1.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Selected model context window in tokens.",
+          "title": "Contextwindow"
+        }
+      },
+      "title": "ModelSettingsDto",
+      "type": "object"
     },
     "PendingOwnershipTransferDto": {
       "properties": {
@@ -309,6 +464,19 @@
       "title": "PendingOwnershipTransferDto",
       "type": "object"
     },
+    "ReasoningEffort": {
+      "enum": [
+        "none",
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "title": "ReasoningEffort",
+      "type": "string"
+    },
     "ResourceLifecycleStatus": {
       "enum": [
         "draft",
@@ -318,6 +486,17 @@
       "title": "ResourceLifecycleStatus",
       "type": "string"
     },
+    "TriggerType": {
+      "enum": [
+        "schedule",
+        "webhook",
+        "api",
+        "slack",
+        "manual"
+      ],
+      "title": "TriggerType",
+      "type": "string"
+    },
     "Visibility": {
       "enum": [
         "shared",
@@ -325,6 +504,345 @@
       ],
       "title": "Visibility",
       "type": "string"
+    },
+    "Weekday": {
+      "enum": [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday"
+      ],
+      "title": "Weekday",
+      "type": "string"
+    },
+    "WorkflowEdgeDto": {
+      "properties": {
+        "id": {
+          "description": "Stable edge id, unique within the graph.",
+          "examples": [
+            "e1"
+          ],
+          "title": "Id",
+          "type": "string"
+        },
+        "source": {
+          "description": "Source node id.",
+          "examples": [
+            "1"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "target": {
+          "description": "Target node id.",
+          "examples": [
+            "2"
+          ],
+          "title": "Target",
+          "type": "string"
+        },
+        "sourceHandle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Source port handle (e.g. a condition branch). Omit for a single-output node.",
+          "examples": [
+            "branch_0"
+          ],
+          "title": "Sourcehandle"
+        }
+      },
+      "required": [
+        "id",
+        "source",
+        "target"
+      ],
+      "title": "WorkflowEdgeDto",
+      "type": "object"
+    },
+    "WorkflowNodeDto": {
+      "properties": {
+        "id": {
+          "description": "Stable node id, unique within the graph.",
+          "examples": [
+            "1"
+          ],
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/WorkflowNodeType",
+          "description": "Node kind. Determines how the runtime interprets `data`.",
+          "examples": [
+            "start"
+          ]
+        },
+        "position": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WorkflowNodePositionDto"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Canvas position. Optional \u2014 preserved for builder layout when present."
+        },
+        "data": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Node-type-specific payload (intentionally open \u2014 shape varies by `type`). Defaults to `{}`.",
+          "examples": [
+            {}
+          ],
+          "title": "Data"
+        }
+      },
+      "required": [
+        "id",
+        "type"
+      ],
+      "title": "WorkflowNodeDto",
+      "type": "object"
+    },
+    "WorkflowNodePositionDto": {
+      "properties": {
+        "x": {
+          "examples": [
+            0
+          ],
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "examples": [
+            50
+          ],
+          "title": "Y",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "title": "WorkflowNodePositionDto",
+      "type": "object"
+    },
+    "WorkflowNodeType": {
+      "enum": [
+        "start",
+        "action",
+        "condition",
+        "agent",
+        "humanApproval"
+      ],
+      "title": "WorkflowNodeType",
+      "type": "string"
+    },
+    "WorkflowStructureResponseDto": {
+      "properties": {
+        "nodes": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/WorkflowNodeDto"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Workflow nodes. Defaults to `[]`.",
+          "title": "Nodes"
+        },
+        "edges": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/WorkflowEdgeDto"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Directed edges connecting the nodes. Defaults to `[]`.",
+          "title": "Edges"
+        }
+      },
+      "title": "WorkflowStructureResponseDto",
+      "type": "object"
+    },
+    "WorkflowTriggerResponseDto": {
+      "properties": {
+        "triggerType": {
+          "$ref": "#/$defs/TriggerType",
+          "description": "Trigger kind. Only `schedule` validates its nested payload here; the rest are opaque.",
+          "examples": [
+            "schedule"
+          ]
+        },
+        "schedule": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WorkflowTriggerScheduleResponseDto"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Schedule details. Required when trigger_type=schedule. Null for every other trigger."
+        }
+      },
+      "required": [
+        "triggerType"
+      ],
+      "title": "WorkflowTriggerResponseDto",
+      "type": "object"
+    },
+    "WorkflowTriggerScheduleResponseDto": {
+      "properties": {
+        "frequency": {
+          "$ref": "#/$defs/Frequency",
+          "description": "Cadence of the schedule.",
+          "examples": [
+            "daily"
+          ]
+        },
+        "timeOfDay": {
+          "anyOf": [
+            {
+              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Time of day in 24-hour HH:MM format. Required for hourly/daily/weekly/monthly; ignored for custom.",
+          "examples": [
+            "09:00"
+          ],
+          "title": "Timeofday"
+        },
+        "timezone": {
+          "description": "IANA timezone identifier.",
+          "examples": [
+            "UTC"
+          ],
+          "title": "Timezone",
+          "type": "string"
+        },
+        "weekdays": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/Weekday"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Required for weekly schedules. Lowercase day names.",
+          "examples": [
+            [
+              "monday",
+              "wednesday",
+              "friday"
+            ]
+          ],
+          "title": "Weekdays"
+        },
+        "dayOfMonth": {
+          "anyOf": [
+            {
+              "maximum": 31.0,
+              "minimum": 1.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Required for monthly schedules. Calendar day 1-31.",
+          "examples": [
+            15
+          ],
+          "title": "Dayofmonth"
+        },
+        "cronExpressions": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Required for custom schedules. Each entry is a 5-field POSIX cron expression.",
+          "examples": [
+            [
+              "0 9 * * 1-5"
+            ]
+          ],
+          "title": "Cronexpressions"
+        },
+        "cronDescription": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Human-readable description of the custom schedule. Required when frequency=custom.",
+          "examples": [
+            "Weekdays at 9am"
+          ],
+          "title": "Crondescription"
+        }
+      },
+      "required": [
+        "frequency",
+        "timezone"
+      ],
+      "title": "WorkflowTriggerScheduleResponseDto",
+      "type": "object"
     }
   },
   "properties": {
@@ -531,7 +1049,7 @@
     "dashboardAlert": {
       "anyOf": [
         {
-          "$ref": "#/$defs/AgentDashboardAlertDto"
+          "$ref": "#/$defs/AgentDashboardAlertResponseDto"
         },
         {
           "type": "null"

@@ -89,4 +89,4 @@ def test_workflow_dto_detail_row_exposes_variation_fields(agent_detail_row):
     assert isinstance(agent, Agent)
     assert agent.variation is not None
     assert agent.variation.agent_selection is not None
-    assert agent.variation.agent_selection["model"] == "gpt-4o-mini"
+    assert agent.variation.agent_selection.model == "gpt-4o-mini"

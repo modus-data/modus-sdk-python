@@ -98,7 +98,13 @@ def agent_detail_row(agent_list_row) -> dict:
         **agent_list_row,
         "variation": {
             "agentSelection": {
-                "agents": [{"skillId": 10, "instructions": "Run the weekly revenue SQL and email results."}],
+                "agents": [
+                    {
+                        "agent_id": 10,
+                        "priority_order": 1,
+                        "instructions": "Run the weekly revenue SQL and email results.",
+                    }
+                ],
                 "model": "gpt-4o-mini",
             },
         },

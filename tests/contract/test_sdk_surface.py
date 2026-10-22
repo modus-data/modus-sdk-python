@@ -24,7 +24,7 @@ _SCHEMA = json.loads((_CLIENTS_DIR / "sdk-surface.schema.json").read_text())
 _HTTP_METHODS = {"get", "post", "put", "patch", "delete"}
 
 # ``AsyncScopesResource`` has no ``evaluations()`` factory and the SDK has no
-# ``AsyncScopeEvaluationsResource`` at all, so these five operations are sync-only in Python.
+# ``AsyncScopeEvaluationsResource`` at all, so these operations are sync-only in Python.
 # A real gap in the async client, not a wrong hint: the hints rows stay correct. Listed by
 # operationId, not by resource, so a new operation on that resource is still caught, and
 # ``test_async_gaps_are_still_gaps`` fails the moment the async resource lands — delete the
@@ -35,6 +35,9 @@ _ASYNC_GAPS = {
     "EvaluationsController_triggerRun",
     "EvaluationsController_listRuns",
     "EvaluationsController_getRun",
+    "ScopesController_addEvaluationCase",
+    "ScopesController_updateEvaluationCase",
+    "ScopesController_deleteEvaluationCase",
 }
 
 

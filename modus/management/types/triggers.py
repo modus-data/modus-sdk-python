@@ -164,6 +164,11 @@ def parse_trigger(raw: object) -> Optional[AgentTriggerValue]:
     """Parse trigger JSON from a variation or API response."""
     if raw is None:
         return None
+    # GET types the trigger as WorkflowTriggerResponseDto, a sibling of the
+    # request DTO. Field names stay snake_case (`trigger_type`); camelCase
+    # aliases are rejected on the next write.
+    if isinstance(raw, BaseModel) and not isinstance(raw, TriggerDto):
+        raw = raw.model_dump(by_alias=False, exclude_none=True)
     dto = TriggerDto.model_validate(raw)
     raw_type = dto.trigger_type
     trigger_type = raw_type.value if hasattr(raw_type, "value") else raw_type

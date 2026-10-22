@@ -121,6 +121,8 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     # --- Scopes (/api/v1/scopes; request schemas share the generated *Skill* DTOs) ---
     "ScopesController_create": _model_wire_fields(_ScopeCreateBody),
     "ScopesController_update": _model_wire_fields(_ScopeUpdateBody),
+    "ScopesController_addEvaluationCase": {"id", "task", "expectedOutput"},
+    "ScopesController_updateEvaluationCase": {"task", "expectedOutput"},
     "ScopeChatController_chat": _model_wire_fields(SkillChatRequestDto),
     "ScopeContextController_compose": _model_wire_fields(ComposeSkillContextRequestDto),
     "ScopeMemoriesController_search": _model_wire_fields(MemorySearchRequest),

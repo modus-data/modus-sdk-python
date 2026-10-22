@@ -37,7 +37,7 @@ class AccessPolicyDto(BaseModel):
     )
 
 
-class AgentDashboardAlertDto(BaseModel):
+class AgentDashboardAlertResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     dashboard_id: str = Field(
         ...,
@@ -125,24 +125,6 @@ class AgentSharedUserDto(BaseModel):
 class AgentType(str, Enum):
     task = 'task'
     workflow = 'workflow'
-
-
-class AgentVariationDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    trigger: dict[str, Any] | None = Field(
-        None,
-        description='`{trigger_type, schedule?}` blob. `trigger_type` is one of `schedule | webhook | api | slack | manual`.',
-    )
-    workflow_structure: dict[str, Any] | None = Field(
-        None,
-        alias='workflowStructure',
-        description='Workflow graph (`{nodes, edges}`) when `type` is `workflow`. Null when `type` is `task`.',
-    )
-    agent_selection: dict[str, Any] | None = Field(
-        None,
-        alias='agentSelection',
-        description='Selected scopes + per-step config (`{agents, model?}`) when `type` is `task`. Null when `type` is `workflow`.',
-    )
 
 
 class ApiErrorCode(str, Enum):
@@ -1072,6 +1054,32 @@ class EvaluationCadenceFrequency(str, Enum):
     custom = 'custom'
 
 
+class EvaluationCaseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(..., description='Stable id of the evaluation case.', min_length=1)
+    task: str = Field(..., description='What the scope should do for this case.')
+    expected_output: str = Field(
+        ..., alias='expectedOutput', description='What a correct result looks like.'
+    )
+
+
+class EvaluationCaseInputDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str | None = Field(
+        None,
+        description='Stable id of the case. Omit it on a new case and one is assigned.',
+        min_length=1,
+    )
+    task: str = Field(
+        ..., description='What the scope should do for this case. An empty string is allowed.'
+    )
+    expected_output: str = Field(
+        ...,
+        alias='expectedOutput',
+        description='What a correct result looks like. An empty string is allowed.',
+    )
+
+
 class EvaluationRecipientDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     clerk_user_id: str = Field(..., alias='clerkUserId', description='Clerk user ID')
@@ -1516,6 +1524,26 @@ class LookupContextItemRowDto(BaseModel):
     )
 
 
+class McpCoreToolsConfigDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    chat: bool = Field(..., description='Whether Get Answer is on.', examples=[False])
+    get_context: bool = Field(
+        ..., alias='getContext', description='Whether Get Context is on.', examples=[True]
+    )
+    teach_modus: bool = Field(
+        ..., alias='teachModus', description='Whether Teach Modus is on.', examples=[False]
+    )
+
+
+class McpToolExposureMode(str, Enum):
+    subset = 'subset'
+    discovery = 'discovery'
+
+
+class McpToolExposureVersion(float, Enum):
+    number_1 = 1
+
+
 class MemberGroupSource(str, Enum):
     native = 'native'
     directory = 'directory'
@@ -1889,12 +1917,12 @@ class SkillMcpInterfaceConfigDto(BaseModel):
     core_tools: dict[str, Any] | None = Field(
         None,
         alias='coreTools',
-        description='Core MCP tools: chat (get_answer), getContext, teachModus. Omitted keys default to chat false, getContext true, teachModus false. chat cannot be true together with another tool.',
+        description='Get Answer, Get Context, and Teach Modus. A changed value uses true or false for each key. Omitted keys default to Get Answer off, Get Context on, and Teach Modus off.',
     )
     mcp_tool_exposure: dict[str, Any] | None = Field(
         None,
         alias='mcpToolExposure',
-        description='Integration tools exposed to MCP clients: mode discovery (all) or subset with allowedIntegrationKeys. Must be an empty subset when chat is true.',
+        description='Tools MCP clients can call. A changed value is version 1, mode subset or discovery, and a list of keys. A new key must be one this scope can expose.',
     )
 
 
@@ -1999,25 +2027,6 @@ class ToolCatalogEntryDto(BaseModel):
     actions: list[ToolCatalogActionDto] | None = Field(
         None,
         description='Fixed set of actions this tool exposes. Present only when the action list does not depend on a live connection (built-in tools). Connected integrations expose connection-specific actions not listed here.',
-    )
-
-
-class ToolsetToolDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    id: str = Field(
-        ...,
-        description='Stable id of the tool (matches the registry key on the workflow runtime).',
-        examples=['web_search'],
-    )
-    enabled: bool | None = Field(
-        None,
-        description='Whether this tool is enabled for the scope. Defaults to true when absent.',
-        examples=[True],
-    )
-    config: dict[str, Any] | None = Field(
-        None,
-        description='Free-form tool-specific configuration (e.g. allowlists). Schema varies per tool.',
-        examples=[{'max_results': 5}],
     )
 
 
@@ -2235,6 +2244,18 @@ class UpdateDashboardLayoutDto(BaseModel):
     )
 
 
+class UpdateEvaluationCaseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    task: str | None = Field(
+        None, description='Replacement for what the scope should do. An empty string is allowed.'
+    )
+    expected_output: str | None = Field(
+        None,
+        alias='expectedOutput',
+        description='Replacement for what a correct result looks like. An empty string is allowed.',
+    )
+
+
 class UpdateMemoryRequestDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     memory: str | None = Field(
@@ -2407,6 +2428,40 @@ class WorkflowNodeType(str, Enum):
     condition = 'condition'
     agent = 'agent'
     human_approval = 'humanApproval'
+
+
+class WorkflowTriggerScheduleResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    frequency: Frequency = Field(..., description='Cadence of the schedule.', examples=['daily'])
+    time_of_day: str | None = Field(
+        None,
+        description='Time of day in 24-hour HH:MM format. Required for hourly/daily/weekly/monthly; ignored for custom.',
+        examples=['09:00'],
+        pattern='^([01]\\d|2[0-3]):[0-5]\\d$',
+    )
+    timezone: str = Field(..., description='IANA timezone identifier.', examples=['UTC'])
+    weekdays: list[Weekday] | None = Field(
+        None,
+        description='Required for weekly schedules. Lowercase day names.',
+        examples=[['monday', 'wednesday', 'friday']],
+    )
+    day_of_month: float | None = Field(
+        None,
+        description='Required for monthly schedules. Calendar day 1-31.',
+        examples=[15],
+        ge=1.0,
+        le=31.0,
+    )
+    cron_expressions: list[str] | None = Field(
+        None,
+        description='Required for custom schedules. Each entry is a 5-field POSIX cron expression.',
+        examples=[['0 9 * * 1-5']],
+    )
+    cron_description: str | None = Field(
+        None,
+        description='Human-readable description of the custom schedule. Required when frequency=custom.',
+        examples=['Weekdays at 9am'],
+    )
 
 
 class ActiveConversationRunStatus(str, Enum):
@@ -2642,8 +2697,8 @@ class AgentInterfaceDto(BaseModel):
     )
     config: dict[str, Any] = Field(
         ...,
-        description='Interface-type-specific configuration (e.g. webhook url, MCP token references). Free-form JSONB.',
-        examples=[{}],
+        description='Shape depends on `type`. Chat interfaces use optional `accessMode` (`all`, `allow-list`, or `allow-org`), `allowedEmails`, and `availableChannelIds`. `mcp` uses an empty object.',
+        examples=[{'accessMode': 'allow-org'}],
     )
     created_at: str = Field(
         ...,
@@ -3277,6 +3332,24 @@ class LookupContextItemResponseDto(BaseModel):
     )
 
 
+class McpToolExposureConfigDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    version: McpToolExposureVersion = Field(
+        ..., description='Exposure format. Always 1.', examples=[1]
+    )
+    mode: McpToolExposureMode = Field(
+        ...,
+        description='subset lists keys. discovery exposes every tool this scope can call.',
+        examples=['discovery'],
+    )
+    allowed_integration_keys: list[str] = Field(
+        ...,
+        alias='allowedIntegrationKeys',
+        description='Exposure keys when mode is subset. Empty for discovery.',
+        examples=[[]],
+    )
+
+
 class MemberGroupDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     uid: str
@@ -3316,14 +3389,7 @@ class PatchSkillMcpConfigDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     config: SkillMcpInterfaceConfigDto = Field(
         ...,
-        description='Full MCP interface config written to the scope draft; takes effect on the next deploy.',
-    )
-
-
-class PatchSkillMcpConfigResponseDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    config: SkillMcpInterfaceConfigDto = Field(
-        ..., description='Sanitized MCP config now stored on the scope draft.'
+        description='MCP interface config written to the scope draft. Takes effect on the next deploy.',
     )
 
 
@@ -3347,20 +3413,6 @@ class RecordSuggestionEventDto(BaseModel):
         description='Conversation thread id when the event is tied to a chat.',
     )
     metadata: dict[str, Any] | None = Field(None, description='Event metadata.')
-
-
-class ScopeMcpInterfaceDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    id: str = Field(
-        ..., description='Interface id.', examples=['00000000-0000-4000-a000-000000000500']
-    )
-    type: ScopeMcpInterfaceType = Field(
-        ..., description='Interface type. A scope has an MCP interface only.', examples=['mcp']
-    )
-    name: str = Field(..., description='Display name.', examples=['MCP Server'])
-    config: SkillMcpInterfaceConfigDto = Field(
-        ..., description='Core tools and the integrations this interface exposes.'
-    )
 
 
 class ScopeMcpInterfaceInputDto(BaseModel):
@@ -3432,63 +3484,17 @@ class SharedUserDto(BaseModel):
     )
 
 
-class SkillVariationDto(BaseModel):
+class SkillMcpInterfaceConfigResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    expected_output: str = Field(
-        ...,
-        alias='expectedOutput',
-        description='Free-form expected-output prompt that constrains the scope’s reply.',
-        examples=['A 3-bullet summary highlighting churn risk drivers.'],
-    )
-    instructions: list[str] = Field(
-        ...,
-        description='Ordered list of instruction blocks. Each entry is a free-form string the builder rendered into the system prompt.',
-        examples=[['Be concise.', 'Always justify the score.']],
-    )
-    model: str = Field(
-        ...,
-        description='Provider-prefixed model id. The orchestrator routes by prefix.',
-        examples=['anthropic/claude-sonnet-4.6'],
-    )
-    model_settings: ModelSettingsDto | None = Field(
+    core_tools: McpCoreToolsConfigDto | None = Field(
         None,
-        alias='modelSettings',
-        description='Model-specific runtime controls such as reasoning effort and context window.',
+        alias='coreTools',
+        description='Get Answer, Get Context, and Teach Modus as they take effect.',
     )
-    toolset: dict[str, Any] = Field(
-        ...,
-        description='Builder-managed toolset descriptor. Map of `{toolName: config}`; opaque to the API surface.',
-        examples=[{'web_search': {'enabled': True}, 'calculator': {'enabled': True}}],
-    )
-    connection_set: list[dict[str, Any]] = Field(
-        ...,
-        alias='connectionSet',
-        description='Connection selections (DBs, integrations) attached to the variation. Each entry is a builder-managed object; opaque here.',
-    )
-    context_selections: list[dict[str, Any]] = Field(
-        ...,
-        alias='contextSelections',
-        description='Context selections attached to the variation. Free-form builder objects.',
-    )
-    evaluations: list[dict[str, Any]] = Field(
-        ...,
-        description='Evaluation entries (task + expected-output pairs) saved for this variation.',
-    )
-    interfaces: list[ScopeMcpInterfaceDto] = Field(
-        ...,
-        description='MCP interface for this scope. Each row has an id, type mcp, a name, and a config.',
-    )
-    supervision_subordinate_ids: list[str] = Field(
-        ...,
-        alias='supervisionSubordinateIds',
-        description='IDs of scopes supervised by this scope (when it is a manager). Stringified for wire stability.',
-        examples=[['12', '17']],
-    )
-    supervision_subordinate_descriptions: dict[str, str] = Field(
-        ...,
-        alias='supervisionSubordinateDescriptions',
-        description='Map of subordinateId -> manager-provided description blurb.',
-        examples=[{'12': 'Reads warehouse facts', '17': 'Drafts the report'}],
+    mcp_tool_exposure: McpToolExposureConfigDto | None = Field(
+        None,
+        alias='mcpToolExposure',
+        description='Tools MCP clients can call, as they take effect.',
     )
 
 
@@ -3502,15 +3508,6 @@ class SqlIngestedDataRequestDto(BaseModel):
     )
 
 
-class ToolsetDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    tools: list[ToolsetToolDto] | None = Field(
-        None,
-        description='List of tools the scope may invoke.',
-        examples=[[{'id': 'web_search', 'enabled': True}]],
-    )
-
-
 class TriggerDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     trigger_type: TriggerType = Field(
@@ -3519,7 +3516,8 @@ class TriggerDto(BaseModel):
         examples=['schedule'],
     )
     schedule: TriggerScheduleDto | None = Field(
-        None, description='Schedule details. Required when trigger_type=schedule.'
+        None,
+        description='Schedule details. Required when trigger_type=schedule. Null for every other trigger.',
     )
 
 
@@ -3551,125 +3549,6 @@ class UpdateEvaluationConfigDto(BaseModel):
     )
 
 
-class WorkflowDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    id: float = Field(
-        ...,
-        description='Numeric workflow id (stable per-org; not reused after delete).',
-        examples=[42],
-    )
-    slug: str = Field(
-        ...,
-        description='URL-safe slug used in human-readable links. Unique per org.',
-        examples=['customer-churn-agent-a3f'],
-    )
-    name: str = Field(
-        ...,
-        description='Display name of the workflow. Shown in the builder and in run logs.',
-        examples=['Customer Churn Analyzer'],
-    )
-    description: str | None = Field(
-        None,
-        description='Optional one-paragraph description of what this workflow does.',
-        examples=['Predicts churn risk for a customer given a 90-day usage window.'],
-    )
-    status: ResourceLifecycleStatus = Field(
-        ...,
-        description='Lifecycle status. `draft` = never deployed. `active` = deployed. `deleted` = soft-deleted.',
-        examples=['active'],
-    )
-    type: AgentType = Field(
-        ...,
-        description='Type of workflow. `task` = single-step scope orchestration; `workflow` = multi-step graph.',
-        examples=['task'],
-    )
-    org_uuid: str = Field(
-        ...,
-        alias='orgUuid',
-        description='Org UUID this workflow belongs to. Matches the caller’s principal.',
-        examples=['00000000-0000-0000-0000-000000000001'],
-    )
-    active_variation_id: str | None = Field(
-        None,
-        alias='activeVariationId',
-        description='Active (deployed) variation id. Null until the workflow is first deployed.',
-        examples=['00000000-0000-4000-a000-000000000100'],
-    )
-    draft_variation_id: str | None = Field(
-        None,
-        alias='draftVariationId',
-        description='Most recent draft variation id. Null when there is no draft pending.',
-        examples=['00000000-0000-4000-a000-000000000101'],
-    )
-    has_unpublished_changes: bool = Field(
-        ...,
-        alias='hasUnpublishedChanges',
-        description='True when the draft variation differs from the active variation (deploy would publish changes).',
-        examples=[False],
-    )
-    is_enabled: bool = Field(
-        ...,
-        alias='isEnabled',
-        description='Whether the workflow’s schedule is currently active. Toggle via the workflow schedule API.',
-        examples=[True],
-    )
-    access_config: AgentAccessConfigDto = Field(
-        ...,
-        alias='accessConfig',
-        description='Access configuration — who in the org can use / manage this workflow.',
-    )
-    pending_ownership_transfer: (
-        PendingOwnershipTransferDto | None
-    ) = (
-        Field(None, alias='pendingOwnershipTransfer', description='Pending ownership transfer awaiting recipient acceptance. Absent when no request is in flight.')
-    )
-    variation: AgentVariationDto | None = Field(
-        None,
-        description='Variation-detail payload (`trigger`, `workflowStructure`, `agentSelection`) for the requested view. Present on detail responses; absent on list rows.',
-    )
-    created_at: str = Field(
-        ...,
-        alias='createdAt',
-        description='Creation timestamp.',
-        examples=['2026-05-01T10:00:00.000Z'],
-    )
-    updated_at: str = Field(
-        ...,
-        alias='updatedAt',
-        description='Most recent update timestamp.',
-        examples=['2026-05-11T10:00:00.000Z'],
-    )
-    deleted_at: str | None = Field(
-        None,
-        alias='deletedAt',
-        description='Soft-delete timestamp. Null for active workflows.',
-        examples=[None],
-    )
-    can_manage: bool = Field(
-        ...,
-        alias='canManage',
-        description='Whether the requesting principal can manage (edit/delete/deploy/toggle) this workflow. Derived server-side from the principal + accessConfig. Always present on every Workflow response.',
-        examples=[True],
-    )
-    can_use: bool = Field(
-        ...,
-        alias='canUse',
-        description='Whether the requesting principal can use (run, view history of) this workflow. Derived server-side from the principal + accessConfig. Always present on every Workflow response.',
-        examples=[True],
-    )
-    manage_denial: ManageDenial | None = Field(
-        ...,
-        alias='manageDenial',
-        description='Why `canManage` is false, for client-facing guidance: `needs_group_manage` (shared, but no group you belong to grants Manage) or `not_owner` (private, and you are not the owner). `null` when `canManage` is true. Derived server-side from the principal + accessConfig.',
-        examples=['needs_group_manage'],
-    )
-    dashboard_alert: AgentDashboardAlertDto | None = Field(
-        None,
-        alias='dashboardAlert',
-        description='Set when a dashboard KPI alert generated this workflow. Changing its definition requires disconnectDashboardAlert.',
-    )
-
-
 class WorkflowNodeDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(..., description='Stable node id, unique within the graph.', examples=['1'])
@@ -3695,6 +3574,29 @@ class WorkflowStructureDto(BaseModel):
     )
     edges: list[WorkflowEdgeDto] | None = Field(
         None, description='Directed edges connecting the nodes. Defaults to `[]`.'
+    )
+
+
+class WorkflowStructureResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    nodes: list[WorkflowNodeDto] | None = Field(
+        None, description='Workflow nodes. Defaults to `[]`.'
+    )
+    edges: list[WorkflowEdgeDto] | None = Field(
+        None, description='Directed edges connecting the nodes. Defaults to `[]`.'
+    )
+
+
+class WorkflowTriggerResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    trigger_type: TriggerType = Field(
+        ...,
+        description='Trigger kind. Only `schedule` validates its nested payload here; the rest are opaque.',
+        examples=['schedule'],
+    )
+    schedule: WorkflowTriggerScheduleResponseDto | None = Field(
+        None,
+        description='Schedule details. Required when trigger_type=schedule. Null for every other trigger.',
     )
 
 
@@ -3835,20 +3737,6 @@ class AccessConfigDto(BaseModel):
     )
 
 
-class AgentDeployResponseDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    workflow: WorkflowDto = Field(
-        ...,
-        description='The workflow after the deploy. `hasUnpublishedChanges` is false and `activeVariationId` matches the newly-published variation.',
-    )
-    deployed_at: str = Field(
-        ...,
-        alias='deployedAt',
-        description='Server-side timestamp at which the deploy completed.',
-        examples=['2026-05-11T10:00:00.000Z'],
-    )
-
-
 class AgentSelectionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     model: str | None = Field(None, description='Override model name for the orchestration step.')
@@ -3858,7 +3746,40 @@ class AgentSelectionDto(BaseModel):
         description='Model-specific runtime controls such as reasoning effort and context window.',
     )
     agents: list[AgentSelectionEntryDto] = Field(
-        ..., description='Ordered list of scopes to invoke. Must contain at least one entry.'
+        ...,
+        description='Ordered list of scopes to invoke. Writes must contain at least one entry; a GET response may contain an empty list when the selection is cleared.',
+    )
+
+
+class AgentSelectionResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    model: str | None = Field(None, description='Override model name for the orchestration step.')
+    model_settings: ModelSettingsDto | None = Field(
+        None,
+        alias='modelSettings',
+        description='Model-specific runtime controls such as reasoning effort and context window.',
+    )
+    agents: list[AgentSelectionEntryDto] = Field(
+        ...,
+        description='Ordered list of scopes to invoke. Writes must contain at least one entry; a GET response may contain an empty list when the selection is cleared.',
+    )
+
+
+class AgentVariationDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    trigger: WorkflowTriggerResponseDto | None = Field(
+        None,
+        description='`trigger_type` is `schedule`, `webhook`, `api`, `slack`, or `manual`. `schedule` is present only for a schedule trigger. Null until a trigger is saved.',
+    )
+    workflow_structure: WorkflowStructureResponseDto | None = Field(
+        None,
+        alias='workflowStructure',
+        description='Workflow graph (`nodes` and `edges`) when `type` is `workflow`. Null when `type` is `task`.',
+    )
+    agent_selection: AgentSelectionResponseDto | None = Field(
+        None,
+        alias='agentSelection',
+        description='Selected scopes and per-step config (`agents`, optional `model`) when `type` is `task`. Null when `type` is `workflow`.',
     )
 
 
@@ -4027,9 +3948,10 @@ class CreateSkillDto(BaseModel):
         description='Ordered list of system-prompt instruction fragments. Joined at run time.',
         examples=[['You are a senior data analyst.', 'Always cite the SQL you used.']],
     )
-    toolset: ToolsetDto | None = Field(
+    toolset: dict[str, Any] | None = Field(
         None,
-        description="Toolset configuration (tools this scope may invoke). Service sanitizes the shape on write. A connected integration given as `{actions, rules?}` is bound to the organization's newest workspace connection of that integration and returned as `{byConnection: {<connectionId>: {actions, rules?}}}`.",
+        description='Map of tool key to its configuration; unknown keys are rejected. A flat connected-integration entry such as slack binds to the newest workspace connection of that integration (create and update return 422 when there is none); use {"byConnection": {"<connectionId>": config}} to pick one.',
+        examples=[{'slack': {'actions': ['SendMessage'], 'rules': {'allowedChannelIds': ['C1']}}}],
     )
     model: str | None = Field(
         None,
@@ -4122,19 +4044,6 @@ class EvaluationConfigDto(BaseModel):
     )
 
 
-class ListAgentsResponseDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    workflows: list[WorkflowDto] = Field(
-        ...,
-        description='Page of workflows the caller can at least `use`. Workflows the caller cannot see are filtered out (not enumerated).',
-    )
-    next_page_token: str | None = Field(
-        ...,
-        alias='nextPageToken',
-        description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
-    )
-
-
 class ListConnectionsResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     connections: list[ConnectionDto] = Field(
@@ -4161,12 +4070,455 @@ class ListMemberGroupsResponseDto(BaseModel):
     groups: list[MemberGroupDto]
 
 
+class PatchSkillMcpConfigResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    config: SkillMcpInterfaceConfigResponseDto = Field(
+        ..., description='MCP config in effect on the scope draft.'
+    )
+
+
 class PublishDashboardResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     dashboard: DashboardDto = Field(
         ..., description='The dashboard in its active view after publishing.'
     )
     version: DashboardVersionDto = Field(..., description='The version that was just published.')
+
+
+class ScopeMcpInterfaceDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(
+        ..., description='Interface id.', examples=['00000000-0000-4000-a000-000000000500']
+    )
+    type: ScopeMcpInterfaceType = Field(
+        ..., description='Interface type. A scope has an MCP interface only.', examples=['mcp']
+    )
+    name: str = Field(..., description='Display name.', examples=['MCP Server'])
+    config: SkillMcpInterfaceConfigResponseDto = Field(
+        ..., description='Core tools and tool exposure as they take effect.'
+    )
+
+
+class SkillVariationDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    expected_output: str = Field(
+        ...,
+        alias='expectedOutput',
+        description='Free-form expected-output prompt that constrains the scope’s reply.',
+        examples=['A 3-bullet summary highlighting churn risk drivers.'],
+    )
+    instructions: list[str] = Field(
+        ...,
+        description='Ordered list of instruction blocks. Each entry is a free-form string the builder rendered into the system prompt.',
+        examples=[['Be concise.', 'Always justify the score.']],
+    )
+    model: str = Field(
+        ...,
+        description='Provider-prefixed model id. The orchestrator routes by prefix.',
+        examples=['anthropic/claude-sonnet-4.6'],
+    )
+    model_settings: ModelSettingsDto | None = Field(
+        None,
+        alias='modelSettings',
+        description='Model-specific runtime controls such as reasoning effort and context window.',
+    )
+    toolset: dict[str, Any] = Field(
+        ...,
+        description='Builder-managed toolset descriptor. Map of `{toolName: config}`; opaque to the API surface.',
+        examples=[{'web_search': {'enabled': True}, 'calculator': {'enabled': True}}],
+    )
+    connection_set: list[dict[str, Any]] = Field(
+        ...,
+        alias='connectionSet',
+        description='Connection selections (DBs, integrations) attached to the variation. Each entry is a builder-managed object; opaque here.',
+    )
+    context_selections: list[dict[str, Any]] = Field(
+        ...,
+        alias='contextSelections',
+        description='Context selections attached to the variation. Free-form builder objects.',
+    )
+    evaluations: list[EvaluationCaseDto] = Field(
+        ..., description='Evaluation cases saved for this variation.'
+    )
+    interfaces: list[ScopeMcpInterfaceDto] = Field(
+        ...,
+        description='MCP interface for this scope. Each row has an id, type mcp, a name, and a config.',
+    )
+    supervision_subordinate_ids: list[str] = Field(
+        ...,
+        alias='supervisionSubordinateIds',
+        description='IDs of scopes supervised by this scope (when it is a manager). Stringified for wire stability.',
+        examples=[['12', '17']],
+    )
+    supervision_subordinate_descriptions: dict[str, str] = Field(
+        ...,
+        alias='supervisionSubordinateDescriptions',
+        description='Map of subordinateId -> manager-provided description blurb.',
+        examples=[{'12': 'Reads warehouse facts', '17': 'Drafts the report'}],
+    )
+
+
+class UpdateAgentDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    name: str | None = Field(
+        None,
+        description='New display name for the workflow.',
+        examples=['Daily Sales Report v2'],
+        max_length=200,
+        min_length=1,
+    )
+    type: AgentType | None = Field(
+        None, description='Updated workflow type. Rarely changed after creation.', examples=['task']
+    )
+    description: str | None = Field(
+        None,
+        description='Updated description.',
+        examples=['Generates a daily sales report broken down by region.'],
+    )
+    trigger: TriggerDto | None = Field(
+        None,
+        description='Updated trigger configuration. Schedule shape is fully validated; other trigger types are opaque.',
+    )
+    agent_selection: AgentSelectionDto | None = Field(
+        None, alias='agentSelection', description='Updated workflow selection.'
+    )
+    workflow_structure: WorkflowStructureDto | None = Field(
+        None,
+        alias='workflowStructure',
+        description='Updated workflow graph (nodes + edges). Unknown node/edge keys and out-of-enum node types are rejected with a 422.',
+    )
+    access_config: AgentAccessConfigDto | None = Field(
+        None,
+        alias='accessConfig',
+        description='Updated access configuration. The service rejects changes that would lock the caller out of use + manage.',
+    )
+    disconnect_dashboard_alert: (
+        bool | None
+    ) = (
+        Field(None, alias='disconnectDashboardAlert', description='Acknowledge that this change disconnects the workflow from its dashboard alert. Required when name, trigger or workflowStructure change on a workflow whose dashboardAlert is set.', examples=[True])
+    )
+
+
+class UpdateDashboardDraftDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    expected_revision: int = Field(
+        ...,
+        alias='expectedRevision',
+        description='Draft revision the change is based on; a stale value is rejected with 409.',
+        ge=1,
+    )
+    title: str | None = Field(None, description='New dashboard title.', max_length=500)
+    description: str | None = Field(
+        None, description='New dashboard description.', max_length=10000
+    )
+    definition: DashboardDefinitionDto = Field(
+        ..., description='Replaces the whole draft definition.'
+    )
+
+
+class UpdateSkillDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    name: str | None = Field(
+        None,
+        description='New display name for the scope.',
+        examples=['Customer Churn Analyzer v2'],
+        max_length=200,
+        min_length=1,
+    )
+    description: str | None = Field(
+        None,
+        description='Updated description.',
+        examples=['Predicts churn risk over a 180-day window.'],
+    )
+    expected_output: str | None = Field(
+        None,
+        alias='expectedOutput',
+        description='Updated expected-output summary, used when this scope is supervised.',
+        examples=['JSON: { churn_probability: number }'],
+    )
+    instructions: list[str] | None = Field(
+        None,
+        description='Updated instruction fragments. Replaces the prior list when present.',
+        examples=[['You are a senior data analyst.']],
+    )
+    toolset: dict[str, Any] | None = Field(
+        None,
+        description='Map of tool key to its configuration; unknown keys are rejected. A flat connected-integration entry such as slack binds to the newest workspace connection of that integration (create and update return 422 when there is none); use {"byConnection": {"<connectionId>": config}} to pick one.',
+        examples=[{'slack': {'actions': ['SendMessage'], 'rules': {'allowedChannelIds': ['C1']}}}],
+    )
+    model: str | None = Field(
+        None,
+        description='Updated model id. Pass `null` (explicit) to clear and use the org default.',
+        examples=['claude-sonnet-4-5'],
+    )
+    model_settings: ModelSettingsDto | None = Field(
+        None,
+        alias='modelSettings',
+        description='Updated model-specific runtime controls. Pass `null` to clear.',
+    )
+    connection_set: list[dict[str, Any]] | None = Field(
+        None,
+        alias='connectionSet',
+        description='Updated connection set. Shape is integration-specific.',
+        examples=[[]],
+    )
+    context_selections: list[dict[str, Any]] | None = Field(
+        None,
+        alias='contextSelections',
+        description="Updated context selections (sources / docs the scope may read). Replaces the whole list, so send every selection to keep, including the scope's own learnings.",
+        examples=[[]],
+    )
+    interfaces: list[ScopeMcpInterfaceInputDto] | None = Field(
+        None,
+        description='Updated MCP interface rows. Each row has type mcp, an optional id and name, and a config of core tools and exposed integrations. Omitted id and name are assigned. Replaces the whole list.',
+    )
+    evaluations: list[EvaluationCaseInputDto] | None = Field(
+        None,
+        description='Replaces the whole evaluation list; send every case to keep. Omit `id` on a new case and one is assigned. To change one case, use POST, PATCH or DELETE /api/v1/scopes/{id}/evaluations/cases.',
+    )
+    supervision_subordinate_descriptions: dict[str, str] | None = Field(
+        None,
+        alias='supervisionSubordinateDescriptions',
+        description='Map of subordinate scope id (stringified) to the manager-provided description blurb. Replaces the prior map when present.',
+        examples=[{'12': 'Reads warehouse facts', '17': 'Drafts the report'}],
+    )
+    access_config: AccessConfigDto | None = Field(
+        None,
+        alias='accessConfig',
+        description='Updated access configuration. The service rejects changes that would lock the caller out of use + manage.',
+    )
+    manager_id: float | None = Field(
+        None,
+        alias='managerId',
+        description='Re-parent the scope under a new manager (or remove its current manager when null). When this field is present, all other fields are ignored.',
+        examples=[17],
+    )
+
+
+class WorkflowDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: float = Field(
+        ...,
+        description='Numeric workflow id (stable per-org; not reused after delete).',
+        examples=[42],
+    )
+    slug: str = Field(
+        ...,
+        description='URL-safe slug used in human-readable links. Unique per org.',
+        examples=['customer-churn-agent-a3f'],
+    )
+    name: str = Field(
+        ...,
+        description='Display name of the workflow. Shown in the builder and in run logs.',
+        examples=['Customer Churn Analyzer'],
+    )
+    description: str | None = Field(
+        None,
+        description='Optional one-paragraph description of what this workflow does.',
+        examples=['Predicts churn risk for a customer given a 90-day usage window.'],
+    )
+    status: ResourceLifecycleStatus = Field(
+        ...,
+        description='Lifecycle status. `draft` = never deployed. `active` = deployed. `deleted` = soft-deleted.',
+        examples=['active'],
+    )
+    type: AgentType = Field(
+        ...,
+        description='Type of workflow. `task` = single-step scope orchestration; `workflow` = multi-step graph.',
+        examples=['task'],
+    )
+    org_uuid: str = Field(
+        ...,
+        alias='orgUuid',
+        description='Org UUID this workflow belongs to. Matches the caller’s principal.',
+        examples=['00000000-0000-0000-0000-000000000001'],
+    )
+    active_variation_id: str | None = Field(
+        None,
+        alias='activeVariationId',
+        description='Active (deployed) variation id. Null until the workflow is first deployed.',
+        examples=['00000000-0000-4000-a000-000000000100'],
+    )
+    draft_variation_id: str | None = Field(
+        None,
+        alias='draftVariationId',
+        description='Most recent draft variation id. Null when there is no draft pending.',
+        examples=['00000000-0000-4000-a000-000000000101'],
+    )
+    has_unpublished_changes: bool = Field(
+        ...,
+        alias='hasUnpublishedChanges',
+        description='True when the draft variation differs from the active variation (deploy would publish changes).',
+        examples=[False],
+    )
+    is_enabled: bool = Field(
+        ...,
+        alias='isEnabled',
+        description='Whether the workflow’s schedule is currently active. Toggle via the workflow schedule API.',
+        examples=[True],
+    )
+    access_config: AgentAccessConfigDto = Field(
+        ...,
+        alias='accessConfig',
+        description='Access configuration — who in the org can use / manage this workflow.',
+    )
+    pending_ownership_transfer: (
+        PendingOwnershipTransferDto | None
+    ) = (
+        Field(None, alias='pendingOwnershipTransfer', description='Pending ownership transfer awaiting recipient acceptance. Absent when no request is in flight.')
+    )
+    variation: AgentVariationDto | None = Field(
+        None,
+        description='Variation-detail payload (`trigger`, `workflowStructure`, `agentSelection`) for the requested view. Present on detail responses; absent on list rows.',
+    )
+    created_at: str = Field(
+        ...,
+        alias='createdAt',
+        description='Creation timestamp.',
+        examples=['2026-05-01T10:00:00.000Z'],
+    )
+    updated_at: str = Field(
+        ...,
+        alias='updatedAt',
+        description='Most recent update timestamp.',
+        examples=['2026-05-11T10:00:00.000Z'],
+    )
+    deleted_at: str | None = Field(
+        None,
+        alias='deletedAt',
+        description='Soft-delete timestamp. Null for active workflows.',
+        examples=[None],
+    )
+    can_manage: bool = Field(
+        ...,
+        alias='canManage',
+        description='Whether the requesting principal can manage (edit/delete/deploy/toggle) this workflow. Derived server-side from the principal + accessConfig. Always present on every Workflow response.',
+        examples=[True],
+    )
+    can_use: bool = Field(
+        ...,
+        alias='canUse',
+        description='Whether the requesting principal can use (run, view history of) this workflow. Derived server-side from the principal + accessConfig. Always present on every Workflow response.',
+        examples=[True],
+    )
+    manage_denial: ManageDenial | None = Field(
+        ...,
+        alias='manageDenial',
+        description='Why `canManage` is false, for client-facing guidance: `needs_group_manage` (shared, but no group you belong to grants Manage) or `not_owner` (private, and you are not the owner). `null` when `canManage` is true. Derived server-side from the principal + accessConfig.',
+        examples=['needs_group_manage'],
+    )
+    dashboard_alert: AgentDashboardAlertResponseDto | None = Field(
+        None,
+        alias='dashboardAlert',
+        description='Set when a dashboard KPI alert generated this workflow. Changing its definition requires disconnectDashboardAlert.',
+    )
+
+
+class RunConfigDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    model: str | None = Field(None, description='Model id, e.g. anthropic/claude-sonnet-4.6.')
+    model_settings: RunModelSettingsDto | None = Field(
+        None, alias='modelSettings', description='Model-specific runtime controls.'
+    )
+    context_selections: list[dict[str, Any]] | None = Field(
+        None, alias='contextSelections', description='Context selections (runtime-owned shape).'
+    )
+    connection_selections: list[dict[str, Any]] | None = Field(
+        None,
+        alias='connectionSelections',
+        description='Database connection selections (runtime-owned shape).',
+    )
+    connection_set: list[dict[str, Any]] | None = Field(
+        None, alias='connectionSet', description='Schema scopes (runtime-owned shape).'
+    )
+    connection_all_mode_ids: list[str] | None = Field(None, alias='connectionAllModeIds')
+    guardrails: list[str] | None = Field(None, description='Guardrail ids applied to the run.')
+    toolset: dict[str, Any] | None = Field(None, description='Map of tool name to tool config.')
+    experimental_features: bool | None = Field(None, alias='experimentalFeatures')
+    debug: bool | None = None
+    composer_file_offload: bool | None = Field(
+        None, alias='composerFileOffload', description='Set false to keep composer output inline.'
+    )
+
+
+class SkillRunDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    message: str = Field(..., description='The user message to send.')
+    session_id: str = Field(
+        ...,
+        alias='sessionId',
+        description='Opaque client-generated conversation token for continuity. The server NEVER derives the run target identity (scope/workflow/modus) from this string — target identity comes only from the request path and DTO (see RunTarget). It is used solely to thread successive turns of the same conversation together.',
+    )
+    organization_id: str | None = Field(
+        None,
+        alias='organizationId',
+        description="Organization id. Ignored for authenticated callers — the server uses the principal's org.",
+    )
+    version: Version | None = Field(
+        None, description='Saved version to run (scope/workflow; ignored for Modus).'
+    )
+    file_thread_id: str | None = Field(
+        None, alias='fileThreadId', description='Document-scoped conversation thread id.'
+    )
+    config: RunConfigDto | None = None
+    attachments: AttachmentsDto | None = None
+    user_context: UserContextDto | None = Field(None, alias='userContext')
+    supplemental_context: SupplementalContextDto | None = Field(None, alias='supplementalContext')
+    source: RunSource | None = Field(None, description='Origin of the run.')
+    run_id: str | None = Field(
+        None, alias='runId', description='Client-supplied run id (Idempotency-Key header wins).'
+    )
+    stream_protocol_version: StreamProtocolVersion | None = Field(
+        None,
+        alias='streamProtocolVersion',
+        description='Streaming protocol version. Version 2 supports assistant-content replacement events.',
+    )
+    experimental_features: bool | None = Field(None, alias='experimentalFeatures')
+    debug: bool | None = None
+    subordinate_skill_ids: list[float] | None = Field(
+        None,
+        alias='subordinateSkillIds',
+        description='Subordinate scope ids for an unsaved supervisor-scope draft test.',
+    )
+
+
+class AgentDeployResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    workflow: WorkflowDto = Field(
+        ...,
+        description='The workflow after the deploy. `hasUnpublishedChanges` is false and `activeVariationId` matches the newly-published variation.',
+    )
+    deployed_at: str = Field(
+        ...,
+        alias='deployedAt',
+        description='Server-side timestamp at which the deploy completed.',
+        examples=['2026-05-11T10:00:00.000Z'],
+    )
+
+
+class CreateDashboardDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    title: str = Field(..., description='Dashboard title.', max_length=500, min_length=1)
+    description: str | None = Field(None, description='Dashboard description.', max_length=10000)
+    definition: DashboardDefinitionDto = Field(
+        ..., description='Tiles, filters and layout of the draft. Element ids must be unique.'
+    )
+    access: DashboardAccessDto | None = Field(
+        None, description='Who can use and manage the dashboard.'
+    )
+
+
+class ListAgentsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    workflows: list[WorkflowDto] = Field(
+        ...,
+        description='Page of workflows the caller can at least `use`. Workflows the caller cannot see are filtered out (not enumerated).',
+    )
+    next_page_token: str | None = Field(
+        ...,
+        alias='nextPageToken',
+        description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
+    )
 
 
 class ScopeDto(BaseModel):
@@ -4269,250 +4621,6 @@ class ScopeDto(BaseModel):
         alias='manageDenial',
         description='Why `canManage` is false, for client-facing guidance: `needs_group_manage` (shared, but no group you belong to grants Manage) or `not_owner` (private, and you are not the owner). `null` when `canManage` is true.',
         examples=['needs_group_manage'],
-    )
-
-
-class UpdateAgentDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    name: str | None = Field(
-        None,
-        description='New display name for the workflow.',
-        examples=['Daily Sales Report v2'],
-        max_length=200,
-        min_length=1,
-    )
-    type: AgentType | None = Field(
-        None, description='Updated workflow type. Rarely changed after creation.', examples=['task']
-    )
-    description: str | None = Field(
-        None,
-        description='Updated description.',
-        examples=['Generates a daily sales report broken down by region.'],
-    )
-    trigger: TriggerDto | None = Field(
-        None,
-        description='Updated trigger configuration. Schedule shape is fully validated; other trigger types are opaque.',
-    )
-    agent_selection: AgentSelectionDto | None = Field(
-        None, alias='agentSelection', description='Updated workflow selection.'
-    )
-    workflow_structure: WorkflowStructureDto | None = Field(
-        None,
-        alias='workflowStructure',
-        description='Updated workflow graph (nodes + edges). Unknown node/edge keys and out-of-enum node types are rejected with a 422.',
-    )
-    access_config: AgentAccessConfigDto | None = Field(
-        None,
-        alias='accessConfig',
-        description='Updated access configuration. The service rejects changes that would lock the caller out of use + manage.',
-    )
-    disconnect_dashboard_alert: (
-        bool | None
-    ) = (
-        Field(None, alias='disconnectDashboardAlert', description='Acknowledge that this change disconnects the workflow from its dashboard alert. Required when name, trigger or workflowStructure change on a workflow whose dashboardAlert is set.', examples=[True])
-    )
-
-
-class UpdateDashboardDraftDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    expected_revision: int = Field(
-        ...,
-        alias='expectedRevision',
-        description='Draft revision the change is based on; a stale value is rejected with 409.',
-        ge=1,
-    )
-    title: str | None = Field(None, description='New dashboard title.', max_length=500)
-    description: str | None = Field(
-        None, description='New dashboard description.', max_length=10000
-    )
-    definition: DashboardDefinitionDto = Field(
-        ..., description='Replaces the whole draft definition.'
-    )
-
-
-class UpdateSkillDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    name: str | None = Field(
-        None,
-        description='New display name for the scope.',
-        examples=['Customer Churn Analyzer v2'],
-        max_length=200,
-        min_length=1,
-    )
-    description: str | None = Field(
-        None,
-        description='Updated description.',
-        examples=['Predicts churn risk over a 180-day window.'],
-    )
-    expected_output: str | None = Field(
-        None,
-        alias='expectedOutput',
-        description='Updated expected-output summary, used when this scope is supervised.',
-        examples=['JSON: { churn_probability: number }'],
-    )
-    instructions: list[str] | None = Field(
-        None,
-        description='Updated instruction fragments. Replaces the prior list when present.',
-        examples=[['You are a senior data analyst.']],
-    )
-    toolset: ToolsetDto | None = Field(
-        None,
-        description="Updated toolset configuration. A connected integration given as `{actions, rules?}` is bound to the organization's newest workspace connection of that integration and returned as `{byConnection: {<connectionId>: {actions, rules?}}}`.",
-    )
-    model: str | None = Field(
-        None,
-        description='Updated model id. Pass `null` (explicit) to clear and use the org default.',
-        examples=['claude-sonnet-4-5'],
-    )
-    model_settings: ModelSettingsDto | None = Field(
-        None,
-        alias='modelSettings',
-        description='Updated model-specific runtime controls. Pass `null` to clear.',
-    )
-    connection_set: list[dict[str, Any]] | None = Field(
-        None,
-        alias='connectionSet',
-        description='Updated connection set. Shape is integration-specific.',
-        examples=[[]],
-    )
-    context_selections: list[dict[str, Any]] | None = Field(
-        None,
-        alias='contextSelections',
-        description="Updated context selections (sources / docs the scope may read). Replaces the whole list, so send every selection to keep, including the scope's own learnings.",
-        examples=[[]],
-    )
-    interfaces: list[ScopeMcpInterfaceInputDto] | None = Field(
-        None,
-        description='Updated MCP interface rows. Each row has type mcp, an optional id and name, and a config of core tools and exposed integrations. Omitted id and name are assigned. Replaces the whole list.',
-    )
-    evaluations: list[dict[str, Any]] | None = Field(
-        None,
-        description='Updated evaluation entries (task + expected-output pairs) saved for the draft variation. Replaces the prior list when present.',
-        examples=[[]],
-    )
-    supervision_subordinate_descriptions: dict[str, str] | None = Field(
-        None,
-        alias='supervisionSubordinateDescriptions',
-        description='Map of subordinate scope id (stringified) to the manager-provided description blurb. Replaces the prior map when present.',
-        examples=[{'12': 'Reads warehouse facts', '17': 'Drafts the report'}],
-    )
-    access_config: AccessConfigDto | None = Field(
-        None,
-        alias='accessConfig',
-        description='Updated access configuration. The service rejects changes that would lock the caller out of use + manage.',
-    )
-    manager_id: float | None = Field(
-        None,
-        alias='managerId',
-        description='Re-parent the scope under a new manager (or remove its current manager when null). When this field is present, all other fields are ignored.',
-        examples=[17],
-    )
-
-
-class RunConfigDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    model: str | None = Field(None, description='Model id, e.g. anthropic/claude-sonnet-4.6.')
-    model_settings: RunModelSettingsDto | None = Field(
-        None, alias='modelSettings', description='Model-specific runtime controls.'
-    )
-    context_selections: list[dict[str, Any]] | None = Field(
-        None, alias='contextSelections', description='Context selections (runtime-owned shape).'
-    )
-    connection_selections: list[dict[str, Any]] | None = Field(
-        None,
-        alias='connectionSelections',
-        description='Database connection selections (runtime-owned shape).',
-    )
-    connection_set: list[dict[str, Any]] | None = Field(
-        None, alias='connectionSet', description='Schema scopes (runtime-owned shape).'
-    )
-    connection_all_mode_ids: list[str] | None = Field(None, alias='connectionAllModeIds')
-    guardrails: list[str] | None = Field(None, description='Guardrail ids applied to the run.')
-    toolset: dict[str, Any] | None = Field(None, description='Map of tool name to tool config.')
-    experimental_features: bool | None = Field(None, alias='experimentalFeatures')
-    debug: bool | None = None
-    composer_file_offload: bool | None = Field(
-        None, alias='composerFileOffload', description='Set false to keep composer output inline.'
-    )
-
-
-class SkillRunDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    message: str = Field(..., description='The user message to send.')
-    session_id: str = Field(
-        ...,
-        alias='sessionId',
-        description='Opaque client-generated conversation token for continuity. The server NEVER derives the run target identity (scope/workflow/modus) from this string — target identity comes only from the request path and DTO (see RunTarget). It is used solely to thread successive turns of the same conversation together.',
-    )
-    organization_id: str | None = Field(
-        None,
-        alias='organizationId',
-        description="Organization id. Ignored for authenticated callers — the server uses the principal's org.",
-    )
-    version: Version | None = Field(
-        None, description='Saved version to run (scope/workflow; ignored for Modus).'
-    )
-    file_thread_id: str | None = Field(
-        None, alias='fileThreadId', description='Document-scoped conversation thread id.'
-    )
-    config: RunConfigDto | None = None
-    attachments: AttachmentsDto | None = None
-    user_context: UserContextDto | None = Field(None, alias='userContext')
-    supplemental_context: SupplementalContextDto | None = Field(None, alias='supplementalContext')
-    source: RunSource | None = Field(None, description='Origin of the run.')
-    run_id: str | None = Field(
-        None, alias='runId', description='Client-supplied run id (Idempotency-Key header wins).'
-    )
-    stream_protocol_version: StreamProtocolVersion | None = Field(
-        None,
-        alias='streamProtocolVersion',
-        description='Streaming protocol version. Version 2 supports assistant-content replacement events.',
-    )
-    experimental_features: bool | None = Field(None, alias='experimentalFeatures')
-    debug: bool | None = None
-    subordinate_skill_ids: list[float] | None = Field(
-        None,
-        alias='subordinateSkillIds',
-        description='Subordinate scope ids for an unsaved supervisor-scope draft test.',
-    )
-
-
-class CreateDashboardDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    title: str = Field(..., description='Dashboard title.', max_length=500, min_length=1)
-    description: str | None = Field(None, description='Dashboard description.', max_length=10000)
-    definition: DashboardDefinitionDto = Field(
-        ..., description='Tiles, filters and layout of the draft. Element ids must be unique.'
-    )
-    access: DashboardAccessDto | None = Field(
-        None, description='Who can use and manage the dashboard.'
-    )
-
-
-class DeployResponseDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    scope: ScopeDto = Field(
-        ...,
-        description='The scope after the deploy. `hasUnpublishedChanges` is false and `activeVariationId` matches the newly-published variation.',
-    )
-    deployed_at: str = Field(
-        ...,
-        alias='deployedAt',
-        description='Server-side timestamp at which the deploy completed.',
-        examples=['2026-05-11T10:00:00.000Z'],
-    )
-
-
-class ListSkillsResponseDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    scopes: list[ScopeDto] = Field(
-        ...,
-        description='Page of scopes the caller can at least `use`. Scopes the caller cannot see are filtered out (not enumerated).',
-    )
-    next_page_token: str | None = Field(
-        ...,
-        alias='nextPageToken',
-        description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
     )
 
 
@@ -4688,6 +4796,33 @@ class ResumeRunDto(BaseModel):
         None,
         alias='approvalTarget',
         description='The paused call an approval decision answers. Only that call is resolved and any other paused write is rejected; without it the first pending approval is resolved.',
+    )
+
+
+class DeployResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    scope: ScopeDto = Field(
+        ...,
+        description='The scope after the deploy. `hasUnpublishedChanges` is false and `activeVariationId` matches the newly-published variation.',
+    )
+    deployed_at: str = Field(
+        ...,
+        alias='deployedAt',
+        description='Server-side timestamp at which the deploy completed.',
+        examples=['2026-05-11T10:00:00.000Z'],
+    )
+
+
+class ListSkillsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    scopes: list[ScopeDto] = Field(
+        ...,
+        description='Page of scopes the caller can at least `use`. Scopes the caller cannot see are filtered out (not enumerated).',
+    )
+    next_page_token: str | None = Field(
+        ...,
+        alias='nextPageToken',
+        description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
     )
 
 

@@ -89,6 +89,33 @@
       "title": "AccessConfigDto",
       "type": "object"
     },
+    "EvaluationCaseDto": {
+      "properties": {
+        "id": {
+          "description": "Stable id of the evaluation case.",
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "task": {
+          "description": "What the scope should do for this case.",
+          "title": "Task",
+          "type": "string"
+        },
+        "expectedOutput": {
+          "description": "What a correct result looks like.",
+          "title": "Expectedoutput",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "task",
+        "expectedOutput"
+      ],
+      "title": "EvaluationCaseDto",
+      "type": "object"
+    },
     "GroupPermissionDto": {
       "properties": {
         "use": {
@@ -122,6 +149,92 @@
       ],
       "title": "ManageDenial",
       "type": "string"
+    },
+    "McpCoreToolsConfigDto": {
+      "properties": {
+        "chat": {
+          "description": "Whether Get Answer is on.",
+          "examples": [
+            false
+          ],
+          "title": "Chat",
+          "type": "boolean"
+        },
+        "getContext": {
+          "description": "Whether Get Context is on.",
+          "examples": [
+            true
+          ],
+          "title": "Getcontext",
+          "type": "boolean"
+        },
+        "teachModus": {
+          "description": "Whether Teach Modus is on.",
+          "examples": [
+            false
+          ],
+          "title": "Teachmodus",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "chat",
+        "getContext",
+        "teachModus"
+      ],
+      "title": "McpCoreToolsConfigDto",
+      "type": "object"
+    },
+    "McpToolExposureConfigDto": {
+      "properties": {
+        "version": {
+          "$ref": "#/$defs/McpToolExposureVersion",
+          "description": "Exposure format. Always 1.",
+          "examples": [
+            1
+          ]
+        },
+        "mode": {
+          "$ref": "#/$defs/McpToolExposureMode",
+          "description": "subset lists keys. discovery exposes every tool this scope can call.",
+          "examples": [
+            "discovery"
+          ]
+        },
+        "allowedIntegrationKeys": {
+          "description": "Exposure keys when mode is subset. Empty for discovery.",
+          "examples": [
+            []
+          ],
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowedintegrationkeys",
+          "type": "array"
+        }
+      },
+      "required": [
+        "version",
+        "mode",
+        "allowedIntegrationKeys"
+      ],
+      "title": "McpToolExposureConfigDto",
+      "type": "object"
+    },
+    "McpToolExposureMode": {
+      "enum": [
+        "subset",
+        "discovery"
+      ],
+      "title": "McpToolExposureMode",
+      "type": "string"
+    },
+    "McpToolExposureVersion": {
+      "enum": [
+        1.0
+      ],
+      "title": "McpToolExposureVersion",
+      "type": "number"
     },
     "ModelSettingsDto": {
       "properties": {
@@ -254,8 +367,8 @@
           "type": "string"
         },
         "config": {
-          "$ref": "#/$defs/SkillMcpInterfaceConfigDto",
-          "description": "Core tools and the integrations this interface exposes."
+          "$ref": "#/$defs/SkillMcpInterfaceConfigResponseDto",
+          "description": "Core tools and tool exposure as they take effect."
         }
       },
       "required": [
@@ -362,38 +475,34 @@
       "title": "SharedUserPermission",
       "type": "string"
     },
-    "SkillMcpInterfaceConfigDto": {
+    "SkillMcpInterfaceConfigResponseDto": {
       "properties": {
         "coreTools": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/$defs/McpCoreToolsConfigDto"
             },
             {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "Core MCP tools: chat (get_answer), getContext, teachModus. Omitted keys default to chat false, getContext true, teachModus false. chat cannot be true together with another tool.",
-          "title": "Coretools"
+          "description": "Get Answer, Get Context, and Teach Modus as they take effect."
         },
         "mcpToolExposure": {
           "anyOf": [
             {
-              "additionalProperties": true,
-              "type": "object"
+              "$ref": "#/$defs/McpToolExposureConfigDto"
             },
             {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "Integration tools exposed to MCP clients: mode discovery (all) or subset with allowedIntegrationKeys. Must be an empty subset when chat is true.",
-          "title": "Mcptoolexposure"
+          "description": "Tools MCP clients can call, as they take effect."
         }
       },
-      "title": "SkillMcpInterfaceConfigDto",
+      "title": "SkillMcpInterfaceConfigResponseDto",
       "type": "object"
     },
     "SkillVariationDto": {
@@ -475,10 +584,9 @@
           "type": "array"
         },
         "evaluations": {
-          "description": "Evaluation entries (task + expected-output pairs) saved for this variation.",
+          "description": "Evaluation cases saved for this variation.",
           "items": {
-            "additionalProperties": true,
-            "type": "object"
+            "$ref": "#/$defs/EvaluationCaseDto"
           },
           "title": "Evaluations",
           "type": "array"

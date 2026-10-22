@@ -5,6 +5,7 @@ import json
 import httpx
 import respx
 from modus.management import AgentSelection, ModusManagement
+from modus.management.types.agent_selection import parse_agent_selection
 from modus.management.types.agents import Agent
 
 BASE = "https://api.modus.com"
@@ -53,6 +54,27 @@ def test_agents_create_agent_selection_snake_case():
     assert "priority_order" in entry
     assert "agentId" not in entry
     assert "priorityOrder" not in entry
+
+
+@respx.mock
+def test_agents_update_resends_model_settings_from_get():
+    selection = {
+        "agents": [{"agent_id": 17, "priority_order": 1}],
+        "model": "gpt-4o",
+        "modelSettings": {"reasoningEffort": "high", "contextWindow": 200000},
+    }
+    respx.get(f"{BASE}/api/v1/workflows/1").mock(
+        return_value=httpx.Response(200, json={**AGENT_RESP, "variation": {"agentSelection": selection}})
+    )
+    route = respx.patch(f"{BASE}/api/v1/workflows/1").mock(
+        return_value=httpx.Response(200, json=AGENT_RESP)
+    )
+    client = _client()
+    fetched = client.workflows.get(1)
+    assert fetched.variation is not None
+    client.workflows.update(1, agent_selection=parse_agent_selection(fetched.variation.agent_selection))
+    body = json.loads(route.calls[0].request.read())
+    assert body["agentSelection"] == selection
 
 
 @respx.mock
