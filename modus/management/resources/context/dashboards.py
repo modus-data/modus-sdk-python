@@ -8,6 +8,14 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Union
 from pydantic import BaseModel
 
 from modus._config import ModusConfig
+from modus._generated.resources.management.context.dashboards import (
+    _AsyncContextDashboardsResourceBase,
+    _ContextDashboardsResourceBase,
+)
+from modus._generated.resources.management.context.dashboards.elements import (
+    _AsyncContextDashboardsElementsResourceBase,
+    _ContextDashboardsElementsResourceBase,
+)
 from modus._http import AsyncHttpClient, HttpClient
 from modus._openapi_invoke import invoke_operation, invoke_operation_async
 from modus._retry import async_with_retry, with_retry
@@ -17,17 +25,14 @@ from ...types.context_dashboards import (
     Dashboard,
     DashboardAccess,
     DashboardDefinition,
-    DashboardDraftSnapshot,
     DashboardElementKind,
     DashboardElementLayout,
     DashboardElementPatch,
     DashboardElementResult,
-    DashboardElementsList,
     DashboardGroupPermission,
     DashboardLayoutElement,
     DashboardPublishResult,
     DashboardSharedUser,
-    DashboardVersion,
     DashboardView,
     DashboardVisibility,
 )
@@ -138,7 +143,7 @@ def _access_body(
     }
 
 
-class DashboardElementsResource:
+class DashboardElementsResource(_ContextDashboardsElementsResourceBase):
     """Tiles and filters on one dashboard draft.
 
     mgmt.context.dashboards.elements(dashboard_id).list()                → DashboardElementsList
@@ -148,61 +153,7 @@ class DashboardElementsResource:
     """
 
     def __init__(self, http: HttpClient, config: ModusConfig, dashboard_id: str) -> None:
-        self._http = http
-        self._config = config
-        self._dashboard_id = dashboard_id
-
-    def list(self) -> DashboardElementsList:
-        """List every tile and filter on the dashboard draft.
-
-        Returns:
-            Each element's id, kind, title and grid position, plus the current
-            ``draft_revision`` to pass as ``expected_revision`` on the next change.
-
-        Raises:
-            NotFoundError: The dashboard does not exist or you cannot edit it.
-
-        Example:
-            >>> listed = mgmt.context.dashboards.elements("DASHBOARD_ID").list()
-            >>> [element.id for element in listed.elements]
-        """
-        data = with_retry(
-            lambda: invoke_operation(
-                self._http,
-                "DashboardsController_listElements",
-                path_params={"dashboardId": self._dashboard_id},
-            ),
-            self._config.max_retries,
-        )
-        return DashboardElementsList.model_validate(data)
-
-    def get(self, element_id: str) -> DashboardElementResult:
-        """Get the full draft settings of one tile or filter.
-
-        Args:
-            element_id: Id of the tile or filter, as returned by ``list()``.
-
-        Returns:
-            The element's settings and the current ``draft_revision``.
-
-        Raises:
-            NotFoundError: The dashboard or the element does not exist, or you cannot
-                edit the dashboard.
-
-        Example:
-            >>> result = mgmt.context.dashboards.elements("DASHBOARD_ID").get("ELEMENT_ID")
-            >>> result.element.title
-        """
-        validate_id(element_id, name="element_id")
-        data = with_retry(
-            lambda: invoke_operation(
-                self._http,
-                "DashboardsController_getElement",
-                path_params={"dashboardId": self._dashboard_id, "elementId": element_id},
-            ),
-            self._config.max_retries,
-        )
-        return DashboardElementResult.model_validate(data)
+        super().__init__(http, config, dashboard_id)
 
     def create(
         self,
@@ -295,7 +246,7 @@ class DashboardElementsResource:
         return Dashboard.model_validate(data)
 
 
-class DashboardsResource:
+class DashboardsResource(_ContextDashboardsResourceBase):
     """Dashboards in the Modus knowledge base.
 
     mgmt.context.dashboards.list(view=...)                                → list[Dashboard]
@@ -317,8 +268,7 @@ class DashboardsResource:
     """
 
     def __init__(self, http: HttpClient, config: ModusConfig) -> None:
-        self._http = http
-        self._config = config
+        super().__init__(http, config)
 
     def list(self, *, view: Optional[ViewInput] = None) -> List[Dashboard]:
         """List dashboards with their full definitions.
@@ -493,149 +443,6 @@ class DashboardsResource:
         )
         return DashboardPublishResult.model_validate(data)
 
-    def delete(self, dashboard_id: str) -> None:
-        """Delete a dashboard and the alert workflows defined on it.
-
-        A deleted dashboard cannot be restored.
-
-        Args:
-            dashboard_id: Id of the dashboard.
-
-        Raises:
-            NotFoundError: The dashboard does not exist or you cannot edit it.
-
-        Example:
-            >>> mgmt.context.dashboards.delete("DASHBOARD_ID")
-        """
-        validate_id(dashboard_id, name="dashboard_id")
-        with_retry(
-            lambda: invoke_operation(
-                self._http,
-                "DashboardsController_delete",
-                path_params={"dashboardId": dashboard_id},
-            ),
-            self._config.max_retries,
-        )
-
-    def list_versions(self, dashboard_id: str) -> List[DashboardVersion]:
-        """List the published versions of a dashboard, newest first.
-
-        Args:
-            dashboard_id: Id of the dashboard.
-
-        Returns:
-            Every published version with its full definition. Definitions are
-            returned as stored, so older versions may lack newer fields. The list
-            is not paginated.
-
-        Raises:
-            NotFoundError: The dashboard does not exist or you cannot open it.
-
-        Example:
-            >>> versions = mgmt.context.dashboards.list_versions("DASHBOARD_ID")
-            >>> [(v.uid, v.version_number) for v in versions]
-        """
-        validate_id(dashboard_id, name="dashboard_id")
-        data = with_retry(
-            lambda: invoke_operation(
-                self._http,
-                "DashboardsController_listVersions",
-                path_params={"dashboardId": dashboard_id},
-            ),
-            self._config.max_retries,
-        )
-        return [DashboardVersion.model_validate(item) for item in data["versions"]]
-
-    def get_version(self, dashboard_id: str, version_id: str) -> Dashboard:
-        """Get a dashboard as it was in one version.
-
-        Args:
-            dashboard_id: Id of the dashboard.
-            version_id: Id of the version, as returned by ``list_versions()``.
-
-        Returns:
-            The dashboard with that version's definition.
-
-        Raises:
-            NotFoundError: The dashboard or the version does not exist, or you
-                cannot open the dashboard.
-
-        Example:
-            >>> old = mgmt.context.dashboards.get_version("DASHBOARD_ID", "VERSION_ID")
-            >>> old.selected_version.version_number
-        """
-        validate_id(dashboard_id, name="dashboard_id")
-        validate_id(version_id, name="version_id")
-        data = with_retry(
-            lambda: invoke_operation(
-                self._http,
-                "DashboardsController_getVersion",
-                path_params={"dashboardId": dashboard_id, "versionId": version_id},
-            ),
-            self._config.max_retries,
-        )
-        return Dashboard.model_validate(data)
-
-    def restore_version(self, dashboard_id: str, version_id: str) -> Dashboard:
-        """Replace the draft with the content of an earlier version.
-
-        The draft being replaced is kept as a draft snapshot. Call ``publish()``
-        afterwards to make the restored content visible.
-
-        Args:
-            dashboard_id: Id of the dashboard.
-            version_id: Id of the version or draft snapshot to restore.
-
-        Returns:
-            The dashboard draft after the restore.
-
-        Raises:
-            NotFoundError: The dashboard or the version does not exist, or you
-                cannot edit the dashboard.
-
-        Example:
-            >>> mgmt.context.dashboards.restore_version("DASHBOARD_ID", "VERSION_ID")
-        """
-        validate_id(dashboard_id, name="dashboard_id")
-        validate_id(version_id, name="version_id")
-        data = with_retry(
-            lambda: invoke_operation(
-                self._http,
-                "DashboardsController_restore",
-                path_params={"dashboardId": dashboard_id, "versionId": version_id},
-            ),
-            self._config.max_retries,
-        )
-        return Dashboard.model_validate(data)
-
-    def list_draft_snapshots(self, dashboard_id: str) -> List[DashboardDraftSnapshot]:
-        """List recent snapshots of the dashboard draft, newest first.
-
-        Args:
-            dashboard_id: Id of the dashboard.
-
-        Returns:
-            Up to 100 snapshots with their id, author and time. Pass an id to
-            ``restore_version()`` to bring that draft back.
-
-        Raises:
-            NotFoundError: The dashboard does not exist or you cannot edit it.
-
-        Example:
-            >>> snapshots = mgmt.context.dashboards.list_draft_snapshots("DASHBOARD_ID")
-            >>> [s.uid for s in snapshots]
-        """
-        validate_id(dashboard_id, name="dashboard_id")
-        data = with_retry(
-            lambda: invoke_operation(
-                self._http,
-                "DashboardsController_listDraftSnapshots",
-                path_params={"dashboardId": dashboard_id},
-            ),
-            self._config.max_retries,
-        )
-        return [DashboardDraftSnapshot.model_validate(item) for item in data["snapshots"]]
-
     def update_access(
         self,
         dashboard_id: str,
@@ -719,64 +526,6 @@ class DashboardsResource:
         )
         return Dashboard.model_validate(data)
 
-    def accept_ownership_transfer(self, dashboard_id: str) -> Dashboard:
-        """Accept a pending ownership transfer and become the dashboard owner.
-
-        Only the requested recipient can accept.
-
-        Args:
-            dashboard_id: Id of the dashboard.
-
-        Returns:
-            The dashboard with you as its owner.
-
-        Raises:
-            NotFoundError: The dashboard does not exist, or it has no pending
-                transfer addressed to you.
-
-        Example:
-            >>> mgmt.context.dashboards.accept_ownership_transfer("DASHBOARD_ID")
-        """
-        validate_id(dashboard_id, name="dashboard_id")
-        data = with_retry(
-            lambda: invoke_operation(
-                self._http,
-                "DashboardsController_acceptOwnership",
-                path_params={"dashboardId": dashboard_id},
-            ),
-            self._config.max_retries,
-        )
-        return Dashboard.model_validate(data)
-
-    def cancel_ownership_transfer(self, dashboard_id: str) -> Dashboard:
-        """Cancel a pending ownership transfer.
-
-        Only the owner can cancel.
-
-        Args:
-            dashboard_id: Id of the dashboard.
-
-        Returns:
-            The dashboard with no pending transfer.
-
-        Raises:
-            NotFoundError: The dashboard does not exist, you cannot open it, or
-                you are not the owner.
-
-        Example:
-            >>> mgmt.context.dashboards.cancel_ownership_transfer("DASHBOARD_ID")
-        """
-        validate_id(dashboard_id, name="dashboard_id")
-        data = with_retry(
-            lambda: invoke_operation(
-                self._http,
-                "DashboardsController_cancelOwnership",
-                path_params={"dashboardId": dashboard_id},
-            ),
-            self._config.max_retries,
-        )
-        return Dashboard.model_validate(data)
-
     def elements(self, dashboard_id: str) -> DashboardElementsResource:
         """Work with the tiles and filters of one dashboard draft.
 
@@ -833,38 +582,11 @@ class DashboardsResource:
         return Dashboard.model_validate(data)
 
 
-class AsyncDashboardElementsResource:
+class AsyncDashboardElementsResource(_AsyncContextDashboardsElementsResourceBase):
     """Async twin of ``DashboardElementsResource``."""
 
     def __init__(self, http: AsyncHttpClient, config: ModusConfig, dashboard_id: str) -> None:
-        self._http = http
-        self._config = config
-        self._dashboard_id = dashboard_id
-
-    async def list(self) -> DashboardElementsList:
-        """List every tile and filter on the dashboard draft. See the sync ``list``."""
-        data = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                "DashboardsController_listElements",
-                path_params={"dashboardId": self._dashboard_id},
-            ),
-            self._config.max_retries,
-        )
-        return DashboardElementsList.model_validate(data)
-
-    async def get(self, element_id: str) -> DashboardElementResult:
-        """Get the full draft settings of one tile or filter. See the sync ``get``."""
-        validate_id(element_id, name="element_id")
-        data = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                "DashboardsController_getElement",
-                path_params={"dashboardId": self._dashboard_id, "elementId": element_id},
-            ),
-            self._config.max_retries,
-        )
-        return DashboardElementResult.model_validate(data)
+        super().__init__(http, config, dashboard_id)
 
     async def create(
         self,
@@ -905,12 +627,11 @@ class AsyncDashboardElementsResource:
         return Dashboard.model_validate(data)
 
 
-class AsyncDashboardsResource:
+class AsyncDashboardsResource(_AsyncContextDashboardsResourceBase):
     """Async twin of ``DashboardsResource``."""
 
     def __init__(self, http: AsyncHttpClient, config: ModusConfig) -> None:
-        self._http = http
-        self._config = config
+        super().__init__(http, config)
 
     async def list(self, *, view: Optional[ViewInput] = None) -> List[Dashboard]:
         """List dashboards with their full definitions. See the sync ``list``."""
@@ -995,72 +716,6 @@ class AsyncDashboardsResource:
         )
         return DashboardPublishResult.model_validate(data)
 
-    async def delete(self, dashboard_id: str) -> None:
-        """Delete a dashboard and its alert workflows. See the sync ``delete``."""
-        validate_id(dashboard_id, name="dashboard_id")
-        await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                "DashboardsController_delete",
-                path_params={"dashboardId": dashboard_id},
-            ),
-            self._config.max_retries,
-        )
-
-    async def list_versions(self, dashboard_id: str) -> List[DashboardVersion]:
-        """List the published versions of a dashboard. See the sync ``list_versions``."""
-        validate_id(dashboard_id, name="dashboard_id")
-        data = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                "DashboardsController_listVersions",
-                path_params={"dashboardId": dashboard_id},
-            ),
-            self._config.max_retries,
-        )
-        return [DashboardVersion.model_validate(item) for item in data["versions"]]
-
-    async def get_version(self, dashboard_id: str, version_id: str) -> Dashboard:
-        """Get a dashboard as it was in one version. See the sync ``get_version``."""
-        validate_id(dashboard_id, name="dashboard_id")
-        validate_id(version_id, name="version_id")
-        data = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                "DashboardsController_getVersion",
-                path_params={"dashboardId": dashboard_id, "versionId": version_id},
-            ),
-            self._config.max_retries,
-        )
-        return Dashboard.model_validate(data)
-
-    async def restore_version(self, dashboard_id: str, version_id: str) -> Dashboard:
-        """Replace the draft with an earlier version. See the sync ``restore_version``."""
-        validate_id(dashboard_id, name="dashboard_id")
-        validate_id(version_id, name="version_id")
-        data = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                "DashboardsController_restore",
-                path_params={"dashboardId": dashboard_id, "versionId": version_id},
-            ),
-            self._config.max_retries,
-        )
-        return Dashboard.model_validate(data)
-
-    async def list_draft_snapshots(self, dashboard_id: str) -> List[DashboardDraftSnapshot]:
-        """List recent draft snapshots. See the sync ``list_draft_snapshots``."""
-        validate_id(dashboard_id, name="dashboard_id")
-        data = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                "DashboardsController_listDraftSnapshots",
-                path_params={"dashboardId": dashboard_id},
-            ),
-            self._config.max_retries,
-        )
-        return [DashboardDraftSnapshot.model_validate(item) for item in data["snapshots"]]
-
     async def update_access(
         self,
         dashboard_id: str,
@@ -1095,32 +750,6 @@ class AsyncDashboardsResource:
                 "DashboardsController_transferOwnership",
                 path_params={"dashboardId": dashboard_id},
                 json_body={"newOwnerUserId": new_owner_user_id},
-            ),
-            self._config.max_retries,
-        )
-        return Dashboard.model_validate(data)
-
-    async def accept_ownership_transfer(self, dashboard_id: str) -> Dashboard:
-        """Accept a pending ownership transfer. See the sync ``accept_ownership_transfer``."""
-        validate_id(dashboard_id, name="dashboard_id")
-        data = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                "DashboardsController_acceptOwnership",
-                path_params={"dashboardId": dashboard_id},
-            ),
-            self._config.max_retries,
-        )
-        return Dashboard.model_validate(data)
-
-    async def cancel_ownership_transfer(self, dashboard_id: str) -> Dashboard:
-        """Cancel a pending ownership transfer. See the sync ``cancel_ownership_transfer``."""
-        validate_id(dashboard_id, name="dashboard_id")
-        data = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                "DashboardsController_cancelOwnership",
-                path_params={"dashboardId": dashboard_id},
             ),
             self._config.max_retries,
         )

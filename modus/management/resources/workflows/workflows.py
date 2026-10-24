@@ -11,18 +11,16 @@ from modus._generated.models import (
     TransferOwnershipDto,
     WorkflowDto,
 )
+from modus._generated.resources.management.workflows import (
+    _AsyncWorkflowsResourceBase,
+    _WorkflowsResourceBase,
+)
 from modus._http import AsyncHttpClient, HttpClient
 from modus._openapi_invoke import invoke_operation, invoke_operation_async
-from modus._pagination import (
-    aip_list_params,
-    build_aip_page_mapped,
-    build_async_aip_page_mapped,
-)
 from modus._query import update_mask_query
 from modus._retry import async_with_retry, with_retry
-from modus._validation import validate_id, validate_page_size
+from modus._validation import validate_id
 from modus.types.agents import Agent, AgentType
-from modus.types.pagination import AsyncPage, Page
 from modus.types.views import VariationView
 
 from ...types.agent_selection import AgentSelectionInput, dump_agent_selection
@@ -77,27 +75,7 @@ def _parse_deploy_workflow(raw: Any) -> Agent:
     return AgentDeployResponseDto.model_validate(raw).workflow
 
 
-def _workflows_list_params(
-    page_size: int,
-    page_token: Optional[str],
-    search: Optional[str],
-    type: Optional[AgentType],
-    view: Optional[VariationView],
-    include_variation: Optional[bool],
-) -> dict:
-    extra: dict = {}
-    if search is not None:
-        extra["search"] = search
-    if type is not None:
-        extra["type"] = type
-    if view is not None:
-        extra["view"] = view
-    if include_variation is not None:
-        extra["includeVariation"] = include_variation
-    return aip_list_params(page_size, page_token, **extra)
-
-
-class WorkflowsResource:
+class WorkflowsResource(_WorkflowsResourceBase):
     """
     Full CRUD access to Modus workflows.
 
@@ -115,70 +93,8 @@ class WorkflowsResource:
         config: ModusConfig,
         ops: "ManagementWorkflowsOperations" = MANAGEMENT_WORKFLOW_OPERATIONS,
     ) -> None:
-        self._http = http
-        self._config = config
-        self._ops = ops
-
-    def list(
-        self,
-        *,
-        page_size: int = 25,
-        page_token: Optional[str] = None,
-        search: Optional[str] = None,
-        type: Optional[AgentType] = None,
-        view: Optional[VariationView] = None,
-        include_variation: Optional[bool] = None,
-    ) -> Page[Agent]:
-        """
-        List all Modus workflows in the organisation.
-
-        Args:
-            page_size:         Maximum number of items to return (default 25).
-            page_token:        Token from a previous page's ``next_page_token``; omit for the first page.
-            search:            Case-insensitive substring filter on the workflow name.
-            type:              Filter by workflow type: ``"task"`` or ``"workflow"``.
-            view:              Variation view — ``"active"`` (deployed) or ``"draft"``.
-            include_variation: Include variation payload on each list row.
-
-        Returns:
-            ``Page[Agent]``. Use ``.auto_paging_iter()`` to walk all pages.
-
-        Example:
-            >>> mgmt = modus.management.ModusManagement()
-            >>> for wf in mgmt.workflows.list(search="digest").auto_paging_iter():
-            ...     print(wf.id, wf.name, wf.status)
-        """
-        validate_page_size(page_size)
-        return self._list_page(
-            page_size, page_token, search, type, view, include_variation
-        )
-
-    def _list_page(
-        self,
-        page_size: int,
-        page_token: Optional[str],
-        search: Optional[str] = None,
-        type: Optional[AgentType] = None,
-        view: Optional[VariationView] = None,
-        include_variation: Optional[bool] = None,
-    ) -> Page[Agent]:
-        params = _workflows_list_params(
-            page_size, page_token, search, type, view, include_variation
-        )
-        data = with_retry(
-            lambda: invoke_operation(
-                self._http, self._ops.list, query=params
-            ),
-            self._config.max_retries,
-        )
-        return build_aip_page_mapped(
-            data,
-            "workflows",
-            _parse_workflow,
-            lambda cur: self._list_page(
-                page_size, cur, search, type, view, include_variation
-            ),
-        )
+        super().__init__(http, config, ops)
+        self._ops: ManagementWorkflowsOperations = ops
 
     def get(
         self,
@@ -383,29 +299,6 @@ class WorkflowsResource:
         )
         return _parse_workflow(raw)
 
-    def delete(self, workflow_id: Union[int, str]) -> None:
-        """Delete a Modus workflow.
-
-        Args:
-            workflow_id: Workflow to remove.
-
-        Returns:
-            ``None``.
-
-        Example:
-            >>> mgmt = modus.management.ModusManagement()
-            >>> mgmt.workflows.delete(workflow_id)
-        """
-        validate_id(workflow_id, name="workflow_id")
-        with_retry(
-            lambda: invoke_operation(
-                self._http,
-                self._ops.delete,
-                path_params={"id": workflow_id},
-            ),
-            self._config.max_retries,
-        )
-
     def request_ownership_transfer(
         self, workflow_id: Union[int, str], *, new_owner_user_id: str,
     ) -> Agent:
@@ -423,111 +316,16 @@ class WorkflowsResource:
         )
         return _parse_workflow(raw)
 
-    def cancel_ownership_transfer(self, workflow_id: Union[int, str]) -> Agent:
-        """Cancel a pending workflow ownership transfer."""
-        validate_id(workflow_id, name="workflow_id")
-        raw = with_retry(
-            lambda: invoke_operation(
-                self._http,
-                self._ops.cancel_ownership_transfer,
-                path_params={"id": workflow_id},
-            ),
-            self._config.max_retries,
-        )
-        return _parse_workflow(raw)
 
-    def accept_ownership_transfer(self, workflow_id: Union[int, str]) -> Agent:
-        """Accept a pending workflow ownership transfer."""
-        validate_id(workflow_id, name="workflow_id")
-        raw = with_retry(
-            lambda: invoke_operation(
-                self._http,
-                self._ops.accept_ownership_transfer,
-                path_params={"id": workflow_id},
-                json_body={},
-            ),
-            self._config.max_retries,
-        )
-        return _parse_workflow(raw)
-
-    def restore(self, workflow_id: Union[int, str]) -> Agent:
-        """Restore a deleted workflow."""
-        validate_id(workflow_id, name="workflow_id")
-        raw = with_retry(
-            lambda: invoke_operation(
-                self._http,
-                self._ops.restore,
-                path_params={"id": workflow_id},
-                json_body={},
-            ),
-            self._config.max_retries,
-        )
-        return _parse_workflow(raw)
-
-
-class AsyncWorkflowsResource:
+class AsyncWorkflowsResource(_AsyncWorkflowsResourceBase):
     def __init__(
         self,
         http: AsyncHttpClient,
         config: ModusConfig,
         ops: "ManagementWorkflowsOperations" = MANAGEMENT_WORKFLOW_OPERATIONS,
     ) -> None:
-        self._http = http
-        self._config = config
-        self._ops = ops
-
-    async def list(
-        self,
-        *,
-        page_size: int = 25,
-        page_token: Optional[str] = None,
-        search: Optional[str] = None,
-        type: Optional[AgentType] = None,
-        view: Optional[VariationView] = None,
-        include_variation: Optional[bool] = None,
-    ) -> AsyncPage[Agent]:
-        """
-        List all Modus workflows in the organisation.
-
-        Args:
-            page_size:         Maximum number of items to return (default 25).
-            page_token:        Token from a previous page's ``next_page_token``; omit for the first page.
-            search:            Case-insensitive substring filter on the workflow name.
-            type:              Filter by workflow type: ``"task"`` or ``"workflow"``.
-            view:              Variation view — ``"active"`` (deployed) or ``"draft"``.
-            include_variation: Include variation payload on each list row.
-        """
-        validate_page_size(page_size)
-        return await self._list_page(
-            page_size, page_token, search, type, view, include_variation
-        )
-
-    async def _list_page(
-        self,
-        page_size: int,
-        page_token: Optional[str],
-        search: Optional[str] = None,
-        type: Optional[AgentType] = None,
-        view: Optional[VariationView] = None,
-        include_variation: Optional[bool] = None,
-    ) -> AsyncPage[Agent]:
-        params = _workflows_list_params(
-            page_size, page_token, search, type, view, include_variation
-        )
-        data = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http, self._ops.list, query=params
-            ),
-            self._config.max_retries,
-        )
-        return build_async_aip_page_mapped(
-            data,
-            "workflows",
-            _parse_workflow,
-            lambda cur: self._list_page(
-                page_size, cur, search, type, view, include_variation
-            ),
-        )
+        super().__init__(http, config, ops)
+        self._ops: ManagementWorkflowsOperations = ops
 
     async def get(
         self,
@@ -665,18 +463,6 @@ class AsyncWorkflowsResource:
         )
         return _parse_workflow(raw)
 
-    async def delete(self, workflow_id: Union[int, str]) -> None:
-        """Delete a Modus workflow. See the sync ``delete`` for argument details."""
-        validate_id(workflow_id, name="workflow_id")
-        await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                self._ops.delete,
-                path_params={"id": workflow_id},
-            ),
-            self._config.max_retries,
-        )
-
     async def request_ownership_transfer(
         self, workflow_id: Union[int, str], *, new_owner_user_id: str,
     ) -> Agent:
@@ -689,47 +475,6 @@ class AsyncWorkflowsResource:
                 self._ops.request_ownership_transfer,
                 path_params={"id": workflow_id},
                 json_body=body.model_dump(by_alias=True, exclude_none=True),
-            ),
-            self._config.max_retries,
-        )
-        return _parse_workflow(raw)
-
-    async def cancel_ownership_transfer(self, workflow_id: Union[int, str]) -> Agent:
-        """Cancel a pending workflow ownership transfer."""
-        validate_id(workflow_id, name="workflow_id")
-        raw = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                self._ops.cancel_ownership_transfer,
-                path_params={"id": workflow_id},
-            ),
-            self._config.max_retries,
-        )
-        return _parse_workflow(raw)
-
-    async def accept_ownership_transfer(self, workflow_id: Union[int, str]) -> Agent:
-        """Accept a pending workflow ownership transfer."""
-        validate_id(workflow_id, name="workflow_id")
-        raw = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                self._ops.accept_ownership_transfer,
-                path_params={"id": workflow_id},
-                json_body={},
-            ),
-            self._config.max_retries,
-        )
-        return _parse_workflow(raw)
-
-    async def restore(self, workflow_id: Union[int, str]) -> Agent:
-        """Restore a deleted workflow."""
-        validate_id(workflow_id, name="workflow_id")
-        raw = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                self._ops.restore,
-                path_params={"id": workflow_id},
-                json_body={},
             ),
             self._config.max_retries,
         )

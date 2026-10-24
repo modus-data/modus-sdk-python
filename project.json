@@ -29,7 +29,10 @@
       "inputs": [
         "default",
         "{workspaceRoot}/apps/services/*/openapi/v1.json",
-        "{workspaceRoot}/packages/openapi-portal/src/**/*.ts"
+        "{workspaceRoot}/packages/openapi-portal/src/**/*.ts",
+        "{workspaceRoot}/distribution/clients/python/scripts/**",
+        "{workspaceRoot}/distribution/clients/sdk-surface.json",
+        "{workspaceRoot}/distribution/clients/sdk-surface.schema.json"
       ],
       "outputs": ["{projectRoot}/reports"]
     },
@@ -96,8 +99,7 @@
     "generate": {
       "executor": "nx:run-commands",
       "dependsOn": [
-        { "projects": ["modus-api", "agent-service"], "target": "openapi:generate" },
-        { "projects": ["openapi-portal"], "target": "build" },
+        { "projects": ["modus-sdk-typescript"], "target": "generate-spec" },
         "install"
       ],
       "options": {
@@ -109,7 +111,9 @@
         "{workspaceRoot}/apps/services/*/openapi/v1.json",
         "{workspaceRoot}/packages/openapi-portal/src/**/*.ts",
         "{workspaceRoot}/distribution/clients/python/scripts/generate-sdk-from-openapi.py",
-        "{workspaceRoot}/distribution/clients/python/scripts/emit-openapi-operations.py"
+        "{workspaceRoot}/distribution/clients/python/scripts/emit-openapi-operations.py",
+        "{workspaceRoot}/distribution/clients/python/scripts/emit_sdk_resources.py",
+        "{workspaceRoot}/distribution/clients/sdk-surface.json"
       ],
       "outputs": ["{projectRoot}/modus/_generated/**"]
     },
@@ -129,12 +133,33 @@
         "default",
         "{workspaceRoot}/apps/services/*/openapi/v1.json",
         { "dependentTasksOutputFiles": "**/*.js" },
-        "{workspaceRoot}/distribution/clients/python/scripts/**"
+        "{workspaceRoot}/distribution/clients/python/scripts/**",
+        "{workspaceRoot}/distribution/clients/sdk-surface.json",
+        "{workspaceRoot}/distribution/clients/typescript/modus-sdk/src/_generated/public-openapi.json"
       ]
     },
     "sdk:check": {
       "executor": "nx:noop",
-      "dependsOn": ["test", "lint", "check-docstrings", "requirements-drift", "contract-check"]
+      "dependsOn": ["check-docstrings", "requirements-drift", "contract-check"]
+    },
+    "public-surface": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install"],
+      "options": {
+        "command": "bash ../../../../scripts/sdk-python/ensure-uv.sh run python ../scripts/emit_public_surface.py --write",
+        "cwd": "{projectRoot}"
+      },
+      "outputs": ["{projectRoot}/tests/snapshots/public_surface.json"],
+      "cache": false
+    },
+    "public-surface-check": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install"],
+      "options": {
+        "command": "bash ../../../../scripts/sdk-python/ensure-uv.sh run python ../scripts/emit_public_surface.py --check",
+        "cwd": "{projectRoot}"
+      },
+      "cache": false
     },
     "openapi-impact": {
       "executor": "nx:run-commands",

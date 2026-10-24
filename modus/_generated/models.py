@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from enum import Enum
 from typing import Any, Literal
+from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, RootModel
 from pydantic.alias_generators import to_camel
@@ -338,7 +339,7 @@ class ChatInterfaceConfigDto(BaseModel):
     available_channel_ids: list[str] | None = Field(
         None,
         alias='availableChannelIds',
-        description='Channels where the interface answers. Slack channel ids look like `C0ALH2JTRR9`. Empty or absent means every channel.',
+        description='Channels where the interface answers. Channel ids look like `C0ALH2JTRR9`. Empty or absent means every channel.',
         examples=[['C0ALH2JTRR9']],
     )
 
@@ -405,22 +406,24 @@ class ComposeSkillContextResponseDto(BaseModel):
     )
 
 
-class ConnectionDto(BaseModel):
+class ConnectionSelectionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    id: str = Field(
+    path: list[str] = Field(
         ...,
-        description='Integration connection UUID.',
-        examples=['7a3f9d2c-1111-4000-a000-000000000abc'],
+        description='Path of the unit, from the connection down to the unit itself.',
+        examples=[['acme/widgets']],
     )
-    name: str | None = Field(
+    object_type: str = Field(
         ...,
-        description='Human-readable connection name configured in the org.',
-        examples=['Production Warehouse'],
+        alias='objectType',
+        description='Kind of unit, such as repository or schema.',
+        examples=['repository'],
     )
-    type: str | None = Field(
+    display_name: str | None = Field(
         ...,
-        description='Effective integration category for the connection (e.g. postgresql, bigquery).',
-        examples=['postgresql'],
+        alias='displayName',
+        description='Human-readable name, when the connection has one.',
+        examples=['widgets'],
     )
 
 
@@ -1137,8 +1140,8 @@ class EvaluationRunWithResultsDto(BaseModel):
 
 class EvaluationSlackChannelDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    nango_connection_id: str = Field(
-        ..., alias='nangoConnectionId', description='Nango connection ID for Slack'
+    connection_id: UUID = Field(
+        ..., alias='connectionId', description='Modus connection UUID for Slack'
     )
     slack_user_id_by_recipient: dict[str, Any] = Field(
         ..., alias='slackUserIdByRecipient', description='Mapping of Clerk user ID to Slack user ID'
@@ -1347,11 +1350,10 @@ class ListAutomationRunsResponseDto(BaseModel):
     )
 
 
-class ListConnectionsResponseDto(BaseModel):
+class ListConnectionSelectionsResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    connections: list[ConnectionDto] = Field(
-        ...,
-        description='Page of integration connections the caller can `use`. Connections the caller cannot access are filtered out (not enumerated).',
+    selections: list[ConnectionSelectionDto] = Field(
+        ..., description='Page of selectable units on this connection.'
     )
     next_page_token: str | None = Field(
         ...,
@@ -1787,6 +1789,10 @@ class ScopeInterfaceDto(BaseModel):
     )
 
 
+class ScopeMcpInterfaceType(str, Enum):
+    mcp = 'mcp'
+
+
 class SearchMemoriesRequestDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     query: str = Field(
@@ -1806,6 +1812,24 @@ class SearchMemoriesRequestDto(BaseModel):
         examples=[10],
         ge=1.0,
         le=1000.0,
+    )
+
+
+class DepthBelowRoot(float, Enum):
+    number_0 = 0
+    number_1 = 1
+
+
+class SelectionModelRootDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    object_type: str = Field(
+        ...,
+        alias='objectType',
+        description='Kind of unit, such as repository or schema.',
+        examples=['repository'],
+    )
+    arity: float = Field(
+        ..., description='Number of path segments in a unit of this kind.', examples=[1]
     )
 
 
@@ -2097,7 +2121,7 @@ class UpdateAgentInterfaceDto(BaseModel):
     )
     config: dict[str, Any] | None = Field(
         None,
-        description='New config payload (interface-type-specific). Free-form JSONB. Replaces the prior config.',
+        description='Replacement chat interface settings (`accessMode`, `allowedEmails`, `availableChannelIds`). An MCP interface accepts no config keys. Replaces the stored config.',
         examples=[{}],
     )
 
@@ -2410,6 +2434,12 @@ class StreamProtocolVersion(float, Enum):
     number_2 = 2
 
 
+class ApprovalTargetDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    tool_name: str = Field(..., alias='toolName')
+    args: dict[str, Any]
+
+
 class CancelRunDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     organization_id: str | None = Field(
@@ -2539,7 +2569,7 @@ class AddAgentInterfaceDto(BaseModel):
     )
     config: dict[str, Any] | None = Field(
         None,
-        description='Initial config payload (interface-type-specific). Free-form JSONB.',
+        description='Chat interface settings. `accessMode` is `all`, `allow-list`, or `allow-org`. `allowedEmails` lists email addresses. `availableChannelIds` lists channel ids; empty or absent means every channel. An MCP interface accepts no config keys.',
         examples=[{}],
     )
 
@@ -3319,6 +3349,57 @@ class RecordSuggestionEventDto(BaseModel):
     metadata: dict[str, Any] | None = Field(None, description='Event metadata.')
 
 
+class ScopeMcpInterfaceDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(
+        ..., description='Interface id.', examples=['00000000-0000-4000-a000-000000000500']
+    )
+    type: ScopeMcpInterfaceType = Field(
+        ..., description='Interface type. A scope has an MCP interface only.', examples=['mcp']
+    )
+    name: str = Field(..., description='Display name.', examples=['MCP Server'])
+    config: SkillMcpInterfaceConfigDto = Field(
+        ..., description='Core tools and the integrations this interface exposes.'
+    )
+
+
+class ScopeMcpInterfaceInputDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str | None = Field(
+        None,
+        description='Interface id. Assigned when omitted.',
+        examples=['00000000-0000-4000-a000-000000000500'],
+    )
+    type: ScopeMcpInterfaceType = Field(
+        ..., description='Interface type. A scope has an MCP interface only.', examples=['mcp']
+    )
+    name: str | None = Field(
+        None, description='Display name. Assigned when omitted.', examples=['MCP Server']
+    )
+    config: SkillMcpInterfaceConfigDto | None = Field(
+        None, description='Core tools and the integrations this interface exposes.'
+    )
+
+
+class SelectionModelDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    unit_term: str = Field(
+        ...,
+        alias='unitTerm',
+        description='What one selectable unit is called.',
+        examples=['Repository'],
+    )
+    roots: list[SelectionModelRootDto] = Field(
+        ..., description='The kinds of unit a scope may select on this connection.'
+    )
+    depth_below_root: DepthBelowRoot = Field(
+        ...,
+        alias='depthBelowRoot',
+        description='How many levels below a unit a scope may still name. 0 means the unit itself only.',
+        examples=[0],
+    )
+
+
 class SharedUserDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     email: str = Field(
@@ -3393,9 +3474,9 @@ class SkillVariationDto(BaseModel):
         ...,
         description='Evaluation entries (task + expected-output pairs) saved for this variation.',
     )
-    interfaces: list[dict[str, Any]] = Field(
+    interfaces: list[ScopeMcpInterfaceDto] = Field(
         ...,
-        description='Interface entries attached to the variation (chat, slack, webhook, etc.). Each is a builder-managed object.',
+        description='MCP interface for this scope. Each row has an id, type mcp, a name, and a config.',
     )
     supervision_subordinate_ids: list[str] = Field(
         ...,
@@ -3663,7 +3744,12 @@ class SupplementalContextDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     text: str = Field(
         ...,
-        description='Background context (e.g. Slack/Teams thread + channel history) to prepend to the system prompt.',
+        description='Background context (e.g. Slack/Teams thread + channel history) for a conversation with no saved history yet.',
+    )
+    follow_up_text: str | None = Field(
+        None,
+        alias='followUpText',
+        description='Only the background that is new since the previous turn, used once the conversation has saved history. Empty when nothing is new.',
     )
     source: SupplementalContextSource = Field(
         ..., description='Producer that supplied the supplemental context.'
@@ -3802,6 +3888,30 @@ class BulkUploadFromUrlsResponseDto(BaseModel):
     )
     failed: list[FailedUploadFromUrlDto] = Field(
         ..., description='Per-item failures. Empty when every URL succeeded.'
+    )
+
+
+class ConnectionDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(
+        ...,
+        description='Integration connection UUID.',
+        examples=['7a3f9d2c-1111-4000-a000-000000000abc'],
+    )
+    name: str | None = Field(
+        ...,
+        description='Human-readable connection name configured in the org.',
+        examples=['Production Warehouse'],
+    )
+    type: str | None = Field(
+        ...,
+        description='Effective integration category for the connection (e.g. postgresql, bigquery).',
+        examples=['postgresql'],
+    )
+    selection_model: SelectionModelDto | None = Field(
+        None,
+        alias='selectionModel',
+        description='How a scope selects units on this connection. Omitted when the connection has none.',
     )
 
 
@@ -3948,10 +4058,9 @@ class CreateSkillDto(BaseModel):
         alias='includeOwnLearnings',
         description="Whether the scope reads what is taught while using it: learnings, facts, glossary terms and preferences. Defaults to true. Set false to create the scope without them; it can be included later in the scope's context selections.",
     )
-    interfaces: list[dict[str, Any]] | None = Field(
+    interfaces: list[ScopeMcpInterfaceInputDto] | None = Field(
         None,
-        description='The scope\'s MCP interface configuration. Only entries with `type: "mcp"` are accepted; any other type is rejected with 400.',
-        examples=[[]],
+        description='MCP interface rows for this scope. Each row has type mcp, an optional id and name, and a config of core tools and exposed integrations. Omitted id and name are assigned.',
     )
     access_config: AccessConfigDto | None = Field(
         None,
@@ -4018,6 +4127,19 @@ class ListAgentsResponseDto(BaseModel):
     workflows: list[WorkflowDto] = Field(
         ...,
         description='Page of workflows the caller can at least `use`. Workflows the caller cannot see are filtered out (not enumerated).',
+    )
+    next_page_token: str | None = Field(
+        ...,
+        alias='nextPageToken',
+        description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request.',
+    )
+
+
+class ListConnectionsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    connections: list[ConnectionDto] = Field(
+        ...,
+        description='Page of integration connections the caller can `use`. Connections the caller cannot access are filtered out (not enumerated).',
     )
     next_page_token: str | None = Field(
         ...,
@@ -4259,10 +4381,9 @@ class UpdateSkillDto(BaseModel):
         description="Updated context selections (sources / docs the scope may read). Replaces the whole list, so send every selection to keep, including the scope's own learnings.",
         examples=[[]],
     )
-    interfaces: list[dict[str, Any]] | None = Field(
+    interfaces: list[ScopeMcpInterfaceInputDto] | None = Field(
         None,
-        description='Updated MCP interface configuration. Only entries with `type: "mcp"` are accepted; any other type is rejected with 400.',
-        examples=[[]],
+        description='Updated MCP interface rows. Each row has type mcp, an optional id and name, and a config of core tools and exposed integrations. Omitted id and name are assigned. Replaces the whole list.',
     )
     evaluations: list[dict[str, Any]] | None = Field(
         None,
@@ -4563,6 +4684,11 @@ class ResumeRunDto(BaseModel):
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
     debug: bool | None = None
     decision: Decision = Field(..., description='Decision that resumes the interrupted run.')
+    approval_target: ApprovalTargetDto | None = Field(
+        None,
+        alias='approvalTarget',
+        description='The paused call an approval decision answers. Only that call is resolved and any other paused write is rejected; without it the first pending approval is resolved.',
+    )
 
 
 class EditQueuedRunDto(BaseModel):

@@ -11,6 +11,8 @@ and ``verificationStatus`` (both rejected by the server).
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Dict, Set, Type
 
 import pytest
@@ -197,7 +199,12 @@ def test_sdk_request_body_is_subset_of_spec(openapi: dict, operation_id: str) ->
 
 def test_every_mapped_write_endpoint_has_a_body_contract(openapi: dict) -> None:
     # Keep this registry honest: if we map a new write endpoint, force a body check.
-    from .operation_coverage import OPERATIONS
+    surface_path = Path(__file__).resolve().parents[4] / "sdk-surface.json"
+    operations = {
+        oid
+        for oid, row in json.loads(surface_path.read_text())["operations"].items()
+        if row["mode"] != "excluded"
+    }
 
     def _has_request_body(operation_id: str) -> bool:
         for path_item in openapi.get("paths", {}).values():
@@ -221,7 +228,7 @@ def test_every_mapped_write_endpoint_has_a_body_contract(openapi: dict) -> None:
     }
     missing = {
         oid
-        for oid in OPERATIONS
+        for oid in operations
         if _has_request_body(oid)
         and oid not in SDK_REQUEST_BODY_FIELDS
         and oid not in reuses_base_body

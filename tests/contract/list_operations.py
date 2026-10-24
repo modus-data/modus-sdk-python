@@ -116,6 +116,14 @@ def _connections_invoke(client: Client) -> Any:
     return client.connections.list(page_size=25, page_token="tok_abc")
 
 
+def _connection_selections_invoke(client: Client) -> Any:
+    return client.connections.list_selections(
+        "7a3f9d2c-1111-4000-a000-000000000abc",
+        page_size=25,
+        page_token="tok_abc",
+    )
+
+
 def _suggestions_invoke(client: Client) -> Any:
     return client.suggestions.list(page_size=5, page_token="tok_abc", scope_ids=[7, 42])
 
@@ -218,6 +226,19 @@ SDK_AIP_LIST_OPERATIONS: List[ListOperationSpec] = [
         sample_item=SAMPLE_CONNECTION,
         client_kind="modus",
         invoke=_connections_invoke,
+    ),
+    ListOperationSpec(
+        operation_id="ConnectionsController_listSelections",
+        mock_url_suffix="/api/v1/connections/7a3f9d2c-1111-4000-a000-000000000abc/selections",
+        items_key="selections",
+        wrong_items_key="connections",
+        sample_item={
+            "path": ["acme/widgets"],
+            "objectType": "repository",
+            "displayName": "widgets",
+        },
+        client_kind="modus",
+        invoke=_connection_selections_invoke,
     ),
     ListOperationSpec(
         operation_id="SuggestionsController_listApproved",

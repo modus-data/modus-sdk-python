@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from .._generated.models import ConnectionDto
+from .._generated.models import ConnectionDto, ConnectionSelectionDto
 
 Connection = ConnectionDto
+ConnectionSelection = ConnectionSelectionDto
 
-__all__ = ["Connection", "ConnectionDto"]
+__all__ = ["Connection", "ConnectionDto", "ConnectionSelection", "ConnectionSelectionDto"]

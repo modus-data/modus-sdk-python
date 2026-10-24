@@ -21,6 +21,7 @@ autodoc_default_options = {
     "undoc-members": False,
     "show-inheritance": False,
     "member-order": "bysource",
+    "inherited-members": True,
 }
 add_module_names = False
 napoleon_google_docstrings = True

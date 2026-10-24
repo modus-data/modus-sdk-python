@@ -5,6 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Optional, Union
 
+from modus._generated.resources.consumption.workflows import (
+    _AsyncWorkflowsResourceBase,
+    _WorkflowsResourceBase,
+)
+
 from ..._chat import (
     AsyncChatStream,
     ChatStream,
@@ -16,15 +21,9 @@ from ..._config import ModusConfig
 from ..._generated.models import WorkflowDto
 from ..._http import AsyncHttpClient, HttpClient
 from ..._openapi_invoke import invoke_operation, invoke_operation_async
-from ..._pagination import (
-    aip_list_params,
-    build_aip_page_mapped,
-    build_async_aip_page_mapped,
-)
 from ..._retry import async_with_retry, with_retry
-from ..._validation import validate_id, validate_page_size
-from ...types.agents import Agent, AgentType
-from ...types.pagination import AsyncPage, Page
+from ..._validation import validate_id
+from ...types.agents import Agent
 from ...types.views import VariationView
 from .runs import (
     WORKFLOW_RUN_OPERATIONS,
@@ -62,27 +61,7 @@ def _parse_workflow(raw: dict) -> Agent:
     return WorkflowDto.model_validate(raw)
 
 
-def _workflows_list_params(
-    page_size: int,
-    page_token: Optional[str],
-    search: Optional[str],
-    type: Optional[AgentType],
-    view: Optional[VariationView],
-    include_variation: Optional[bool],
-) -> dict:
-    extra: dict = {}
-    if search is not None:
-        extra["search"] = search
-    if type is not None:
-        extra["type"] = type
-    if view is not None:
-        extra["view"] = view
-    if include_variation is not None:
-        extra["includeVariation"] = include_variation
-    return aip_list_params(page_size, page_token, **extra)
-
-
-class WorkflowsResource:
+class WorkflowsResource(_WorkflowsResourceBase):
     """
     Read and run access to Modus workflows.
 
@@ -106,72 +85,11 @@ class WorkflowsResource:
         config: ModusConfig,
         ops: WorkflowsOperations = WORKFLOW_OPERATIONS,
     ) -> None:
-        self._http = http
+        super().__init__(http, config, ops)
         self._agent_http = agent_http
-        self._config = config
-        self._ops = ops
+        self._ops: WorkflowsOperations = ops
         self.runs = WorkflowRunsResource(http, config, ops.runs)
         self.workflow_actions = AgentWorkflowActionsResource(http, config)
-
-    def list(
-        self,
-        *,
-        page_size: int = 25,
-        page_token: Optional[str] = None,
-        search: Optional[str] = None,
-        type: Optional[AgentType] = None,
-        view: Optional[VariationView] = None,
-        include_variation: Optional[bool] = None,
-    ) -> Page[Agent]:
-        """
-        List workflows in the organisation.
-
-        Args:
-            page_size:         Items per page (default 25).
-            page_token:        Opaque token from a previous page's ``next_page_token``.
-            search:            Case-insensitive substring filter on the workflow name.
-            type:              Filter by workflow type: ``"task"`` or ``"workflow"``.
-            view:              Variation view — ``"active"`` (deployed) or ``"draft"``.
-            include_variation: Include variation payload on each list row.
-
-        Returns:
-            ``Page[Agent]``. Use ``.auto_paging_iter()`` to walk all pages.
-
-        Example:
-            >>> for wf in client.workflows.list(search="digest").auto_paging_iter():
-            ...     print(wf.id, wf.name, wf.status)
-        """
-        validate_page_size(page_size)
-        return self._list_page(
-            page_size, page_token, search, type, view, include_variation
-        )
-
-    def _list_page(
-        self,
-        page_size: int,
-        page_token: Optional[str],
-        search: Optional[str] = None,
-        type: Optional[AgentType] = None,
-        view: Optional[VariationView] = None,
-        include_variation: Optional[bool] = None,
-    ) -> Page[Agent]:
-        params = _workflows_list_params(
-            page_size, page_token, search, type, view, include_variation
-        )
-        data = with_retry(
-            lambda: invoke_operation(
-                self._http, self._ops.list, query=params
-            ),
-            self._config.max_retries,
-        )
-        return build_aip_page_mapped(
-            data,
-            "workflows",
-            _parse_workflow,
-            lambda cur: self._list_page(
-                page_size, cur, search, type, view, include_variation
-            ),
-        )
 
     def get(
         self,
@@ -255,7 +173,7 @@ class WorkflowsResource:
         )
 
 
-class AsyncWorkflowsResource:
+class AsyncWorkflowsResource(_AsyncWorkflowsResourceBase):
     """
     Async read and run access to Modus workflows.
 
@@ -274,65 +192,11 @@ class AsyncWorkflowsResource:
         config: ModusConfig,
         ops: WorkflowsOperations = WORKFLOW_OPERATIONS,
     ) -> None:
-        self._http = http
+        super().__init__(http, config, ops)
         self._agent_http = agent_http
-        self._config = config
-        self._ops = ops
+        self._ops: WorkflowsOperations = ops
         self.runs = AsyncWorkflowRunsResource(http, config, ops.runs)
         self.workflow_actions = AsyncAgentWorkflowActionsResource(http, config)
-
-    async def list(
-        self,
-        *,
-        page_size: int = 25,
-        page_token: Optional[str] = None,
-        search: Optional[str] = None,
-        type: Optional[AgentType] = None,
-        view: Optional[VariationView] = None,
-        include_variation: Optional[bool] = None,
-    ) -> AsyncPage[Agent]:
-        """
-        List workflows in the organisation.
-
-        Args:
-            page_size:         Items per page (default 25).
-            page_token:        Opaque token from a previous page's ``next_page_token``.
-            search:            Case-insensitive substring filter on the workflow name.
-            type:              Filter by workflow type: ``"task"`` or ``"workflow"``.
-            view:              Variation view — ``"active"`` (deployed) or ``"draft"``.
-            include_variation: Include variation payload on each list row.
-        """
-        validate_page_size(page_size)
-        return await self._list_page(
-            page_size, page_token, search, type, view, include_variation
-        )
-
-    async def _list_page(
-        self,
-        page_size: int,
-        page_token: Optional[str],
-        search: Optional[str] = None,
-        type: Optional[AgentType] = None,
-        view: Optional[VariationView] = None,
-        include_variation: Optional[bool] = None,
-    ) -> AsyncPage[Agent]:
-        params = _workflows_list_params(
-            page_size, page_token, search, type, view, include_variation
-        )
-        data = await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http, self._ops.list, query=params
-            ),
-            self._config.max_retries,
-        )
-        return build_async_aip_page_mapped(
-            data,
-            "workflows",
-            _parse_workflow,
-            lambda cur: self._list_page(
-                page_size, cur, search, type, view, include_variation
-            ),
-        )
 
     async def get(
         self,

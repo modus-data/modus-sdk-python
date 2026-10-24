@@ -15,8 +15,6 @@ from typing import Any, Callable, Dict, Set
 import pytest
 from modus._pagination import aip_list_params
 from modus.resources.context.items import _context_list_params
-from modus.resources.scopes.scopes import _scopes_list_params
-from modus.resources.workflows.workflows import _workflows_list_params
 
 _OPENAPI_PATH = Path(__file__).parents[5] / "apps/services/modus-api/openapi/v1.json"
 
@@ -74,16 +72,8 @@ def _assert_aip_params_subset(
             lambda: aip_list_params(25, None),
         ),
         (
-            "ScopesController_list",
-            lambda: _scopes_list_params(25, None, "churn", None, None),
-        ),
-        (
             "WorkflowsController_list",
             lambda: aip_list_params(25, "tok_abc"),
-        ),
-        (
-            "WorkflowsController_list",
-            lambda: _workflows_list_params(25, None, "sales", "workflow", None, None),
         ),
         (
             "ContextItemsController_list",
