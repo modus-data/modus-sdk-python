@@ -1616,6 +1616,7 @@ class Model(str, Enum):
     deepseek_chat_v3_1 = 'deepseek-chat-v3.1'
     deepseek_v4_pro = 'deepseek-v4-pro'
     deepseek_v4_flash_latest = 'deepseek-v4-flash-latest'
+    deepseek_v4_1_flash_1017 = 'deepseek-v4.1-flash-1017'
     minimax_m2_7 = 'minimax-m2.7'
     llama_4_maverick = 'llama-4-maverick'
     llama_4_scout = 'llama-4-scout'
@@ -1643,7 +1644,7 @@ class ModusChatRequestDto(BaseModel):
     )
     model: Model = Field(
         ...,
-        description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-5.5, claude-sonnet-4.6, claude-opus-4.8, claude-opus-5.5, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-5.6-luna, gpt-6-luna, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, grok-4.7, kimi-k3.',
+        description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-5.5, claude-sonnet-4.6, claude-opus-4.8, claude-opus-5.5, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-5.6-luna, gpt-6-luna, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, deepseek-v4.1-flash-1017, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, grok-4.7, kimi-k3.',
         examples=['claude-sonnet-4.6'],
     )
     approval_continuation: bool | None = Field(
@@ -1906,7 +1907,7 @@ class SkillChatRequestDto(BaseModel):
     )
     model: Model = Field(
         ...,
-        description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-5.5, claude-sonnet-4.6, claude-opus-4.8, claude-opus-5.5, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-5.6-luna, gpt-6-luna, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, grok-4.7, kimi-k3.',
+        description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-5.5, claude-sonnet-4.6, claude-opus-4.8, claude-opus-5.5, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-5.6-luna, gpt-6-luna, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, deepseek-v4.1-flash-1017, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, grok-4.7, kimi-k3.',
         examples=['claude-sonnet-4.6'],
     )
 
