@@ -51,6 +51,7 @@ def _chat_path(
     suffix = "/stream" if stream else ""
     tid = _effective_thread_id(thread_id)
     if tid is not None:
+        validate_id(tid, name="thread_id")
         safe_tid = quote(str(tid), safe="")
         return f"/api/v1/{resource}/{safe_id}/conversations/{safe_tid}/chat{suffix}"
     return f"/api/v1/{resource}/{safe_id}/chat{suffix}"

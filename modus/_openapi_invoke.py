@@ -7,6 +7,7 @@ from urllib.parse import quote
 from ._config import resolve_service_base_url
 from ._generated.operations import OPERATIONS, OperationSpec
 from ._http import AsyncHttpClient, HttpClient
+from ._validation import validate_id
 
 HttpLike = Union[HttpClient, AsyncHttpClient]
 
@@ -19,7 +20,9 @@ def _format_path(template: str, path_params: Mapping[str, Any]) -> str:
             key = segment[1:-1]
             if key not in path_params:
                 raise ValueError(f"Missing path parameter {key!r} for {template!r}")
-            formatted.append(quote(str(path_params[key]), safe=""))
+            value = str(path_params[key])
+            validate_id(value, name=key)
+            formatted.append(quote(value, safe=""))
         else:
             formatted.append(segment)
     return "/".join(formatted)

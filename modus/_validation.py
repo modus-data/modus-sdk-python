@@ -23,9 +23,17 @@ def validate_page_size(page_size: int, *, max_page_size: Optional[int] = None) -
 
 
 def validate_id(resource_id: Union[int, str], *, name: str = "id") -> None:
-    """Reject empty/whitespace-only string IDs that would produce ambiguous URLs."""
-    if isinstance(resource_id, str) and not resource_id.strip():
+    """Reject ids that would not address one resource.
+
+    Blank ids hit the list route, and ``.`` / ``..`` are dot segments the URL
+    collapses onto the parent (``memories(7).delete('..')`` deleted scope 7).
+    """
+    if not isinstance(resource_id, str):
+        return
+    if not resource_id.strip():
         raise ValueError(f"{name} must be a non-empty string or int")
+    if resource_id in (".", ".."):
+        raise ValueError(f"{name} must not be {resource_id!r}")
 
 
 # Canonical chat model ids from SkillChatRequestDto (keep in sync with the API spec).
