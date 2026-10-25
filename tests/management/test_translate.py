@@ -57,7 +57,10 @@ def test_scope_dto_detail_row_exposes_variation_fields(skill_detail_row):
     assert skill.variation.expected_output == "Structured JSON with data rows"
     assert skill.variation.toolset is not None
     assert skill.variation.connection_set is not None
-    assert skill.variation.connection_set[0]["connectionId"] == "conn-snowflake-001"
+    row = skill.variation.connection_set[0]
+    assert row.connection_id
+    assert row.connection_id == "conn-snowflake-001"
+    assert row.path == []
 
 
 def test_scope_dto_maps_pending_ownership_transfer(skill_detail_row):

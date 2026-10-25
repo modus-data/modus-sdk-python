@@ -6,13 +6,18 @@ optional convenience wrapper; both are accepted.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from typing import Any, Dict, List, Optional, Union
+
+from pydantic import BaseModel
 
 from modus.types.json_blob import JsonObject, JsonObjectInput
 
 from ._serialize import dump_opaque_json
 
-JsonObjectListInput = Union[List[JsonObject], List[Dict[str, Any]]]
+# A generated row model (for example ConnectionSetItemDto from scopes.get) is a
+# BaseModel. Sequence is covariant, so a list of that model is accepted here.
+JsonObjectListInput = Sequence[Union[BaseModel, Mapping[str, Any]]]
 
 __all__ = ["JsonObject", "JsonObjectInput", "JsonObjectListInput"]
 
@@ -32,13 +37,15 @@ def dump_json_object_list(
         return []
     normalized: List[Dict[str, Any]] = []
     for item in value:
-        if isinstance(item, JsonObject):
+        if isinstance(item, BaseModel):
+            # by_alias keeps connection_id (the pinned wire name). exclude_none
+            # drops only absent optionals; required keys such as path stay, including [].
             normalized.append(item.model_dump(by_alias=True, exclude_none=True))
-        elif isinstance(item, dict):
-            normalized.append(item)
+        elif isinstance(item, Mapping):
+            normalized.append(dict(item))
         else:
             raise TypeError(
-                f"{field_name} items must be JsonObject or dict, got {type(item).__name__}"
+                f"{field_name} items must be a model or mapping, got {type(item).__name__}"
             )
     return normalized
 

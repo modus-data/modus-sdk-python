@@ -409,6 +409,26 @@ class ConnectionSelectionDto(BaseModel):
     )
 
 
+class ConnectionSetItemDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+    connection_id: str = Field(
+        ...,
+        description='Id of the connection this row selects.',
+        examples=['11111111-1111-4111-8111-111111111111'],
+    )
+    path: list[str] = Field(
+        ...,
+        description='Path of the selected unit. An empty array selects the whole connection.',
+        examples=[[]],
+    )
+    preferences: dict[str, Any] | None = Field(
+        None, description='Which objects under this connection the scope includes or excludes.'
+    )
+    context_enabled: bool | None = Field(
+        None, description='Whether the scope reads context from this connection. Defaults to true.'
+    )
+
+
 class ContentProjectionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     fields: list[str] | None = Field(
@@ -3963,11 +3983,11 @@ class CreateSkillDto(BaseModel):
         alias='modelSettings',
         description='Model-specific runtime controls such as reasoning effort and context window.',
     )
-    connection_set: list[dict[str, Any]] | None = Field(
+    connection_set: list[ConnectionSetItemDto] | None = Field(
         None,
         alias='connectionSet',
-        description='List of integration connection refs available to this scope. Shape is integration-specific.',
-        examples=[[]],
+        description='Connections this scope can use. Each entry is a connection id and a path; an empty path selects the whole connection.',
+        examples=[[{'connection_id': '11111111-1111-4111-8111-111111111111', 'path': []}]],
     )
     context_selections: list[dict[str, Any]] | None = Field(
         None,
@@ -4127,10 +4147,10 @@ class SkillVariationDto(BaseModel):
         description='Builder-managed toolset descriptor. Map of `{toolName: config}`; opaque to the API surface.',
         examples=[{'web_search': {'enabled': True}, 'calculator': {'enabled': True}}],
     )
-    connection_set: list[dict[str, Any]] = Field(
+    connection_set: list[ConnectionSetItemDto] = Field(
         ...,
         alias='connectionSet',
-        description='Connection selections (DBs, integrations) attached to the variation. Each entry is a builder-managed object; opaque here.',
+        description='Connections attached to this variation. Each entry is a connection id and a path; an empty path selects the whole connection.',
     )
     context_selections: list[dict[str, Any]] = Field(
         ...,
@@ -4256,11 +4276,11 @@ class UpdateSkillDto(BaseModel):
         alias='modelSettings',
         description='Updated model-specific runtime controls. Pass `null` to clear.',
     )
-    connection_set: list[dict[str, Any]] | None = Field(
+    connection_set: list[ConnectionSetItemDto] | None = Field(
         None,
         alias='connectionSet',
-        description='Updated connection set. Shape is integration-specific.',
-        examples=[[]],
+        description='Replacement connection list. Each entry is a connection id and a path; an empty path selects the whole connection.',
+        examples=[[{'connection_id': '11111111-1111-4111-8111-111111111111', 'path': []}]],
     )
     context_selections: list[dict[str, Any]] | None = Field(
         None,

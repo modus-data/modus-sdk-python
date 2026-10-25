@@ -58,7 +58,7 @@ def skill_detail_row(skill_list_row) -> dict:
                 "sql_runner": ["SELECT:conn-snowflake-001:analytics:public"],
                 "memory": {"enabled": True},
             },
-            "connectionSet": [{"connectionId": "conn-snowflake-001"}],
+            "connectionSet": [{"connection_id": "conn-snowflake-001", "path": []}],
             "contextSelections": [],
             "interfaces": [],
             "evaluations": [],

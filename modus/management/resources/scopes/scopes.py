@@ -116,7 +116,10 @@ class ScopesResource(_ScopesResourceBase):
             instructions: Optional instruction strings.
             toolset: Optional tool configuration payload.
             model: Optional model id (for example ``\"claude-sonnet-5\"``).
-            connection_set: Optional data connections for the scope.
+            connection_set: Optional data connections for the scope. Each row is
+                ``{connection_id, path}`` with optional ``preferences`` and
+                ``context_enabled``. A row from ``variation.connection_set``
+                can be sent back.
             context_selections: Optional context selection payload.
             include_own_learnings: Whether the scope reads what is taught while
                 using it. Defaults to ``True`` on the server.
@@ -194,7 +197,10 @@ class ScopesResource(_ScopesResourceBase):
             instructions: Optional instruction strings.
             toolset: Optional tool configuration payload.
             model: Optional model id.
-            connection_set: Optional data connections for the scope.
+            connection_set: Optional data connections for the scope. Each row is
+                ``{connection_id, path}`` with optional ``preferences`` and
+                ``context_enabled``. A row from ``variation.connection_set``
+                can be sent back.
             context_selections: Optional context selection payload.
             interfaces: Optional MCP interface configuration. Only entries with
                 ``type: "mcp"`` are accepted; any other type makes the call raise

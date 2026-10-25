@@ -89,6 +89,62 @@
       "title": "AccessConfigDto",
       "type": "object"
     },
+    "ConnectionSetItemDto": {
+      "properties": {
+        "connection_id": {
+          "description": "Id of the connection this row selects.",
+          "examples": [
+            "11111111-1111-4111-8111-111111111111"
+          ],
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "path": {
+          "description": "Path of the selected unit. An empty array selects the whole connection.",
+          "examples": [
+            []
+          ],
+          "items": {
+            "type": "string"
+          },
+          "title": "Path",
+          "type": "array"
+        },
+        "preferences": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Which objects under this connection the scope includes or excludes.",
+          "title": "Preferences"
+        },
+        "context_enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether the scope reads context from this connection. Defaults to true.",
+          "title": "Context Enabled"
+        }
+      },
+      "required": [
+        "connection_id",
+        "path"
+      ],
+      "title": "ConnectionSetItemDto",
+      "type": "object"
+    },
     "EvaluationCaseDto": {
       "properties": {
         "id": {
@@ -566,10 +622,9 @@
           "type": "object"
         },
         "connectionSet": {
-          "description": "Connection selections (DBs, integrations) attached to the variation. Each entry is a builder-managed object; opaque here.",
+          "description": "Connections attached to this variation. Each entry is a connection id and a path; an empty path selects the whole connection.",
           "items": {
-            "additionalProperties": true,
-            "type": "object"
+            "$ref": "#/$defs/ConnectionSetItemDto"
           },
           "title": "Connectionset",
           "type": "array"
