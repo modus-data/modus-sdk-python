@@ -32,7 +32,8 @@
         "{workspaceRoot}/packages/openapi-portal/src/**/*.ts",
         "{workspaceRoot}/distribution/clients/python/scripts/**",
         "{workspaceRoot}/distribution/clients/sdk-surface.json",
-        "{workspaceRoot}/distribution/clients/sdk-surface.schema.json"
+        "{workspaceRoot}/distribution/clients/sdk-surface.schema.json",
+        { "externalDependencies": [] }
       ],
       "outputs": ["{projectRoot}/reports"]
     },
