@@ -175,7 +175,7 @@ class WorkflowRunsResource:
         List runs for a workflow.
 
         Args:
-            workflow_id:     Workflow ID or slug.
+            workflow_id:     Numeric workflow id.
             page_size:       Maximum number of items to return (default 25, max 100).
             page_token:      Token from a previous page's ``next_page_token``; omit for the first page.
             status:          Filter by run status (e.g. ``"running"``, ``"awaiting_human"``,
@@ -315,7 +315,7 @@ class WorkflowRunsResource:
         Retrieve a Modus workflow run by ID.
 
         Args:
-            workflow_id:      Modus workflow ID or slug.
+            workflow_id:      Numeric workflow id.
             run_id:           Run ID (the list row's ``workflow_id`` field, not
                               the composite ``id``).
             temporal_run_id:  Optional Temporal run ID when disambiguating retries.
@@ -353,7 +353,7 @@ class WorkflowRunsResource:
         Start a workflow run and stream its events.
 
         Args:
-            workflow_id: Workflow ID or slug.
+            workflow_id: Numeric workflow id.
             body:        Run request fields such as ``message``, optional
                          ``sessionId``, ``config`` (e.g. ``{"model": "..."}``),
                          and optional ``runId``.
@@ -394,7 +394,7 @@ class WorkflowRunsResource:
         instead of a workflow.
 
         Args:
-            scope_id: Scope ID or slug.
+            scope_id: Numeric scope id.
             body:     Run request fields such as ``message``, ``sessionId``,
                       ``config``, and ``runId``.
 
@@ -608,7 +608,7 @@ class AsyncWorkflowRunsResource:
         List runs for a workflow.
 
         Args:
-            workflow_id:     Workflow ID or slug.
+            workflow_id:     Numeric workflow id.
             page_size:       Maximum number of items to return (default 25, max 100).
             page_token:      Token from a previous page's ``next_page_token``; omit for the first page.
             status:          Filter by run status (e.g. ``"running"``, ``"awaiting_human"``,
@@ -741,7 +741,7 @@ class AsyncWorkflowRunsResource:
         Retrieve a Modus workflow run by ID.
 
         Args:
-            workflow_id:      Modus workflow ID or slug.
+            workflow_id:      Numeric workflow id.
             run_id:           Run ID.
             temporal_run_id:  Optional Temporal run ID when disambiguating.
         """
@@ -771,7 +771,7 @@ class AsyncWorkflowRunsResource:
         Start a workflow run and stream its events.
 
         Args:
-            workflow_id: Workflow ID or slug.
+            workflow_id: Numeric workflow id.
             body:        Run request fields such as message, sessionId, config, and runId.
         """
         validate_id(workflow_id, name="workflow_id")
@@ -794,7 +794,7 @@ class AsyncWorkflowRunsResource:
         Start a scope run and stream its events.
 
         Args:
-            scope_id: Scope ID or slug.
+            scope_id: Numeric scope id.
             body:     Run request fields such as message, sessionId, config, and runId.
         """
         validate_id(scope_id, name="scope_id")

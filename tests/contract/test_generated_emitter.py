@@ -157,6 +157,11 @@ _COMPONENTS = {
 }
 
 
+def _json_body() -> dict:
+    """A 2xx response with a JSON body, which an exposure with ``returns`` requires."""
+    return {"description": "", "content": {"application/json": {"schema": {"type": "object"}}}}
+
+
 def _spec(method: str, parameters: list[dict]) -> dict:
     return {
         "components": _COMPONENTS,
@@ -170,7 +175,7 @@ def _spec(method: str, parameters: list[dict]) -> dict:
                         {"name": "probeId", "in": "path", "description": "Probe id."},
                         *parameters,
                     ],
-                    "responses": {"200": {"description": ""}},
+                    "responses": {"200": _json_body()},
                 }
             }
         }
@@ -234,7 +239,7 @@ def _list_spec(parameters: list[dict]) -> dict:
                     "x-modus-service": "modus-api",
                     "summary": "List probes",
                     "parameters": parameters,
-                    "responses": {"200": {"description": ""}},
+                    "responses": {"200": _json_body()},
                 }
             }
         }
@@ -622,22 +627,6 @@ def test_body_keeps_python_argument_and_model_dump_options(by_alias: bool, exclu
     assert source.count(f"body = replacement.model_dump(by_alias={by_alias}, exclude_none={exclude_none})") == 2
 
 
-def test_sync_only_exposure_emits_no_async_base_or_imports() -> None:
-    hints = _hints([])
-    hints["operations"]["ProbeController_update"]["exposures"][0]["pyAsync"] = False
-    source = emit_resource_files(hints, _spec("patch", []))[0][1]
-    assert "class _ProbesResourceBase:" in source
-    assert "Async" not in source
-    assert "async_" not in source
-
-
-def test_sync_and_async_exposures_cannot_disagree_on_resource_availability() -> None:
-    hints = _hints([])
-    exposures = hints["operations"]["ProbeController_update"]["exposures"]
-    exposures.append({**exposures[0], "method": "replace", "pyAsync": False})
-    with pytest.raises(ValueError, match="disagree.*pyAsync"):
-        emit_resource_files(hints, _spec("patch", []))
-
 
 @pytest.mark.parametrize("paginated", [False, True])
 def test_operation_binding_preserves_constructor_dispatch(paginated: bool) -> None:
@@ -664,3 +653,23 @@ def test_bound_id_validation_can_precede_positional_path_arguments() -> None:
         assert cls.index('validate_id(self._scope_id, name="scope_id")') < cls.index(
             'validate_id(probe_id, name="probe_id")'
         )
+
+
+@pytest.mark.parametrize("mode", ["generated", "custom"])
+def test_returns_on_an_operation_without_a_response_body_is_refused(mode: str) -> None:
+    """A 204 operation typed as returning a model parses ``None`` after the write succeeded."""
+    hints = _hints([])
+    hints["operations"]["ProbeController_update"]["mode"] = mode
+    spec = _spec("patch", [])
+    spec["paths"]["/api/v1/probes/{probeId}"]["patch"]["responses"] = {"204": {"description": ""}}
+    with pytest.raises(ValueError, match=r'ProbeController_update.*"returns".*no 2xx response body'):
+        emit_resource_files(hints, spec)
+
+
+def test_an_operation_without_a_response_body_and_no_returns_emits_none() -> None:
+    hints = _hints([])
+    del hints["operations"]["ProbeController_update"]["exposures"][0]["returns"]
+    spec = _spec("patch", [])
+    spec["paths"]["/api/v1/probes/{probeId}"]["patch"]["responses"] = {"204": {"description": ""}}
+    source = emit_resource_files(hints, spec)[0][1]
+    assert "model_validate" not in source

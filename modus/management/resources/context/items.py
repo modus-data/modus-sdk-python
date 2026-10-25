@@ -12,7 +12,7 @@ from modus._pagination import (
     build_aip_page,
     build_async_aip_page,
 )
-from modus._query import update_mask_query
+from modus._query import update_body, update_mask_query
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_page_size
 from modus.types.pagination import AsyncPage, Page
@@ -205,13 +205,13 @@ class ContextItemsResource:
         feedback: UserFeedback | None = (
             UserFeedback(user_feedback) if user_feedback is not None else None
         )
-        payload = ContextItemUpdate(
+        payload = update_body(ContextItemUpdate(
             content=content,
             context_type=context_type,
             description=description,
             user_feedback=feedback,
             topics=topics,
-        ).model_dump(by_alias=True, exclude_none=update_mask is None)
+        ), update_mask)
         with_retry(
             lambda: invoke_operation(
                 self._http,
@@ -382,13 +382,13 @@ class AsyncContextItemsResource:
         feedback: UserFeedback | None = (
             UserFeedback(user_feedback) if user_feedback is not None else None
         )
-        payload = ContextItemUpdate(
+        payload = update_body(ContextItemUpdate(
             content=content,
             context_type=context_type,
             description=description,
             user_feedback=feedback,
             topics=topics,
-        ).model_dump(by_alias=True, exclude_none=update_mask is None)
+        ), update_mask)
         await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,

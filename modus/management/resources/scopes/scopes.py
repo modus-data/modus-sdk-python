@@ -18,7 +18,7 @@ from modus._generated.resources.management.scopes import (
 )
 from modus._http import AsyncHttpClient, HttpClient
 from modus._openapi_invoke import invoke_operation, invoke_operation_async
-from modus._query import update_mask_query
+from modus._query import update_body, update_mask_query
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_id
 from modus.types.skills import Skill
@@ -34,9 +34,7 @@ from .conversations import (
     AsyncScopeConversationsResource,
     ScopeConversationsResource,
 )
-from .evaluations import (
-    ScopeEvaluationsResource,
-)
+from .evaluations import AsyncScopeEvaluationsResource, ScopeEvaluationsResource
 from .interfaces import AsyncScopeInterfacesResource, ScopeInterfacesResource
 from .memories import AsyncScopeMemoriesResource, ScopeMemoriesResource
 from .supervision import AsyncScopeSupervisionResource, ScopeSupervisionResource
@@ -177,7 +175,7 @@ class ScopesResource(_ScopesResourceBase):
         context_selections: Optional[JsonObjectListInput] = None,
         interfaces: Optional[JsonObjectListInput] = None,
         guardrails: Optional[List[str]] = None,
-        manager_id: Optional[str] = None,
+        manager_id: Optional[int] = None,
         evaluations: Optional[JsonObjectListInput] = None,
         supervision_subordinate_descriptions: Optional[Dict[str, str]] = None,
         update_mask: Optional[str] = None,
@@ -190,7 +188,7 @@ class ScopesResource(_ScopesResourceBase):
         fields not named in the mask untouched.
 
         Args:
-            scope_id: Scope numeric id or slug string.
+            scope_id: Numeric scope id.
             name: Optional new display name.
             description: Optional new description.
             expected_output: Optional expected-output guidance.
@@ -209,7 +207,10 @@ class ScopesResource(_ScopesResourceBase):
                 the current scope first and merges these labels into its access
                 configuration (an extra ``get`` request). Omit (``None``) to
                 leave guardrails unchanged. Pass ``[]`` to clear all guardrails.
-            manager_id: Optional supervising manager scope id.
+            manager_id: Numeric id of the manager scope to move this scope under.
+                Sent alone: the server rejects it combined with other fields. To
+                detach the scope from its manager, pass ``update_mask="managerId"``
+                and leave this unset.
             evaluations: Optional evaluation configuration payload.
             supervision_subordinate_descriptions: Optional map of subordinate
                 scope id to description text.
@@ -238,7 +239,7 @@ class ScopesResource(_ScopesResourceBase):
                 self._config.max_retries,
             ),
         )
-        body = _ScopeUpdateBody(
+        body = update_body(_ScopeUpdateBody(
             name=name, description=description, expected_output=expected_output,
             instructions=instructions,
             toolset=dump_toolset(toolset),
@@ -252,7 +253,7 @@ class ScopesResource(_ScopesResourceBase):
             manager_id=manager_id,
             evaluations=dump_json_object_list(evaluations, field_name="evaluations"),
             supervision_subordinate_descriptions=supervision_subordinate_descriptions,
-        ).model_dump(by_alias=True, exclude_none=update_mask is None)
+        ), update_mask)
         raw = with_retry(
             lambda: invoke_operation(
                 self._http,
@@ -360,6 +361,10 @@ class AsyncScopesResource(_AsyncScopesResourceBase):
         """Return the memories sub-resource scoped to ``scope_id``."""
         return AsyncScopeMemoriesResource(self._http, self._config, scope_id)
 
+    def evaluations(self, scope_id: Union[int, str]) -> AsyncScopeEvaluationsResource:
+        """Return the evaluations sub-resource scoped to ``scope_id``."""
+        return AsyncScopeEvaluationsResource(self._http, self._config, scope_id)
+
     def supervision(self, scope_id: Union[int, str]) -> AsyncScopeSupervisionResource:
         """Return the supervision sub-resource scoped to ``scope_id``."""
         return AsyncScopeSupervisionResource(self._http, self._config, scope_id)
@@ -421,7 +426,7 @@ class AsyncScopesResource(_AsyncScopesResourceBase):
         context_selections: Optional[JsonObjectListInput] = None,
         interfaces: Optional[JsonObjectListInput] = None,
         guardrails: Optional[List[str]] = None,
-        manager_id: Optional[str] = None,
+        manager_id: Optional[int] = None,
         evaluations: Optional[JsonObjectListInput] = None,
         supervision_subordinate_descriptions: Optional[Dict[str, str]] = None,
         update_mask: Optional[str] = None,
@@ -452,7 +457,7 @@ class AsyncScopesResource(_AsyncScopesResourceBase):
             access_config = access_config_body_for_update(guardrails, lambda: existing)
         else:
             access_config = None
-        body = _ScopeUpdateBody(
+        body = update_body(_ScopeUpdateBody(
             name=name, description=description, expected_output=expected_output,
             instructions=instructions,
             toolset=dump_toolset(toolset),
@@ -466,7 +471,7 @@ class AsyncScopesResource(_AsyncScopesResourceBase):
             manager_id=manager_id,
             evaluations=dump_json_object_list(evaluations, field_name="evaluations"),
             supervision_subordinate_descriptions=supervision_subordinate_descriptions,
-        ).model_dump(by_alias=True, exclude_none=update_mask is None)
+        ), update_mask)
         raw = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,

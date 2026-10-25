@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, List, Optional, Union
+from typing import Any, Optional, Union
 
 from modus._config import ModusConfig
 from modus._generated.models import (
@@ -17,7 +17,7 @@ from modus._generated.resources.management.workflows import (
 )
 from modus._http import AsyncHttpClient, HttpClient
 from modus._openapi_invoke import invoke_operation, invoke_operation_async
-from modus._query import update_mask_query
+from modus._query import update_body, update_mask_query
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_id
 from modus.types.agents import Agent, AgentType
@@ -26,10 +26,6 @@ from modus.types.views import VariationView
 from ...types.agent_selection import AgentSelectionInput, dump_agent_selection
 from ...types.triggers import TriggerInput, dump_trigger
 from ...types.workflow import WorkflowGraphInput, dump_workflow_structure
-from .._access_config_write import (
-    access_config_body_for_create,
-    access_config_body_for_update,
-)
 from ._update_body import _WorkflowCreateBody, _WorkflowUpdateBody
 from .interfaces import AsyncWorkflowInterfacesResource, WorkflowInterfacesResource
 
@@ -106,7 +102,7 @@ class WorkflowsResource(_WorkflowsResourceBase):
         Retrieve a Modus workflow with full configuration.
 
         Args:
-            workflow_id: Workflow numeric id or slug string.
+            workflow_id: Numeric workflow id.
             view:        Variation view — ``"active"`` (deployed) or ``"draft"``.
 
         Returns:
@@ -114,7 +110,8 @@ class WorkflowsResource(_WorkflowsResourceBase):
 
         Example:
             >>> mgmt = modus.management.ModusManagement()
-            >>> wf = mgmt.workflows.get("weekly-digest")
+            >>> first = mgmt.workflows.list().items[0]
+            >>> wf = mgmt.workflows.get(first.id)
             >>> print(wf.name, wf.status)
         """
         validate_id(workflow_id, name="workflow_id")
@@ -143,29 +140,24 @@ class WorkflowsResource(_WorkflowsResourceBase):
         trigger: Optional[TriggerInput] = None,
         agent_selection: Optional[AgentSelectionInput] = None,
         workflow_structure: Optional[WorkflowGraphInput] = None,
-        guardrails: Optional[List[str]] = None,
     ) -> Agent:
         """Create a new Modus workflow.
 
         Args:
             name: Display name for the workflow.
-            type: ``"task"`` for single-step skill orchestration, or ``"workflow"``
-                  for a multi-step graph.
+            type: ``"workflow"``. ``"task"`` is a deprecated alias the server
+                  stores as ``"workflow"``.
             description: Optional human-readable description.
             trigger: Optional trigger configuration payload.
-            agent_selection: Optional scope/skill selection for task workflows.
-            workflow_structure: Optional multi-step graph for ``\"workflow\"`` type.
-            guardrails: Runtime guardrail labels (for example ``\"no-pii\"``).
-                When set, the workflow is created with these labels under the
-                organisation default sharing rules. Omit (``None``) to create
-                with no guardrails. ACL fields cannot be set from the SDK.
+            agent_selection: Optional scope selection for the workflow.
+            workflow_structure: Optional multi-step graph.
 
         Returns:
             The created workflow (draft).
 
         Example:
             >>> mgmt = modus.management.ModusManagement()
-            >>> wf = mgmt.workflows.create("Daily report", "task")
+            >>> wf = mgmt.workflows.create("Daily report", "workflow")
             >>> print(wf.id, wf.name)
         """
         body = _WorkflowCreateBody(
@@ -173,7 +165,6 @@ class WorkflowsResource(_WorkflowsResourceBase):
             trigger=dump_trigger(trigger),
             agent_selection=dump_agent_selection(agent_selection),
             workflow_structure=dump_workflow_structure(workflow_structure),
-            access_config=access_config_body_for_create(guardrails),
         ).model_dump(by_alias=True, exclude_none=True)
         raw = with_retry(
             lambda: invoke_operation(
@@ -193,7 +184,6 @@ class WorkflowsResource(_WorkflowsResourceBase):
         trigger: Optional[TriggerInput] = None,
         agent_selection: Optional[AgentSelectionInput] = None,
         workflow_structure: Optional[WorkflowGraphInput] = None,
-        guardrails: Optional[List[str]] = None,
         update_mask: Optional[str] = None,
     ) -> Agent:
         """Update a Modus workflow's configuration.
@@ -204,17 +194,13 @@ class WorkflowsResource(_WorkflowsResourceBase):
         fields not named in the mask untouched.
 
         Args:
-            workflow_id: Workflow numeric id or slug string.
+            workflow_id: Numeric workflow id.
             name: Optional new display name.
-            type: Optional new type (``\"task\"`` or ``\"workflow\"``).
+            type: Only ``"workflow"`` is accepted; ``"task"`` is rejected (HTTP 422).
             description: Optional new description.
             trigger: Optional trigger configuration payload.
-            agent_selection: Optional scope/skill selection for task workflows.
-            workflow_structure: Optional multi-step graph for ``\"workflow\"`` type.
-            guardrails: Runtime guardrail labels to set on the workflow. Fetches
-                the current workflow first and merges these labels into its access
-                configuration (an extra ``get`` request). Omit (``None``) to
-                leave guardrails unchanged. Pass ``[]`` to clear all guardrails.
+            agent_selection: Optional scope selection for the workflow.
+            workflow_structure: Optional multi-step graph.
             update_mask: Comma-separated field names to update or clear.
 
         Returns:
@@ -229,24 +215,12 @@ class WorkflowsResource(_WorkflowsResourceBase):
             >>> print(wf.description)
         """
         validate_id(workflow_id, name="workflow_id")
-        access_config = access_config_body_for_update(
-            guardrails,
-            lambda: with_retry(
-                lambda: invoke_operation(
-                    self._http,
-                    self._ops.get,
-                    path_params={"id": workflow_id},
-                ),
-                self._config.max_retries,
-            ),
-        )
-        body = _WorkflowUpdateBody(
+        body = update_body(_WorkflowUpdateBody(
             name=name, type=type, description=description,
             trigger=dump_trigger(trigger),
             agent_selection=dump_agent_selection(agent_selection),
             workflow_structure=dump_workflow_structure(workflow_structure),
-            access_config=access_config,
-        ).model_dump(by_alias=True, exclude_none=update_mask is None)
+        ), update_mask)
         raw = with_retry(
             lambda: invoke_operation(
                 self._http,
@@ -355,25 +329,26 @@ class AsyncWorkflowsResource(_AsyncWorkflowsResourceBase):
                      description: Optional[str] = None,
                      trigger: Optional[TriggerInput] = None,
                      agent_selection: Optional[AgentSelectionInput] = None,
-                     workflow_structure: Optional[WorkflowGraphInput] = None,
-                     guardrails: Optional[List[str]] = None) -> Agent:
+                     workflow_structure: Optional[WorkflowGraphInput] = None) -> Agent:
         """Create a new Modus workflow.
 
         Args:
             name: Display name for the workflow.
-            type: ``"task"`` for single-step skill orchestration, or ``"workflow"``
-                  for a multi-step graph.
-            guardrails: Runtime guardrail labels (for example ``\"no-pii\"``).
-                When set, the workflow is created with these labels under the
-                organisation default sharing rules. Omit (``None``) to create
-                with no guardrails. ACL fields cannot be set from the SDK.
+            type: ``"workflow"``. ``"task"`` is a deprecated alias the server
+                  stores as ``"workflow"``.
+            description: Optional human-readable description.
+            trigger: Optional trigger configuration payload.
+            agent_selection: Optional scope selection for the workflow.
+            workflow_structure: Optional multi-step graph.
+
+        Returns:
+            The created workflow (draft).
         """
         body = _WorkflowCreateBody(
             name=name, type=type, description=description,
             trigger=dump_trigger(trigger),
             agent_selection=dump_agent_selection(agent_selection),
             workflow_structure=dump_workflow_structure(workflow_structure),
-            access_config=access_config_body_for_create(guardrails),
         ).model_dump(by_alias=True, exclude_none=True)
         raw = await async_with_retry(
             lambda: invoke_operation_async(
@@ -389,7 +364,6 @@ class AsyncWorkflowsResource(_AsyncWorkflowsResourceBase):
                      trigger: Optional[TriggerInput] = None,
                      agent_selection: Optional[AgentSelectionInput] = None,
                      workflow_structure: Optional[WorkflowGraphInput] = None,
-                     guardrails: Optional[List[str]] = None,
                      update_mask: Optional[str] = None) -> Agent:
         """Update a Modus workflow's configuration.
 
@@ -399,31 +373,25 @@ class AsyncWorkflowsResource(_AsyncWorkflowsResourceBase):
         fields not named in the mask untouched.
 
         Args:
-            guardrails: Runtime guardrail labels to set on the workflow. Fetches
-                the current workflow first and merges these labels into its access
-                configuration (an extra ``get`` request). Omit (``None``) to
-                leave guardrails unchanged. Pass ``[]`` to clear all guardrails.
+            workflow_id: Numeric workflow id.
+            name: Optional new display name.
+            type: Only ``"workflow"`` is accepted; ``"task"`` is rejected (HTTP 422).
+            description: Optional new description.
+            trigger: Optional trigger configuration payload.
+            agent_selection: Optional scope selection for the workflow.
+            workflow_structure: Optional multi-step graph.
+            update_mask: Comma-separated field names to update or clear.
+
+        Returns:
+            The updated workflow.
         """
         validate_id(workflow_id, name="workflow_id")
-        if guardrails is not None:
-            existing = await async_with_retry(
-                lambda: invoke_operation_async(
-                    self._http,
-                    self._ops.get,
-                    path_params={"id": workflow_id},
-                ),
-                self._config.max_retries,
-            )
-            access_config = access_config_body_for_update(guardrails, lambda: existing)
-        else:
-            access_config = None
-        body = _WorkflowUpdateBody(
+        body = update_body(_WorkflowUpdateBody(
             name=name, type=type, description=description,
             trigger=dump_trigger(trigger),
             agent_selection=dump_agent_selection(agent_selection),
             workflow_structure=dump_workflow_structure(workflow_structure),
-            access_config=access_config,
-        ).model_dump(by_alias=True, exclude_none=update_mask is None)
+        ), update_mask)
         raw = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,

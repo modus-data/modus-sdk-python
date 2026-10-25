@@ -52,7 +52,9 @@ client = modus.Modus()
 for scope in client.scopes.list():
     print(scope.name, scope.status)
 
-scope = client.scopes.get("revenue-analysis")
+# Ids are numeric: take one from list()
+first = client.scopes.list().items[0]
+scope = client.scopes.get(first.id)
 print(scope.name, scope.description)
 
 for item in client.context.items.list():

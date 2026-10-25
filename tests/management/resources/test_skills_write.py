@@ -144,7 +144,7 @@ def test_skills_create_with_toolset_factory():
 
 
 @respx.mock
-def test_skills_create_empty_toolset_is_omitted():
+def test_skills_create_empty_toolset_is_sent_as_no_tools():
     from modus.management import Toolset
 
     route = respx.post(f"{BASE}/api/v1/scopes").mock(
@@ -152,7 +152,36 @@ def test_skills_create_empty_toolset_is_omitted():
     )
     _client().scopes.create(name="X", toolset=Toolset.empty())
     body = json.loads(route.calls[0].request.read())
-    assert "toolset" not in body
+    assert body["toolset"] == {}
+
+
+@respx.mock
+def test_skills_update_empty_toolset_clears_tools():
+    from modus.management import Toolset
+
+    route = respx.patch(f"{BASE}/api/v1/scopes/1").mock(
+        return_value=httpx.Response(200, json=SKILL_RESP)
+    )
+    _client().scopes.update(1, toolset=Toolset.empty())
+    assert json.loads(route.calls[0].request.read()) == {"toolset": {}}
+
+
+@respx.mock
+def test_skills_update_manager_id_is_an_int():
+    route = respx.patch(f"{BASE}/api/v1/scopes/1").mock(
+        return_value=httpx.Response(200, json=SKILL_RESP)
+    )
+    _client().scopes.update(1, manager_id=7)
+    assert json.loads(route.calls[0].request.read()) == {"managerId": 7}
+
+
+@respx.mock
+def test_skills_update_mask_detaches_manager():
+    route = respx.patch(url__regex=rf"{BASE}/api/v1/scopes/1\?.*").mock(
+        return_value=httpx.Response(200, json=SKILL_RESP)
+    )
+    _client().scopes.update(1, update_mask="managerId")
+    assert json.loads(route.calls[0].request.read()) == {"managerId": None}
 
 
 @respx.mock

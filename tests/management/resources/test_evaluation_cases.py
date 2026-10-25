@@ -37,6 +37,30 @@ def test_add_case_without_id_sends_a_generated_id():
 
 
 @respx.mock
+async def test_async_client_has_scope_evaluations(async_client):
+    def respond(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(201, json=json.loads(request.content))
+
+    route = respx.post(f"{BASE}/api/v1/scopes/42/evaluations/cases").mock(side_effect=respond)
+    respx.delete(f"{BASE}/api/v1/scopes/42/evaluations/cases/c1").mock(
+        return_value=httpx.Response(204)
+    )
+    respx.get(f"{BASE}/api/v1/scopes/42/evaluations/config").mock(
+        return_value=httpx.Response(200, json={
+            "enabled": True,
+            "notifications": {"recipients": [], "channels": {"email": False}},
+        })
+    )
+    evaluations = async_client.scopes.evaluations(42)
+    added = await evaluations.add_case(task="t", expected_output="o", id="c1")
+    assert added.id == "c1"
+    assert json.loads(route.calls[0].request.content)["id"] == "c1"
+    assert await evaluations.delete_case("c1") is None
+    config = await evaluations.get_config()
+    assert config.enabled is True
+
+
+@respx.mock
 def test_retried_add_case_sends_the_same_body_and_surfaces_409():
     bodies: list[dict[str, str]] = []
 

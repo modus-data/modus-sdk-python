@@ -23,22 +23,6 @@ _SCHEMA = json.loads((_CLIENTS_DIR / "sdk-surface.schema.json").read_text())
 
 _HTTP_METHODS = {"get", "post", "put", "patch", "delete"}
 
-# ``AsyncScopesResource`` has no ``evaluations()`` factory and the SDK has no
-# ``AsyncScopeEvaluationsResource`` at all, so these operations are sync-only in Python.
-# A real gap in the async client, not a wrong hint: the hints rows stay correct. Listed by
-# operationId, not by resource, so a new operation on that resource is still caught, and
-# ``test_async_gaps_are_still_gaps`` fails the moment the async resource lands — delete the
-# entry then.
-_ASYNC_GAPS = {
-    "EvaluationsController_getConfig",
-    "EvaluationsController_updateConfig",
-    "EvaluationsController_triggerRun",
-    "EvaluationsController_listRuns",
-    "EvaluationsController_getRun",
-    "ScopesController_addEvaluationCase",
-    "ScopesController_updateEvaluationCase",
-    "ScopesController_deleteEvaluationCase",
-}
 
 
 def _snake(name: str) -> str:
@@ -202,11 +186,11 @@ def _resolves(root: object, exposure: dict) -> bool:
     return callable(getattr(_resolve(root, exposure), method, None))
 
 
-def _unresolved(roots: Dict[str, object], skip: Set[str] = frozenset()) -> List[str]:
+def _unresolved(roots: Dict[str, object]) -> List[str]:
     return [
         f"{operation_id}: {_py_path(exposure)}"
         for operation_id, exposure in _exposures()
-        if operation_id not in skip and not _resolves(roots[exposure["surface"]], exposure)
+        if not _resolves(roots[exposure["surface"]], exposure)
     ]
 
 
@@ -230,32 +214,5 @@ def test_every_exposure_resolves_on_the_sync_clients() -> None:
 
 
 def test_every_exposure_resolves_on_the_async_clients() -> None:
-    failures = _unresolved(_async_clients(), skip=_ASYNC_GAPS)
+    failures = _unresolved(_async_clients())
     assert not failures, f"Exposures that do not resolve to a method: {failures}"
-
-
-def test_async_gaps_are_still_gaps() -> None:
-    """``_ASYNC_GAPS`` suppresses the async check, so each entry must still be a real gap."""
-    roots = _async_clients()
-    resolved = sorted(
-        f"{operation_id}: {_py_path(exposure)}"
-        for operation_id, exposure in _exposures()
-        if operation_id in _ASYNC_GAPS and _resolves(roots[exposure["surface"]], exposure)
-    )
-    assert not resolved, (
-        "These exposures now resolve on the async client, so _ASYNC_GAPS is stale — delete "
-        f"the operationId from it: {resolved}"
-    )
-
-
-def test_async_gaps_name_known_operations() -> None:
-    """A renamed operationId would leave a dead entry that suppresses nothing, silently."""
-    unknown = sorted(_ASYNC_GAPS - set(_SURFACE["operations"]))
-    assert not unknown, f"_ASYNC_GAPS names operationIds absent from sdk-surface.json: {unknown}"
-
-
-def test_sync_only_hints_match_the_exact_expected_async_gaps() -> None:
-    assert {
-        operation_id for operation_id, exposure in _exposures()
-        if exposure.get("pyAsync") is False
-    } == _ASYNC_GAPS

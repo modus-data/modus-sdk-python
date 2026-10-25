@@ -4,8 +4,9 @@ from __future__ import annotations
 import json
 
 import httpx
+import pytest
 import respx
-from modus import Modus, SuggestionEventSource, SuggestionEventType
+from modus import AsyncModus, Modus, SuggestionEventSource, SuggestionEventType
 
 SAMPLE_SUGGESTION = {
     "id": "predefined:q1",
@@ -29,6 +30,25 @@ def test_suggestions_list():
     params = route.calls[0].request.url.params
     assert params["pageSize"] == "5"
     assert params["scopeIds"] == "7,42"
+
+
+@respx.mock
+def test_suggestions_list_rejects_empty_scope_ids_before_any_request():
+    # ``scopeIds=`` is a 400 on the server; dropping the filter would silently broaden the result.
+    route = respx.get("https://api.test/api/v1/suggestions/questions")
+    client = Modus(api_key="modus_test", base_url="https://api.test")
+    with pytest.raises(ValueError, match="scope_ids.*at least one"):
+        client.suggestions.list(scope_ids=[])
+    assert not route.called
+
+
+@respx.mock
+async def test_async_suggestions_list_rejects_empty_scope_ids_before_any_request():
+    route = respx.get("https://api.test/api/v1/suggestions/questions")
+    async with AsyncModus(api_key="modus_test", base_url="https://api.test") as client:
+        with pytest.raises(ValueError, match="scope_ids.*at least one"):
+            await client.suggestions.list(scope_ids=[])
+    assert not route.called
 
 
 @respx.mock

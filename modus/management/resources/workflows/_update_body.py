@@ -15,7 +15,6 @@ class _WorkflowCreateBody(BaseModel):
     trigger: Optional[Dict[str, Any]] = None
     agent_selection: Optional[Dict[str, Any]] = None
     workflow_structure: Optional[Dict[str, Any]] = None
-    access_config: Optional[Dict[str, Any]] = None
 
 
 class _WorkflowUpdateBody(BaseModel):
@@ -26,4 +25,3 @@ class _WorkflowUpdateBody(BaseModel):
     trigger: Optional[Dict[str, Any]] = None
     agent_selection: Optional[Dict[str, Any]] = None
     workflow_structure: Optional[Dict[str, Any]] = None
-    access_config: Optional[Dict[str, Any]] = None

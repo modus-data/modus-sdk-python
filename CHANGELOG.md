@@ -13,14 +13,22 @@ release, including pre-1.0 (`0.x`) releases.
 
 - **`deepseek-v4.1-flash-1017` model.** The October 17, 2026 snapshot of DeepSeek V4.1 Flash is an
   accepted chat model id.
+- **Async scope evaluations.** `AsyncModusManagement().scopes.evaluations(id)` has the same methods as the sync client: `get_config`, `update_config`, `trigger_run`, `list_runs`, `get_run`, `add_case`, `update_case`, and `delete_case`.
 
 ### Changed
 
 - **Breaking (pre-1.0): scope `connectionSet` rows have one shape.** `scopes.create` and `scopes.update` accept each entry only as `{ connection_id, path, preferences?, context_enabled? }`, where `path` is an array of strings, `preferences` an object and `context_enabled` a boolean. An empty path selects the whole connection. Any other field, a non-string path segment, an empty or null `connection_id`, or a null `connectionSet` is rejected with 400. `variation.connection_set` entries are now `ConnectionSetItemDto` models (`.connection_id`, `.path`, `.preferences`, `.context_enabled`); `row["connection_id"]` no longer works.
+- **Breaking (pre-1.0): workflow `guardrails` removed.** `workflows.create` and `workflows.update` (sync and async) no longer take `guardrails=`. The workflow access configuration has no guardrails, so every call that set it failed with 400 and changed nothing. Scope `guardrails` are unchanged.
+- **Breaking (pre-1.0): `scopes.memories(id).update()` returns `None`.** The server answers 204 with no body; the method raised a `ValidationError` after the update had been applied.
+- **Breaking (pre-1.0): `manager_id` is an `int`.** `scopes.update(manager_id=...)` takes the numeric id of the manager scope. It was typed `str`, which the server rejects with 400. To detach, pass `update_mask="managerId"`.
 
 ### Fixed
 
 - **A path id of `'..'` could target the parent resource, e.g. delete the scope.** `scopes.memories(7).delete('..')` sent `DELETE /scopes/7`. Every path id that is blank, `'.'` or `'..'` now raises `ValueError` before any request; a blank id no longer returns the list page as one item.
+- **`update_mask` sends only what you set.** `scopes.update`, `workflows.update`, `context.items.update`, and `workflows.interfaces(id).update` sent `null` for every unset field whenever `update_mask` was given, and the server rejected the call with 400. The body now holds the fields you set, plus `null` for each field the mask names and you left unset, which the server clears.
+- **`Toolset.empty()` clears a scope's tools.** `scopes.update(toolset=Toolset.empty())` sends `{}`; it was dropped, so the tools stayed.
+- **`suggestions.list(scope_ids=[])` raises `ValueError`** before any request. It sent `scopeIds=`, which the server rejects with 400.
+- **Docs: ids are numeric.** The getting-started example took a slug (`scopes.get("revenue-analysis")`), which the server rejects with 400; it now takes an id from `list()`. Docstrings no longer say "id or slug". `type="task"` is documented as a deprecated alias on create; `workflows.update` accepts only `"workflow"`.
 
 ## [0.9.0] — 2026-10-24
 

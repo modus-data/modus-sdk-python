@@ -21,8 +21,6 @@ from modus import AsyncModus, Modus
 from modus._generated.operations import OPERATIONS
 from modus.management import AsyncModusManagement, ModusManagement
 
-from .test_sdk_surface import _ASYNC_GAPS
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
 from emit_sdk_resources import (  # noqa: E402
     _QUERY_ARG_TYPES,
@@ -274,7 +272,6 @@ def _params(cases: List[Case]) -> List[Any]:
         pytest.param(case, is_async, id=f"{case.label}-{'async' if is_async else 'sync'}")
         for case in cases
         for is_async in (False, True)
-        if not is_async or case.operation_id not in _ASYNC_GAPS
     ]
 
 

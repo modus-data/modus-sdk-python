@@ -41,7 +41,7 @@ class ScopesResource(_ScopesResourceBase):
 
     When to use which method:
 
-    - ``list`` / ``get`` — find an active scope id or slug
+    - ``list`` / ``get`` — find an active scope's numeric id
     - ``chat`` — one complete reply from that scope
     - ``chat_stream`` — print tokens as they arrive
     - ``get_context`` — preview composed context without chatting
@@ -94,7 +94,7 @@ class ScopesResource(_ScopesResourceBase):
         For the org-wide assistant use ``client.modus.chat`` instead.
 
         Args:
-            scope_id:  Scope numeric id or slug (must be active/deployed for chat).
+            scope_id:  Numeric scope id (must be active/deployed for chat).
             message:   User message text.
             model:     Model id, e.g. ``"claude-sonnet-5"``. Unsupported ids raise
                        ``ValueError`` before the request is sent.
@@ -146,7 +146,7 @@ class ScopesResource(_ScopesResourceBase):
         ``event_stream``. Always use the context manager and iterate.
 
         Args:
-            scope_id:  Scope numeric id or slug.
+            scope_id:  Numeric scope id.
             message:   User message text.
             model:     Model id, e.g. ``"claude-sonnet-5"``.
             thread_id: Continue an existing conversation; omit to start new.
@@ -185,7 +185,7 @@ class ScopesResource(_ScopesResourceBase):
         Compose context this scope would use for an intent, without running chat.
 
         Args:
-            scope_id: Scope numeric id or slug.
+            scope_id: Numeric scope id.
             message:  Natural-language query used to select context.
             limit:    Maximum context items to return. Omit to return all
                       selected items.
@@ -290,7 +290,7 @@ class AsyncScopesResource(_AsyncScopesResourceBase):
         Return composed context Modus would use for a scope query, without running chat.
 
         Args:
-            scope_id: Scope id or slug.
+            scope_id: Numeric scope id.
             message:  Natural-language query used to select context.
             limit:    Maximum context items to return. Omit to return all selected items.
         """

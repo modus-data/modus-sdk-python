@@ -201,7 +201,7 @@ class Toolset(BaseModel):
 
     @classmethod
     def empty(cls) -> "Toolset":
-        """Return a toolset with no tools."""
+        """Return a toolset with no tools. Pass it to ``scopes.update`` to clear every tool."""
         return cls()
 
     @classmethod
@@ -224,11 +224,8 @@ ToolsetInput = Toolset
 
 
 def dump_toolset(value: Optional[ToolsetInput]) -> Optional[Dict[str, Any]]:
-    """Serialize a toolset for the request body, omitting an empty toolset."""
-    dumped = dump_optional_model(value, field_name="toolset", typed_label="Toolset")
-    if isinstance(dumped, dict):
-        return dumped or None
-    return None
+    """Serialize a toolset for the request body. ``Toolset.empty()`` stays ``{}``, which clears every tool."""
+    return dump_optional_model(value, field_name="toolset", typed_label="Toolset")
 
 
 def parse_toolset(raw: object) -> Optional[Toolset]:

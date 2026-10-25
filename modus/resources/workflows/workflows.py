@@ -98,20 +98,21 @@ class WorkflowsResource(_WorkflowsResourceBase):
         view: Optional[VariationView] = None,
     ) -> Agent:
         """
-        Retrieve a workflow by ID or slug.
+        Retrieve a workflow by its numeric id.
 
         Args:
-            workflow_id: Workflow numeric id or slug string.
+            workflow_id: Numeric workflow id.
             view: Variation view — ``"active"`` (deployed) or ``"draft"``.
 
         Returns:
             Workflow record (``id``, ``name``, ``status``, …).
 
         Raises:
-            NotFoundError: if no workflow with this ID/slug exists.
+            NotFoundError: if no workflow with this id exists.
 
         Example:
-            >>> wf = client.workflows.get("weekly-digest")
+            >>> first = client.workflows.list().items[0]
+            >>> wf = client.workflows.get(first.id)
             >>> print(wf.name, wf.status)
         """
         validate_id(workflow_id, name="workflow_id")
@@ -143,7 +144,7 @@ class WorkflowsResource(_WorkflowsResourceBase):
         events (cancel / resume). Use this helper for a chat-shaped stream.
 
         Args:
-            workflow_id: Workflow ID or slug.
+            workflow_id: Numeric workflow id.
             message:   The message to send.
             model:     Model to run this message with (required). One of the
                        supported model IDs, e.g. ``"claude-sonnet-5"`` or ``"gpt-5.5"``.
@@ -205,13 +206,13 @@ class AsyncWorkflowsResource(_AsyncWorkflowsResourceBase):
         view: Optional[VariationView] = None,
     ) -> Agent:
         """
-        Retrieve a workflow by ID or slug.
+        Retrieve a workflow by its numeric id.
 
         Args:
             view: Variation view — ``"active"`` (deployed) or ``"draft"``.
 
         Raises:
-            NotFoundError: if no workflow with this ID/slug exists.
+            NotFoundError: if no workflow with this id exists.
         """
         validate_id(workflow_id, name="workflow_id")
         query = {} if view is None else {"view": view}
@@ -239,7 +240,7 @@ class AsyncWorkflowsResource(_AsyncWorkflowsResourceBase):
         Send a message to a workflow and stream the reply token by token.
 
         Args:
-            workflow_id: Workflow ID or slug.
+            workflow_id: Numeric workflow id.
             message:   The message to send.
             model:     Model to run this message with (required). One of the
                        supported model IDs, e.g. ``"claude-sonnet-5"`` or ``"gpt-5.5"``.

@@ -113,7 +113,7 @@ class _ScopesMemoriesResourceBase:
         update: MemoryUpdate,
         *,
         update_mask: Optional[str] = None,
-    ) -> Memory:
+    ) -> None:
         """
         Update a memory.
 
@@ -135,7 +135,7 @@ class _ScopesMemoriesResourceBase:
         update_mask_params = update_mask_query(update_mask)
         if update_mask_params is not None:
             query.update(update_mask_params)
-        raw = with_retry(
+        with_retry(
             lambda: invoke_operation(
                 self._http,
                 "ScopeMemoriesController_update",
@@ -145,7 +145,6 @@ class _ScopesMemoriesResourceBase:
             ),
             self._config.max_retries,
         )
-        return Memory.model_validate(raw)
 
     def delete(self, memory_id: str) -> None:
         """
@@ -268,7 +267,7 @@ class _AsyncScopesMemoriesResourceBase:
         update: MemoryUpdate,
         *,
         update_mask: Optional[str] = None,
-    ) -> Memory:
+    ) -> None:
         """
         Update a memory.
 
@@ -290,7 +289,7 @@ class _AsyncScopesMemoriesResourceBase:
         update_mask_params = update_mask_query(update_mask)
         if update_mask_params is not None:
             query.update(update_mask_params)
-        raw = await async_with_retry(
+        await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,
                 "ScopeMemoriesController_update",
@@ -300,7 +299,6 @@ class _AsyncScopesMemoriesResourceBase:
             ),
             self._config.max_retries,
         )
-        return Memory.model_validate(raw)
 
     async def delete(self, memory_id: str) -> None:
         """
