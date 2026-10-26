@@ -415,20 +415,46 @@ class ConnectionSelectionDto(BaseModel):
 class ConnectionSetItemDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="ignore")
     connection_id: str = Field(
-        ...,
-        description='Id of the connection this row selects.',
-        examples=['11111111-1111-4111-8111-111111111111'],
+        ..., description='Id of the connection.', examples=['11111111-1111-4111-8111-111111111111']
     )
-    path: list[str] = Field(
-        ...,
-        description='Path of the selected unit. An empty array selects the whole connection.',
+    path: list[str] | None = Field(
+        None,
+        deprecated=True,
+        description='Deprecated. Use `preferences`. Path of one selected unit; an empty array selects the whole connection. Ignored when `preferences` is sent, required otherwise.',
         examples=[[]],
     )
     preferences: dict[str, Any] | None = Field(
-        None, description='Which objects under this connection the scope includes or excludes.'
+        None,
+        description='What the scope reads under this connection. `mode` `all` reads the whole connection; `manual` reads only the units its `include` rules select. `exclude` rules remove units in either mode. Each rule\'s `path` lists id steps `{type, by: "id", id}` from the connection down.',
+        examples=[{'mode': 'manual', 'include': [{'path': [{'type': 'database', 'by': 'id', 'id': 'analytics'}]}], 'exclude': [{'path': [{'type': 'database', 'by': 'id', 'id': 'analytics'}, {'type': 'schema', 'by': 'id', 'id': 'staging'}]}]}],
     )
     context_enabled: bool | None = Field(
-        None, description='Whether the scope reads context from this connection. Defaults to true.'
+        None,
+        deprecated=True,
+        description='Deprecated. Use `preferences` alone: the scope always reads context from its connections. Omit it; `false` is accepted only when the connection is already stored with `false`.',
+    )
+
+
+class ConnectionSetItemReadDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+    connection_id: str = Field(
+        ..., description='Id of the connection.', examples=['11111111-1111-4111-8111-111111111111']
+    )
+    path: list[str] = Field(
+        ...,
+        deprecated=True,
+        description='Deprecated. Use `preferences`. One stored row per included path, derived from `preferences`; an empty array is the whole connection.',
+        examples=[[]],
+    )
+    preferences: dict[str, Any] | None = Field(
+        None,
+        description='What the scope reads under this connection. `mode` `all` reads the whole connection; `manual` reads only the units its `include` rules select. `exclude` rules remove units in either mode. Each rule\'s `path` lists id steps `{type, by: "id", id}` from the connection down. Present on the connection\'s first row. Absent on every row of a connection last saved without `preferences`, until the server converts it.',
+        examples=[{'mode': 'manual', 'include': [{'path': [{'type': 'database', 'by': 'id', 'id': 'analytics'}]}], 'exclude': [{'path': [{'type': 'database', 'by': 'id', 'id': 'analytics'}, {'type': 'schema', 'by': 'id', 'id': 'staging'}]}]}],
+    )
+    context_enabled: bool | None = Field(
+        None,
+        deprecated=True,
+        description='Deprecated. Use `preferences`. Whether the scope reads context from this connection: true, except on a few older entries kept for their tools only.',
     )
 
 
@@ -4003,8 +4029,8 @@ class CreateSkillDto(BaseModel):
     connection_set: list[ConnectionSetItemDto] | None = Field(
         None,
         alias='connectionSet',
-        description='Connections this scope can use. Each entry is a connection id and a path; an empty path selects the whole connection.',
-        examples=[[{'connection_id': '11111111-1111-4111-8111-111111111111', 'path': []}]],
+        description='Connections this scope can use. Each entry names a connection and what the scope reads under it in `preferences`; `path` is deprecated.',
+        examples=[[{'connection_id': '11111111-1111-4111-8111-111111111111', 'preferences': {'mode': 'manual', 'include': [{'path': [{'type': 'database', 'by': 'id', 'id': 'analytics'}]}], 'exclude': []}}]],
     )
     context_selections: list[dict[str, Any]] | None = Field(
         None,
@@ -4164,10 +4190,10 @@ class SkillVariationDto(BaseModel):
         description='Builder-managed toolset descriptor. Map of `{toolName: config}`; opaque to the API surface.',
         examples=[{'web_search': {'enabled': True}, 'calculator': {'enabled': True}}],
     )
-    connection_set: list[ConnectionSetItemDto] = Field(
+    connection_set: list[ConnectionSetItemReadDto] = Field(
         ...,
         alias='connectionSet',
-        description='Connections attached to this variation. Each entry is a connection id and a path; an empty path selects the whole connection.',
+        description="Connections attached to this variation. A connection's `preferences` say what the scope reads under it; its rows list the derived paths.",
     )
     context_selections: list[dict[str, Any]] = Field(
         ...,
@@ -4302,8 +4328,8 @@ class UpdateSkillDto(BaseModel):
     connection_set: list[ConnectionSetItemDto] | None = Field(
         None,
         alias='connectionSet',
-        description='Replacement connection list. Each entry is a connection id and a path; an empty path selects the whole connection.',
-        examples=[[{'connection_id': '11111111-1111-4111-8111-111111111111', 'path': []}]],
+        description='Replacement connection list. Each entry names a connection and what the scope reads under it in `preferences`; `path` is deprecated.',
+        examples=[[{'connection_id': '11111111-1111-4111-8111-111111111111', 'preferences': {'mode': 'manual', 'include': [{'path': [{'type': 'database', 'by': 'id', 'id': 'analytics'}]}], 'exclude': []}}]],
     )
     context_selections: list[dict[str, Any]] | None = Field(
         None,

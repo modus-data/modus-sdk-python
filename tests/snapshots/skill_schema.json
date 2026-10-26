@@ -89,10 +89,10 @@
       "title": "AccessConfigDto",
       "type": "object"
     },
-    "ConnectionSetItemDto": {
+    "ConnectionSetItemReadDto": {
       "properties": {
         "connection_id": {
-          "description": "Id of the connection this row selects.",
+          "description": "Id of the connection.",
           "examples": [
             "11111111-1111-4111-8111-111111111111"
           ],
@@ -100,7 +100,8 @@
           "type": "string"
         },
         "path": {
-          "description": "Path of the selected unit. An empty array selects the whole connection.",
+          "deprecated": true,
+          "description": "Deprecated. Use `preferences`. One stored row per included path, derived from `preferences`; an empty array is the whole connection.",
           "examples": [
             []
           ],
@@ -121,7 +122,39 @@
             }
           ],
           "default": null,
-          "description": "Which objects under this connection the scope includes or excludes.",
+          "description": "What the scope reads under this connection. `mode` `all` reads the whole connection; `manual` reads only the units its `include` rules select. `exclude` rules remove units in either mode. Each rule's `path` lists id steps `{type, by: \"id\", id}` from the connection down. Present on the connection's first row. Absent on every row of a connection last saved without `preferences`, until the server converts it.",
+          "examples": [
+            {
+              "exclude": [
+                {
+                  "path": [
+                    {
+                      "by": "id",
+                      "id": "analytics",
+                      "type": "database"
+                    },
+                    {
+                      "by": "id",
+                      "id": "staging",
+                      "type": "schema"
+                    }
+                  ]
+                }
+              ],
+              "include": [
+                {
+                  "path": [
+                    {
+                      "by": "id",
+                      "id": "analytics",
+                      "type": "database"
+                    }
+                  ]
+                }
+              ],
+              "mode": "manual"
+            }
+          ],
           "title": "Preferences"
         },
         "context_enabled": {
@@ -134,7 +167,8 @@
             }
           ],
           "default": null,
-          "description": "Whether the scope reads context from this connection. Defaults to true.",
+          "deprecated": true,
+          "description": "Deprecated. Use `preferences`. Whether the scope reads context from this connection: true, except on a few older entries kept for their tools only.",
           "title": "Context Enabled"
         }
       },
@@ -142,7 +176,7 @@
         "connection_id",
         "path"
       ],
-      "title": "ConnectionSetItemDto",
+      "title": "ConnectionSetItemReadDto",
       "type": "object"
     },
     "EvaluationCaseDto": {
@@ -622,9 +656,9 @@
           "type": "object"
         },
         "connectionSet": {
-          "description": "Connections attached to this variation. Each entry is a connection id and a path; an empty path selects the whole connection.",
+          "description": "Connections attached to this variation. A connection's `preferences` say what the scope reads under it; its rows list the derived paths.",
           "items": {
-            "$ref": "#/$defs/ConnectionSetItemDto"
+            "$ref": "#/$defs/ConnectionSetItemReadDto"
           },
           "title": "Connectionset",
           "type": "array"
