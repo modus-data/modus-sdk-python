@@ -201,7 +201,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "service": 'modus-api',
         "server_url": 'https://api.getmodus.com',
         "path_params": ('uid',),
-        "query_params": ('contextType', 'contentKeyPath', 'pageSize', 'offset', 'pageToken', 'searchQuery', 'dataPathPrefix'),
+        "query_params": ('contextType', 'contentKeyPath', 'pageSize', 'pageToken', 'searchQuery'),
         "request_schema": None,
         "response_schema": 'ListContextItemValuesResponseDto',
         "idempotent": False,

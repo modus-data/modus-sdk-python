@@ -8,7 +8,15 @@ from pydantic.alias_generators import to_camel
 
 
 class ContextValueRow(BaseModel):
-    """One value entry for a context item (shape varies by context type)."""
+    """One element of a context item's array field.
+
+    Attributes:
+        index: Position of the element in the array (0-based).
+        value: The element itself, as JSON of any type.
+    """
+
+    index: int
+    value: Any
 
     model_config = ConfigDict(
         alias_generator=to_camel,

@@ -134,6 +134,7 @@ class ApiErrorCode(str, Enum):
     forbidden = 'FORBIDDEN'
     not_found = 'NOT_FOUND'
     conflict = 'CONFLICT'
+    payload_too_large = 'PAYLOAD_TOO_LARGE'
     rate_limited = 'RATE_LIMITED'
     internal_error = 'INTERNAL_ERROR'
     upstream_error = 'UPSTREAM_ERROR'
@@ -695,13 +696,13 @@ class CreateLinkDto(BaseModel):
     is_crawl: bool | None = Field(
         False,
         alias='isCrawl',
-        description='When true, crawls multiple pages starting from the supplied URL.',
+        description='When true, runs a web search for the supplied URL and stores up to `pageLimit` results, which may come from other sites. It does not crawl the site’s pages.',
         examples=[False],
     )
     page_limit: float | None = Field(
         None,
         alias='pageLimit',
-        description='Maximum number of pages to crawl when `isCrawl` is true. Ignored otherwise.',
+        description='Maximum number of search results to store when `isCrawl` is true. Ignored otherwise.',
         examples=[10],
         ge=1.0,
         le=200.0,
@@ -1394,7 +1395,7 @@ class ListContextItemValuesResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     values: list[Any] = Field(
         ...,
-        description='Page of values extracted from the context item at the supplied `contentKeyPath`. Each entry is opaque JSON whose shape depends on the source item.',
+        description='Page of elements from the array field at `contentKeyPath`, in array order. Each entry is `{ "index": <0-based position in the array>, "value": <the element, as JSON of any type> }`.',
     )
     next_page_token: str | None = Field(
         ...,
@@ -2789,7 +2790,7 @@ class ConversationMessageDto(BaseModel):
     )
     content: str = Field(
         ...,
-        description='Message content. Usually a string for human turns; AI turns from newer LangChain versions may carry an array of content blocks (e.g. `[{type:"text",text:"…"}]`) instead. Consumers should handle both shapes.',
+        description='Text of the message. Tool calls an AI turn made are listed separately in `toolCalls`.',
         examples=['Run the churn analysis for last 30 days.'],
     )
     id: str | None = Field(

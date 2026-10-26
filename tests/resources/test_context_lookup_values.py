@@ -71,13 +71,14 @@ def test_lookup_returns_none_on_404():
 def test_list_values_returns_page():
     route = respx.get(f"{BASE}/api/v1/context/items/abc-123/values").mock(
         return_value=httpx.Response(200, json={
-            "values": [{"value": 123}, {"value": 456}],
+            "values": [{"index": 0, "value": 123}, {"index": 1, "value": 456}],
             "nextPageToken": None,
         })
     )
     page = _client().context.items.list_values("abc-123", "metric", "amount")
     assert len(page) == 2
     assert page.items[0].value == 123
+    assert page.items[1].index == 1
     assert route.called
 
 

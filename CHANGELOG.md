@@ -45,6 +45,9 @@ release, including pre-1.0 (`0.x`) releases.
 - **A non-UUID interface id is a 400.** `mgmt.workflows.interfaces(id).update()` and `.delete()` with an id that is not a UUID return 400 instead of a retried 500.
 - **Dashboard and element titles must contain a non-whitespace character.** A blank title on `mgmt.context.dashboards.create`, `.update_draft`, and `.elements(id).create` / `.update` returns 400.
 - **Delete docs match the server.** Deleting a workflow or scope that is already deleted returns 404; deleting a memory that no longer exists returns 404 (it returned 422). Neither is a no-op.
+- **Custom context item writes are documented as opt-in.** `custom_items` writes
+  raise `PermissionDeniedError` ("Custom context item writes are not enabled")
+  until Modus enables them for the organization.
 - **Breaking (pre-1.0): `runs.interrupt` and `runs.edit_queued` take the turn to send.** `runs.interrupt(run_id, next_run, *, last_seen_event_id=None)` and `runs.edit_queued(run_id, next_run)` send `next_run` (`message` and `sessionId`, the run's conversation id) as `nextRun` and return the admitted run as `RunAdmission` (`run_id`, `status`), sync and async. For `interrupt`, that is the new run that carries the follow-up turn; stream it with `runs.stream(run_id)`. The old optional `body` defaulted to `{}`, which the server always rejected, and the methods returned `None`. `interrupt` sets `nextRun.runId` when you omit it, so a retried request returns the same run instead of starting a second turn. On a run that has already finished, `interrupt` starts a follow-up turn.
 - **`runs.resume` requires `sessionId` and sends no message.** A missing or blank `sessionId` raises `ValueError` before any request; it was replaced by a random id, so the server answered "no longer pending". The documented example sends only `decision` and `sessionId`; a non-empty `message` is rejected by the server.
 
@@ -75,6 +78,19 @@ release, including pre-1.0 (`0.x`) releases.
   `None` instead of raising.
 - **`UnprocessableError` documentation:** 422 is a business-rule failure; schema failures are
   400 (`BadRequestError`).
+- **Breaking (pre-1.0): `context.items.list_values` pages one item's array.** The
+  server used to ignore the uid and return one row per item of the context type,
+  with each item's whole `content`. It now reads only the item named by `uid`
+  (`NotFoundError` when it is missing, unreadable, or of another context type) and
+  pages the elements of the array at `content_key_path`. `ContextValueRow` has
+  `index` (the element's 0-based position) and `value` (the element itself).
+- **Conversation messages carry text.** `conversations.get` returns `content` as a
+  string for every message, so a message stored as content blocks no longer fails
+  validation; tool calls stay in `tool_calls`.
+- **Oversized request bodies say so.** A request body over an operation's size
+  limit fails with HTTP 413 and error code `PAYLOAD_TOO_LARGE` instead of
+  `BAD_REQUEST`. Dashboards, a custom context item and a note now accept up to
+  1 MiB, and `custom_items.batch_create` up to 8 MiB.
 
 ## [0.9.0] — 2026-10-24
 

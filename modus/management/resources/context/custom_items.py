@@ -71,6 +71,15 @@ def _custom_list_params(
 
 
 class CustomContextItemsResource:
+    """Customer-owned context items for internal systems and custom databases.
+
+    Writes (``create``, ``batch_create``, ``create_relations``, ``update``,
+    ``delete``) are off by default for each organization: until Modus enables
+    them, they raise ``PermissionDeniedError`` with the message
+    ``Custom context item writes are not enabled``. Reads (``list``, ``get``)
+    always work.
+    """
+
     def __init__(self, http: HttpClient, config: ModusConfig) -> None:
         self._http = http
         self._config = config
@@ -300,6 +309,15 @@ class CustomContextItemsResource:
 
 
 class AsyncCustomContextItemsResource:
+    """Customer-owned context items for internal systems and custom databases.
+
+    Writes (``create``, ``batch_create``, ``create_relations``, ``update``,
+    ``delete``) are off by default for each organization: until Modus enables
+    them, they raise ``PermissionDeniedError`` with the message
+    ``Custom context item writes are not enabled``. Reads (``list``, ``get``)
+    always work.
+    """
+
     def __init__(self, http: AsyncHttpClient, config: ModusConfig) -> None:
         self._http = http
         self._config = config

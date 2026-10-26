@@ -33,7 +33,7 @@ SDK_LIST_OPS_EXCLUDED: frozenset[str] = frozenset()
 
 FORBIDDEN_RESPONSE_KEYS = frozenset({"items", "data", "results"})
 
-SAMPLE_VALUE_ENTRY: Dict[str, Any] = {"value": 123}
+SAMPLE_VALUE_ENTRY: Dict[str, Any] = {"index": 0, "value": 123}
 
 SAMPLE_MEMORY: Dict[str, Any] = {
     "id": "mem_01",
