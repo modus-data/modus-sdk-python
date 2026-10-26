@@ -135,6 +135,8 @@ class _ScopesEvaluationsResourceBase:
 
         Args:
             page_size: Items per page. Defaults to 25.
+            page_token: Opaque page token from a previous response's ``next_page_token``. Omit for
+                the first page.
 
         Returns:
             A page of runs.
@@ -283,6 +285,8 @@ class _AsyncScopesEvaluationsResourceBase:
 
         Args:
             page_size: Items per page. Defaults to 25.
+            page_token: Opaque page token from a previous response's ``next_page_token``. Omit for
+                the first page.
 
         Returns:
             A page of runs.

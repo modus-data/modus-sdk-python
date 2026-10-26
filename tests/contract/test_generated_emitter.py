@@ -310,7 +310,7 @@ def test_docs_omit_unexposed_query_parameters_from_all_prose(paginated: bool) ->
 
 
 @pytest.mark.parametrize("description", [
-    "Items per page. Defaults to 10, clamped to 100.",
+    "Items per page. Defaults to 10. Must be between 1 and 100.",
     "Items per page. Defaults to 100 when no pagination params are sent (legacy); otherwise 25.",
     "",
 ])
