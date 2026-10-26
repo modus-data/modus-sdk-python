@@ -14,6 +14,7 @@ from typing import (
     Sequence,
     Union,
 )
+from uuid import uuid4
 
 from ..._agent_run_request import with_agent_run_session_id
 from ..._config import ModusConfig
@@ -22,6 +23,7 @@ from ..._generated.models import (
     ActiveRunsResponseDto,
     GetAutomationRunResponseDto,
     ListAutomationRunsResponseDto,
+    RunAdmissionResponseDto,
 )
 from ..._http import AsyncHttpClient, HttpClient
 from ..._openapi_invoke import (
@@ -34,7 +36,12 @@ from ..._pagination import aip_list_params, normalize_page_token
 from ..._retry import async_with_retry, with_retry
 from ..._streaming import parse_sse_stream
 from ..._validation import validate_id, validate_page_size
-from ...types.agent_runs import ActiveConversationRun, AgentRun, AgentRunListItem
+from ...types.agent_runs import (
+    ActiveConversationRun,
+    AgentRun,
+    AgentRunListItem,
+    RunAdmission,
+)
 from ...types.pagination import AsyncPage, Page
 from ...types.runs import RunEvent
 
@@ -122,6 +129,37 @@ def _request_body(body: Mapping[str, Any]) -> Dict[str, Any]:
 
 def _optional_body(body: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
     return dict(body or {})
+
+
+def _require_session_id(body: Mapping[str, Any]) -> None:
+    """Interrupt, queue-edit and resume continue an existing conversation: never mint one."""
+    session_id = body.get("sessionId")
+    if not isinstance(session_id, str) or not session_id.strip():
+        raise ValueError("sessionId must be the run's conversation id (a non-empty string)")
+
+
+def _interrupt_body(
+    next_run: Mapping[str, Any], last_seen_event_id: Optional[str]
+) -> Dict[str, Any]:
+    """Pin ``nextRun.runId`` so a retried request returns the same run, not a second turn."""
+    _require_session_id(next_run)
+    pinned = dict(next_run)
+    run_id = pinned.get("runId")
+    pinned["runId"] = run_id.strip() if isinstance(run_id, str) and run_id.strip() else str(uuid4())
+    body: Dict[str, Any] = {"nextRun": pinned}
+    if last_seen_event_id:
+        body["lastSeenEventId"] = last_seen_event_id
+    return body
+
+
+def _edit_queued_body(next_run: Mapping[str, Any]) -> Dict[str, Any]:
+    _require_session_id(next_run)
+    return {"nextRun": dict(next_run)}
+
+
+def _resume_body(body: Mapping[str, Any]) -> Dict[str, Any]:
+    _require_session_id(body)
+    return dict(body)
 
 
 def _parse_events(lines: Iterator[str]) -> Iterator[RunEvent]:
@@ -447,33 +485,35 @@ class WorkflowRunsResource:
 
     def resume(self, run_id: str, body: Mapping[str, Any]) -> Iterator[RunEvent]:
         """
-        Resume a paused run and stream its events.
+        Resume a run paused at an approval or connect interrupt, and stream the continuation.
+
+        The decision is the whole turn: send no ``message`` (a non-empty one is rejected).
 
         Args:
-            run_id: Run ID to resume.
-            body:   Resume fields including ``decision``
-                    (``"approve"`` / ``"deny"`` / ``"connected"`` / ``"cancelled"``),
-                    ``message``, and ``sessionId``.
+            run_id: ID of the interrupted run.
+            body:   ``sessionId`` (the run's conversation id, required) and ``decision``
+                    (``"approve"`` / ``"deny"`` / ``"connected"`` / ``"cancelled"``);
+                    optional ``approvalTarget``.
+
+        Raises:
+            ValueError: ``sessionId`` is missing or blank (raised before any request).
 
         Example:
             >>> for event in client.workflows.runs.resume(
             ...     run_id,
-            ...     {
-            ...         "decision": "approve",
-            ...         "message": "Looks good — continue.",
-            ...         "sessionId": session_id,
-            ...     },
+            ...     {"decision": "approve", "sessionId": session_id},
             ... ):
             ...     if event.type == "token":
             ...         print(event.content, end="", flush=True)
         """
         validate_id(run_id, name="run_id")
+        json_body = _resume_body(body)
         return _parse_events(
             invoke_operation_stream(
                 self._http,
                 "ResumeRunsController_create",
                 path_params={"runId": run_id},
-                json_body=_request_body(body),
+                json_body=json_body,
             )
         )
 
@@ -499,42 +539,91 @@ class WorkflowRunsResource:
             self._config.max_retries,
         )
 
-    def interrupt(self, run_id: str, body: Optional[Mapping[str, Any]] = None) -> None:
+    def interrupt(
+        self,
+        run_id: str,
+        next_run: Mapping[str, Any],
+        *,
+        last_seen_event_id: Optional[str] = None,
+    ) -> RunAdmission:
         """
-        Interrupt a run.
+        Supersede a run's current turn with a follow-up turn.
+
+        The run is cancelled and ``next_run`` starts as a new run on the same
+        conversation. On a run that has already finished nothing is cancelled, and
+        ``next_run`` simply starts a follow-up turn. ``nextRun.runId`` is pinned (a new
+        uuid when you do not set one), so a retried request returns the same run
+        instead of starting another.
 
         Args:
-            run_id: Run ID to interrupt.
-            body:   Optional interruption details.
+            run_id:             Run ID to interrupt.
+            next_run:           The follow-up turn: ``message`` and ``sessionId``
+                                (the run's conversation id).
+            last_seen_event_id: ID of the last event you rendered, so the cancelled
+                                turn's saved output stops there.
+
+        Returns:
+            The new run (``run_id``, ``status``); follow it with :meth:`stream`.
+
+        Raises:
+            ValueError: ``sessionId`` is missing or blank (raised before any request).
+
+        Example:
+            >>> admitted = client.workflows.runs.interrupt(
+            ...     run_id, {"message": "Only count EMEA.", "sessionId": session_id}
+            ... )
+            >>> for event in client.workflows.runs.stream(admitted.run_id):
+            ...     if event.type == "token":
+            ...         print(event.content, end="", flush=True)
         """
         validate_id(run_id, name="run_id")
-        with_retry(
-            lambda: invoke_operation(
-                self._http,
-                "RunLifecycleController_interrupt",
-                path_params={"runId": run_id},
-                json_body=_optional_body(body),
-            ),
-            self._config.max_retries,
+        json_body = _interrupt_body(next_run, last_seen_event_id)
+        return RunAdmissionResponseDto.model_validate(
+            with_retry(
+                lambda: invoke_operation(
+                    self._http,
+                    "RunLifecycleController_interrupt",
+                    path_params={"runId": run_id},
+                    json_body=json_body,
+                ),
+                self._config.max_retries,
+            )
         )
 
-    def edit_queued(self, run_id: str, body: Optional[Mapping[str, Any]] = None) -> None:
+    def edit_queued(self, run_id: str, next_run: Mapping[str, Any]) -> RunAdmission:
         """
-        Edit a queued run.
+        Replace the turn of a run that is still queued (not yet started).
 
         Args:
-            run_id: Run ID to edit.
-            body:   Optional queued-run edit details.
+            run_id:   Queued run ID.
+            next_run: The replacement turn: ``message`` and ``sessionId``
+                      (the run's conversation id).
+
+        Returns:
+            The edited run (``run_id``, ``status``).
+
+        Raises:
+            ValueError: ``sessionId`` is missing or blank (raised before any request).
+            ConflictError: The run has already started.
+
+        Example:
+            >>> client.workflows.runs.edit_queued(
+            ...     queued_run_id,
+            ...     {"message": "Summarize last week instead.", "sessionId": session_id},
+            ... )
         """
         validate_id(run_id, name="run_id")
-        with_retry(
-            lambda: invoke_operation(
-                self._http,
-                "RunLifecycleController_editQueued",
-                path_params={"runId": run_id},
-                json_body=_optional_body(body),
-            ),
-            self._config.max_retries,
+        json_body = _edit_queued_body(next_run)
+        return RunAdmissionResponseDto.model_validate(
+            with_retry(
+                lambda: invoke_operation(
+                    self._http,
+                    "RunLifecycleController_editQueued",
+                    path_params={"runId": run_id},
+                    json_body=json_body,
+                ),
+                self._config.max_retries,
+            )
         )
 
     def events(self, run_id: str) -> Iterator[RunEvent]:
@@ -826,19 +915,23 @@ class AsyncWorkflowRunsResource:
 
     async def resume(self, run_id: str, body: Mapping[str, Any]) -> AsyncIterator[RunEvent]:
         """
-        Resume a paused run and stream its events.
+        Resume a run paused at an approval or connect interrupt, and stream the continuation.
 
         Args:
-            run_id: Run ID to resume.
-            body:   Resume request fields including the decision and message.
+            run_id: ID of the interrupted run.
+            body:   ``sessionId`` (required) and ``decision``; send no ``message``.
+
+        Raises:
+            ValueError: ``sessionId`` is missing or blank (raised before any request).
         """
         validate_id(run_id, name="run_id")
+        json_body = _resume_body(body)
         async for event in _parse_events_async(
             invoke_operation_stream_async(
                 self._http,
                 "ResumeRunsController_create",
                 path_params={"runId": run_id},
-                json_body=_request_body(body),
+                json_body=json_body,
             )
         ):
             yield event
@@ -862,46 +955,67 @@ class AsyncWorkflowRunsResource:
             self._config.max_retries,
         )
 
-    async def interrupt(self, run_id: str, body: Optional[Mapping[str, Any]] = None) -> None:
-        """
-        Interrupt a run.
-
-        Args:
-            run_id: Run ID to interrupt.
-            body:   Optional interruption details.
-        """
-        validate_id(run_id, name="run_id")
-        await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                "RunLifecycleController_interrupt",
-                path_params={"runId": run_id},
-                json_body=_optional_body(body),
-            ),
-            self._config.max_retries,
-        )
-
-    async def edit_queued(
+    async def interrupt(
         self,
         run_id: str,
-        body: Optional[Mapping[str, Any]] = None,
-    ) -> None:
+        next_run: Mapping[str, Any],
+        *,
+        last_seen_event_id: Optional[str] = None,
+    ) -> RunAdmission:
         """
-        Edit a queued run.
+        Supersede a run's current turn with a follow-up turn (see the sync method).
 
         Args:
-            run_id: Run ID to edit.
-            body:   Optional queued-run edit details.
+            run_id:             Run ID to interrupt.
+            next_run:           The follow-up turn: ``message`` and ``sessionId``.
+            last_seen_event_id: ID of the last event you rendered.
+
+        Returns:
+            The new run (``run_id``, ``status``).
+
+        Raises:
+            ValueError: ``sessionId`` is missing or blank (raised before any request).
         """
         validate_id(run_id, name="run_id")
-        await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                "RunLifecycleController_editQueued",
-                path_params={"runId": run_id},
-                json_body=_optional_body(body),
-            ),
-            self._config.max_retries,
+        json_body = _interrupt_body(next_run, last_seen_event_id)
+        return RunAdmissionResponseDto.model_validate(
+            await async_with_retry(
+                lambda: invoke_operation_async(
+                    self._http,
+                    "RunLifecycleController_interrupt",
+                    path_params={"runId": run_id},
+                    json_body=json_body,
+                ),
+                self._config.max_retries,
+            )
+        )
+
+    async def edit_queued(self, run_id: str, next_run: Mapping[str, Any]) -> RunAdmission:
+        """
+        Replace the turn of a run that is still queued (not yet started).
+
+        Args:
+            run_id:   Queued run ID.
+            next_run: The replacement turn: ``message`` and ``sessionId``.
+
+        Returns:
+            The edited run (``run_id``, ``status``).
+
+        Raises:
+            ValueError: ``sessionId`` is missing or blank (raised before any request).
+        """
+        validate_id(run_id, name="run_id")
+        json_body = _edit_queued_body(next_run)
+        return RunAdmissionResponseDto.model_validate(
+            await async_with_retry(
+                lambda: invoke_operation_async(
+                    self._http,
+                    "RunLifecycleController_editQueued",
+                    path_params={"runId": run_id},
+                    json_body=json_body,
+                ),
+                self._config.max_retries,
+            )
         )
 
     async def events(self, run_id: str) -> AsyncIterator[RunEvent]:

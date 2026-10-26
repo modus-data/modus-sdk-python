@@ -11,11 +11,13 @@ from .._generated.models import (
     AutomationRunListItemDto,
     CancelRunDto,
     EditQueuedRunDto,
+    FollowUpRunDto,
     GetAutomationRunResponseDto,
     InterruptRunDto,
     ListAutomationRunsResponseDto,
     ModusRunDto,
     ResumeRunDto,
+    RunAdmissionResponseDto,
     SkillRunDto,
     WorkflowActionDto,
 )
@@ -34,6 +36,8 @@ ResumeRunRequest = ResumeRunDto
 CancelRunRequest = CancelRunDto
 InterruptRunRequest = InterruptRunDto
 EditQueuedRunRequest = EditQueuedRunDto
+FollowUpRunRequest = FollowUpRunDto
+RunAdmission = RunAdmissionResponseDto
 WorkflowActionRequest = WorkflowActionDto
 
 __all__ = [
@@ -51,20 +55,24 @@ __all__ = [
     "AgentRunListPage",
     "CancelRunRequest",
     "EditQueuedRunRequest",
+    "FollowUpRunRequest",
     "InterruptRunRequest",
     "ModusRunCreateRequest",
     "ResumeRunRequest",
+    "RunAdmission",
     "SkillRunCreateRequest",
     "WorkflowActionRequest",
     "AgentRunDto",
     "AutomationRunListItemDto",
     "CancelRunDto",
     "EditQueuedRunDto",
+    "FollowUpRunDto",
     "GetAutomationRunResponseDto",
     "InterruptRunDto",
     "ListAutomationRunsResponseDto",
     "ModusRunDto",
     "ResumeRunDto",
+    "RunAdmissionResponseDto",
     "SkillRunDto",
     "WorkflowActionDto",
 ]

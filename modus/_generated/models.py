@@ -2580,6 +2580,16 @@ class Decision(str, Enum):
     cancelled = 'cancelled'
 
 
+class RunAdmissionResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    run_id: str = Field(
+        ...,
+        alias='runId',
+        description='Id of the admitted run. Stream it with GET /runs/{runId}/stream.',
+    )
+    status: str = Field(..., description='Status of the admitted run, e.g. `pending` or `queued`.')
+
+
 class RunReasoningEffort(str, Enum):
     none = 'none'
     minimal = 'minimal'
@@ -4735,7 +4745,9 @@ class InterruptRunDto(BaseModel):
         description='Redis Stream id of the last SSE frame the client rendered (see CancelRunDto).',
     )
     next_run: FollowUpRunDto = Field(
-        ..., alias='nextRun', description='Follow-up message that supersedes the current turn.'
+        ...,
+        alias='nextRun',
+        description="Follow-up turn that supersedes the current one. Its `sessionId` must be the run's conversation. Set `runId` so a retry returns the same run.",
     )
 
 
@@ -4780,7 +4792,6 @@ class ModusRunDto(BaseModel):
 
 class ResumeRunDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    message: str = Field(..., description='The user message to send.')
     session_id: str = Field(
         ...,
         alias='sessionId',
@@ -4812,6 +4823,10 @@ class ResumeRunDto(BaseModel):
     )
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
     debug: bool | None = None
+    message: str | None = Field(
+        None,
+        description='Omit it. A resume carries no new message; a non-empty message is rejected.',
+    )
     decision: Decision = Field(..., description='Decision that resumes the interrupted run.')
     approval_target: ApprovalTargetDto | None = Field(
         None,

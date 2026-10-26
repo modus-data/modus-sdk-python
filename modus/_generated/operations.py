@@ -666,7 +666,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": ('runId',),
         "query_params": (),
         "request_schema": 'EditQueuedRunDto',
-        "response_schema": None,
+        "response_schema": 'RunAdmissionResponseDto',
     },
     "RunLifecycleController_events": {
         "method": "GET",
@@ -686,7 +686,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": ('runId',),
         "query_params": (),
         "request_schema": 'InterruptRunDto',
-        "response_schema": None,
+        "response_schema": 'RunAdmissionResponseDto',
     },
     "RunLifecycleController_stream": {
         "method": "GET",
