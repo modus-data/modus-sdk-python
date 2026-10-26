@@ -6,6 +6,13 @@ import httpx
 import pytest
 import respx
 from modus import Modus
+from modus._exceptions import (
+    ConflictError,
+    ModusError,
+    NotFoundError,
+    PermissionDeniedError,
+    RateLimitError,
+)
 from modus.types.agent_runs import (
     ActiveConversationRun,
     AgentRun,
@@ -338,3 +345,50 @@ def test_agents_workflow_actions_execute_routes_to_agent_service():
     assert route.called
     assert isinstance(events[0], DoneEvent)
     assert events[0].run_id == "wf-action-1"
+
+
+# agent-service admits a run before the first response byte, so a rejected
+# stream POST is a plain HTTP error with the standard envelope (these are its bytes).
+_ADMISSION_REJECTIONS = [
+    (400, "BAD_REQUEST", "Message, images, or documents required", ModusError),
+    (403, "FORBIDDEN", "Not a member of this organization", PermissionDeniedError),
+    (404, "NOT_FOUND", "Scope 17 not found", NotFoundError),
+    (409, "CONFLICT", "Idempotency key run-1 conflicts with an existing run", ConflictError),
+    (429, "RATE_LIMITED", "Conversation has 20 non-terminal runs", RateLimitError),
+]
+
+
+def _admission_rejection(status: int, code: str, message: str) -> httpx.Response:
+    return httpx.Response(
+        status,
+        json={"error": {"code": code, "status": "X", "message": message, "requestId": "req_1"}},
+    )
+
+
+@pytest.mark.parametrize(("status", "code", "message", "error_class"), _ADMISSION_REJECTIONS)
+@respx.mock
+def test_run_stream_refused_raises_typed_error(client, status, code, message, error_class):
+    respx.post(f"{BASE}/agent/v1/modus/runs").mock(
+        return_value=_admission_rejection(status, code, message)
+    )
+    with pytest.raises(error_class) as raised:
+        list(client.workflows.runs.create_modus({"message": "hi", "sessionId": "s1"}))
+    assert raised.value.status_code == status
+    assert message in str(raised.value)
+
+
+@pytest.mark.parametrize(("status", "code", "message", "error_class"), _ADMISSION_REJECTIONS)
+@respx.mock
+async def test_async_run_stream_refused_raises_typed_error(
+    async_client, status, code, message, error_class
+):
+    respx.post(f"{BASE}/agent/v1/modus/runs").mock(
+        return_value=_admission_rejection(status, code, message)
+    )
+    with pytest.raises(error_class) as raised:
+        async for _ in async_client.workflows.runs.create_modus(
+            {"message": "hi", "sessionId": "s1"}
+        ):
+            pass
+    assert raised.value.status_code == status
+    assert message in str(raised.value)
