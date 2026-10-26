@@ -124,8 +124,8 @@ class _ScopesResourceBase:
         """
         Delete a scope.
 
-        Deletes a scope. The scope can be restored later with POST /scopes/{id}/restore. Deleting an
-        already-deleted scope is a no-op.
+        Deletes a scope. The scope can be restored later with POST /scopes/{id}/restore. Returns 404
+        if the scope does not exist or is already deleted.
 
         **Requires:** ``scopes:write``
 
@@ -174,8 +174,8 @@ class _ScopesResourceBase:
         """
         Cancel ownership transfer.
 
-        Cancels a pending ownership transfer. The current owner may cancel; the pending recipient
-        may decline.
+        Cancels a pending ownership transfer. The current owner may cancel, the pending recipient
+        may decline, and for a scope with no owner an organization owner may cancel.
 
         **Requires:** ``scopes:write``
 
@@ -323,8 +323,8 @@ class _AsyncScopesResourceBase:
         """
         Delete a scope.
 
-        Deletes a scope. The scope can be restored later with POST /scopes/{id}/restore. Deleting an
-        already-deleted scope is a no-op.
+        Deletes a scope. The scope can be restored later with POST /scopes/{id}/restore. Returns 404
+        if the scope does not exist or is already deleted.
 
         **Requires:** ``scopes:write``
 
@@ -369,8 +369,8 @@ class _AsyncScopesResourceBase:
         """
         Cancel ownership transfer.
 
-        Cancels a pending ownership transfer. The current owner may cancel; the pending recipient
-        may decline.
+        Cancels a pending ownership transfer. The current owner may cancel, the pending recipient
+        may decline, and for a scope with no owner an organization owner may cancel.
 
         **Requires:** ``scopes:write``
 

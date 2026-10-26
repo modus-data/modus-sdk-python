@@ -137,6 +137,7 @@ class ApiErrorCode(str, Enum):
     rate_limited = 'RATE_LIMITED'
     internal_error = 'INTERNAL_ERROR'
     upstream_error = 'UPSTREAM_ERROR'
+    upstream_timeout = 'UPSTREAM_TIMEOUT'
 
 
 class ApiErrorStatus(str, Enum):
@@ -148,6 +149,7 @@ class ApiErrorStatus(str, Enum):
     resource_exhausted = 'RESOURCE_EXHAUSTED'
     internal = 'INTERNAL'
     unavailable = 'UNAVAILABLE'
+    deadline_exceeded = 'DEADLINE_EXCEEDED'
 
 
 class AutomationRunListItemDto(BaseModel):
@@ -2912,7 +2914,12 @@ class CreateDashboardElementDto(BaseModel):
     kind: DashboardElementKind = Field(
         ..., description='Element to create: a chart, KPI, table or markdown tile, or a filter.'
     )
-    title: str = Field(..., description='Title shown on the element.', max_length=500, min_length=1)
+    title: str = Field(
+        ...,
+        description='Title shown on the element. Must contain a non-whitespace character.',
+        max_length=500,
+        min_length=1,
+    )
     layout: DashboardElementLayoutDto = Field(..., description='Grid position of the new element.')
 
 
@@ -3009,7 +3016,9 @@ class DashboardElementDto(BaseModel):
 
 class DashboardElementPatchDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    title: str | None = Field(None, description='Element title.', max_length=500)
+    title: str | None = Field(
+        None, description='Element title. Must contain a non-whitespace character.', max_length=500
+    )
     connection_id: str | None = Field(
         None, alias='connectionId', description='Connection the tile query runs on.', max_length=200
     )
@@ -4195,7 +4204,9 @@ class UpdateAgentDto(BaseModel):
         min_length=1,
     )
     type: AgentType | None = Field(
-        None, description='Updated workflow type. Rarely changed after creation.', examples=['task']
+        None,
+        description='Workflow type. Only `workflow` is accepted; `task` is a legacy value that create upgrades to `workflow` and update rejects (422).',
+        examples=['workflow'],
     )
     description: str | None = Field(
         None,
@@ -4234,7 +4245,11 @@ class UpdateDashboardDraftDto(BaseModel):
         description='Draft revision the change is based on; a stale value is rejected with 409.',
         ge=1,
     )
-    title: str | None = Field(None, description='New dashboard title.', max_length=500)
+    title: str | None = Field(
+        None,
+        description='New dashboard title. Must contain a non-whitespace character.',
+        max_length=500,
+    )
     description: str | None = Field(
         None, description='New dashboard description.', max_length=10000
     )
@@ -4535,7 +4550,12 @@ class AgentDeployResponseDto(BaseModel):
 
 class CreateDashboardDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    title: str = Field(..., description='Dashboard title.', max_length=500, min_length=1)
+    title: str = Field(
+        ...,
+        description='Dashboard title. Must contain a non-whitespace character.',
+        max_length=500,
+        min_length=1,
+    )
     description: str | None = Field(None, description='Dashboard description.', max_length=10000)
     definition: DashboardDefinitionDto = Field(
         ..., description='Tiles, filters and layout of the draft. Element ids must be unique.'

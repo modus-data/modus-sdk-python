@@ -119,7 +119,7 @@ class _WorkflowsResourceBase:
         Delete a workflow.
 
         Deletes a workflow and stops its schedule. The workflow can be restored later with POST
-        /workflows/{id}/restore. Deleting an already-deleted workflow is a no-op.
+        /workflows/{id}/restore. Returns 404 if the workflow does not exist or is already deleted.
 
         **Requires:** ``workflows:write``
 
@@ -294,7 +294,7 @@ class _AsyncWorkflowsResourceBase:
         Delete a workflow.
 
         Deletes a workflow and stops its schedule. The workflow can be restored later with POST
-        /workflows/{id}/restore. Deleting an already-deleted workflow is a no-op.
+        /workflows/{id}/restore. Returns 404 if the workflow does not exist or is already deleted.
 
         **Requires:** ``workflows:write``
 

@@ -296,7 +296,12 @@ class ScopesResource(_ScopesResourceBase):
     def request_ownership_transfer(
         self, scope_id: Union[int, str], *, new_owner_user_id: str,
     ) -> Skill:
-        """Start transferring ownership of a scope to another organisation member."""
+        """Start transferring ownership of a scope to another organisation member.
+
+        The current owner calls this, and the recipient accepts. A scope with no owner
+        (one created with a service-account token) can be given one by an organisation
+        owner; assigning yourself takes effect at once.
+        """
         validate_id(scope_id, name="scope_id")
         body = TransferOwnershipDto(new_owner_user_id=new_owner_user_id)
         raw = with_retry(
@@ -502,7 +507,12 @@ class AsyncScopesResource(_AsyncScopesResourceBase):
     async def request_ownership_transfer(
         self, scope_id: Union[int, str], *, new_owner_user_id: str,
     ) -> Skill:
-        """Start transferring ownership of a scope to another organisation member."""
+        """Start transferring ownership of a scope to another organisation member.
+
+        The current owner calls this, and the recipient accepts. A scope with no owner
+        (one created with a service-account token) can be given one by an organisation
+        owner; assigning yourself takes effect at once.
+        """
         validate_id(scope_id, name="scope_id")
         body = TransferOwnershipDto(new_owner_user_id=new_owner_user_id)
         raw = await async_with_retry(
