@@ -2196,18 +2196,18 @@ class UpdateContextItemDto(BaseModel):
     )
     description: str | None = Field(
         None,
-        description='Replacement description text.',
+        description='Replacement description text. `null` clears it.',
         examples=['Updated description after review'],
     )
     user_feedback: UserFeedback | None = Field(
         None,
         alias='userFeedback',
-        description='User-supplied verification verdict.',
+        description='User-supplied verification verdict. `null` resets it to `neutral`.',
         examples=['positive'],
     )
     topics: list[str] | None = Field(
         None,
-        description='Replacement topic tags. Pass `[]` to clear all tags.',
+        description='Replacement topic tags. Pass `[]` or `null` to clear all tags.',
         examples=[['analytics', 'verified']],
     )
 
@@ -2313,7 +2313,7 @@ class UpdateMemoryRequestDto(BaseModel):
     )
     metadata: dict[str, Any] | None = Field(
         None,
-        description='Replacement metadata bag. Optional.',
+        description='Replacement metadata bag. Optional; `null` clears it to `{}`.',
         examples=[{'topic': 'preferences', 'confidence': 'high'}],
     )
 
@@ -4237,7 +4237,7 @@ class UpdateAgentDto(BaseModel):
     )
     description: str | None = Field(
         None,
-        description='Updated description.',
+        description='Updated description. `null` clears it to an empty string.',
         examples=['Generates a daily sales report broken down by region.'],
     )
     trigger: TriggerDto | None = Field(
@@ -4296,18 +4296,18 @@ class UpdateSkillDto(BaseModel):
     )
     description: str | None = Field(
         None,
-        description='Updated description.',
+        description='Updated description. `null` clears it to an empty string.',
         examples=['Predicts churn risk over a 180-day window.'],
     )
     expected_output: str | None = Field(
         None,
         alias='expectedOutput',
-        description='Updated expected-output summary, used when this scope is supervised.',
+        description='Updated expected-output summary, used when this scope is supervised. `null` clears it to an empty string.',
         examples=['JSON: { churn_probability: number }'],
     )
     instructions: list[str] | None = Field(
         None,
-        description='Updated instruction fragments. Replaces the prior list when present.',
+        description='Updated instruction fragments. Replaces the prior list when present; `null` clears it.',
         examples=[['You are a senior data analyst.']],
     )
     toolset: dict[str, Any] | None = Field(
@@ -4328,27 +4328,27 @@ class UpdateSkillDto(BaseModel):
     connection_set: list[ConnectionSetItemDto] | None = Field(
         None,
         alias='connectionSet',
-        description='Replacement connection list. Each entry names a connection and what the scope reads under it in `preferences`; `path` is deprecated.',
+        description='Replacement connection list. Each entry names a connection and what the scope reads under it in `preferences`; `path` is deprecated. `null` clears it.',
         examples=[[{'connection_id': '11111111-1111-4111-8111-111111111111', 'preferences': {'mode': 'manual', 'include': [{'path': [{'type': 'database', 'by': 'id', 'id': 'analytics'}]}], 'exclude': []}}]],
     )
     context_selections: list[dict[str, Any]] | None = Field(
         None,
         alias='contextSelections',
-        description="Updated context selections (sources / docs the scope may read). Replaces the whole list, so send every selection to keep, including the scope's own learnings.",
+        description="Updated context selections (sources / docs the scope may read). Replaces the whole list, so send every selection to keep, including the scope's own learnings. `null` clears it.",
         examples=[[]],
     )
     interfaces: list[ScopeMcpInterfaceInputDto] | None = Field(
         None,
-        description='Updated MCP interface rows. Each row has type mcp, an optional id and name, and a config of core tools and exposed integrations. Omitted id and name are assigned. Replaces the whole list.',
+        description='Updated MCP interface rows. Each row has type mcp, an optional id and name, and a config of core tools and exposed integrations. Omitted id and name are assigned. Replaces the whole list; `null` clears it.',
     )
     evaluations: list[EvaluationCaseInputDto] | None = Field(
         None,
-        description='Replaces the whole evaluation list; send every case to keep. Omit `id` on a new case and one is assigned. To change one case, use POST, PATCH or DELETE /api/v1/scopes/{id}/evaluations/cases.',
+        description='Replaces the whole evaluation list; send every case to keep. Omit `id` on a new case and one is assigned. To change one case, use POST, PATCH or DELETE /api/v1/scopes/{id}/evaluations/cases. `null` clears it.',
     )
     supervision_subordinate_descriptions: dict[str, str] | None = Field(
         None,
         alias='supervisionSubordinateDescriptions',
-        description='Map of subordinate scope id (stringified) to the manager-provided description blurb. Replaces the prior map when present.',
+        description='Map of subordinate scope id (stringified) to the manager-provided description blurb. Replaces the prior map when present; `null` clears it.',
         examples=[{'12': 'Reads warehouse facts', '17': 'Drafts the report'}],
     )
     access_config: AccessConfigDto | None = Field(
