@@ -1104,7 +1104,7 @@ class EvaluationRecipientDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     clerk_user_id: str = Field(..., alias='clerkUserId', description='Clerk user ID')
     email: str = Field(..., description='Email address')
-    name: dict[str, Any] | None = Field(None, description='Display name')
+    name: str | None = Field(None, description='Display name')
 
 
 class EvaluationResultDto(BaseModel):
@@ -1113,13 +1113,13 @@ class EvaluationResultDto(BaseModel):
     case_id: str = Field(..., alias='caseId', description='Evaluation case ID')
     task: str = Field(..., description='Task that was evaluated')
     expected_output: str = Field(..., alias='expectedOutput', description='Expected output')
-    actual_output: dict[str, Any] | None = Field(
+    actual_output: str | None = Field(
         None, alias='actualOutput', description='Actual output from the scope'
     )
-    passed: dict[str, Any] | None = Field(None, description='Whether the case passed')
-    score: dict[str, Any] | None = Field(None, description='Score (0-100)')
-    reasoning: dict[str, Any] | None = Field(None, description='Judge reasoning')
-    was_passing_before: dict[str, Any] | None = Field(
+    passed: bool | None = Field(None, description='Whether the case passed')
+    score: float | None = Field(None, description='Score (0-100)')
+    reasoning: str | None = Field(None, description='Judge reasoning')
+    was_passing_before: bool | None = Field(
         None,
         alias='wasPassingBefore',
         description='Whether this case was passing in the previous run',
@@ -1144,8 +1144,8 @@ class EvaluationRunWithResultsDto(BaseModel):
     skill_id: float = Field(..., alias='skillId', description='Scope ID')
     trigger: EvaluationRunTrigger = Field(..., description='How the run was triggered')
     status: EvaluationRunStatus = Field(..., description='Run status')
-    started_at: str = Field(..., alias='startedAt', description='When the run started')
-    finished_at: dict[str, Any] | None = Field(
+    started_at: AwareDatetime = Field(..., alias='startedAt', description='When the run started')
+    finished_at: AwareDatetime | None = Field(
         None, alias='finishedAt', description='When the run finished'
     )
     total_cases: float = Field(
@@ -1153,9 +1153,7 @@ class EvaluationRunWithResultsDto(BaseModel):
     )
     passed_cases: float = Field(..., alias='passedCases', description='Number of passed cases')
     failed_cases: float = Field(..., alias='failedCases', description='Number of failed cases')
-    avg_score: dict[str, Any] | None = Field(
-        None, alias='avgScore', description='Average score (0-100)'
-    )
+    avg_score: float | None = Field(None, alias='avgScore', description='Average score (0-100)')
     is_regression: bool = Field(
         ..., alias='isRegression', description='Whether this run detected a regression'
     )
@@ -3164,8 +3162,8 @@ class EvaluationRunDto(BaseModel):
     skill_id: float = Field(..., alias='skillId', description='Scope ID')
     trigger: EvaluationRunTrigger = Field(..., description='How the run was triggered')
     status: EvaluationRunStatus = Field(..., description='Run status')
-    started_at: str = Field(..., alias='startedAt', description='When the run started')
-    finished_at: dict[str, Any] | None = Field(
+    started_at: AwareDatetime = Field(..., alias='startedAt', description='When the run started')
+    finished_at: AwareDatetime | None = Field(
         None, alias='finishedAt', description='When the run finished'
     )
     total_cases: float = Field(
@@ -3173,9 +3171,7 @@ class EvaluationRunDto(BaseModel):
     )
     passed_cases: float = Field(..., alias='passedCases', description='Number of passed cases')
     failed_cases: float = Field(..., alias='failedCases', description='Number of failed cases')
-    avg_score: dict[str, Any] | None = Field(
-        None, alias='avgScore', description='Average score (0-100)'
-    )
+    avg_score: float | None = Field(None, alias='avgScore', description='Average score (0-100)')
     is_regression: bool = Field(
         ..., alias='isRegression', description='Whether this run detected a regression'
     )

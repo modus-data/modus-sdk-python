@@ -17,6 +17,7 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Changed
 
+- **Breaking (pre-1.0): evaluation run timestamps are `datetime`.** `EvaluationRun.started_at` was a `str` and is now a timezone-aware `datetime`. `finished_at` is `datetime | None`. Replace string parsing with the value itself. Use this release with a Modus API that sends ISO 8601 evaluation timestamps; an older server's JavaScript date string fails validation.
 - **Breaking (pre-1.0): scope `connectionSet` rows have one shape.** `scopes.create` and `scopes.update` accept each entry only as `{ connection_id, path, preferences?, context_enabled? }`, where `path` is an array of strings, `preferences` an object and `context_enabled` a boolean. An empty path selects the whole connection. Any other field, a non-string path segment, an empty or null `connection_id`, or a null `connectionSet` is rejected with 400. `variation.connection_set` entries are now `ConnectionSetItemDto` models (`.connection_id`, `.path`, `.preferences`, `.context_enabled`); `row["connection_id"]` no longer works.
 - **Breaking (pre-1.0): workflow `guardrails` removed.** `workflows.create` and `workflows.update` (sync and async) no longer take `guardrails=`. The workflow access configuration has no guardrails, so every call that set it failed with 400 and changed nothing. Scope `guardrails` are unchanged.
 - **Breaking (pre-1.0): `scopes.memories(id).update()` returns `None`.** The server answers 204 with no body; the method raised a `ValidationError` after the update had been applied.
@@ -26,6 +27,7 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Fixed
 
+- **Completed evaluation runs could not be listed or read.** `mgmt.scopes.evaluations(id).list_runs()` and `.get_run(run_id)` raised `ValidationError` for any finished run, because `avg_score`, `finished_at` and the result fields `actual_output`, `passed`, `score`, `reasoning` and `was_passing_before` were typed as dicts. They are now `float`, `datetime`, `str` and `bool`, each optional. The server now sends evaluation timestamps as ISO 8601 (see Changed). An evaluation recipient's `name` is `str | None`.
 - **A path id of `'..'` could target the parent resource, e.g. delete the scope.** `scopes.memories(7).delete('..')` sent `DELETE /scopes/7`. Every path id that is blank, `'.'` or `'..'` now raises `ValueError` before any request; a blank id no longer returns the list page as one item.
 - **`update_mask` sends only what you set.** `scopes.update`, `workflows.update`, `context.items.update`, and `workflows.interfaces(id).update` sent `null` for every unset field whenever `update_mask` was given, and the server rejected the call with 400. The body now holds the fields you set, plus `null` for each field the mask names and you left unset, which the server clears.
 - **`Toolset.empty()` clears a scope's tools.** `scopes.update(toolset=Toolset.empty())` sends `{}`; it was dropped, so the tools stayed.
