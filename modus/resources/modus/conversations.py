@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Literal, Optional
 
 from ..._config import ModusConfig
+from ..._exceptions import ValidationError
 from ..._generated.resources.consumption.modus.conversations import (
     _AsyncModusConversationsResourceBase,
     _ModusConversationsResourceBase,
@@ -33,7 +34,7 @@ def _list_params(
     source_ref: Optional[str] = None,
 ) -> dict:
     if kind is not None and kind not in _ALLOWED_KINDS:
-        raise ValueError(f"kind must be one of {sorted(_ALLOWED_KINDS)}, got {kind!r}")
+        raise ValidationError(f"kind must be one of {sorted(_ALLOWED_KINDS)}, got {kind!r}")
     extra: dict = {}
     if kind is not None:
         extra["kind"] = kind

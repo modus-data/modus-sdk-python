@@ -1,12 +1,14 @@
 """Tiny client-side validators shared across resources.
 
 These exist so we fail fast on obvious bad inputs (empty IDs, negative limits)
-before making a network call. They raise ``ValueError`` — caller-visible bugs,
-not server-side conditions.
+before making a network call. They raise ``modus.ValidationError`` (a ``ModusError``
+and a ``ValueError``): caller-visible bugs, not server-side conditions.
 """
 from __future__ import annotations
 
 from typing import Optional, Union
+
+from ._exceptions import ValidationError
 
 # API max page size for context list and values surfaces.
 DEFAULT_MAX_PAGE_SIZE = 200
@@ -15,9 +17,9 @@ DEFAULT_MAX_PAGE_SIZE = 200
 def validate_page_size(page_size: int, *, max_page_size: Optional[int] = None) -> None:
     """Reject page_size values that the backend would reject anyway, locally."""
     if not isinstance(page_size, int) or isinstance(page_size, bool) or page_size < 1:
-        raise ValueError(f"page_size must be a positive int, got {page_size!r}")
+        raise ValidationError(f"page_size must be a positive int, got {page_size!r}")
     if max_page_size is not None and page_size > max_page_size:
-        raise ValueError(
+        raise ValidationError(
             f"page_size must be <= {max_page_size}, got {page_size!r}"
         )
 
@@ -31,9 +33,9 @@ def validate_id(resource_id: Union[int, str], *, name: str = "id") -> None:
     if not isinstance(resource_id, str):
         return
     if not resource_id.strip():
-        raise ValueError(f"{name} must be a non-empty string or int")
+        raise ValidationError(f"{name} must be a non-empty string or int")
     if resource_id in (".", ".."):
-        raise ValueError(f"{name} must not be {resource_id!r}")
+        raise ValidationError(f"{name} must not be {resource_id!r}")
 
 
 # Canonical chat model ids from SkillChatRequestDto (keep in sync with the API spec).
@@ -73,6 +75,6 @@ ALLOWED_CHAT_MODELS = frozenset({
 def validate_chat_model(model: str) -> None:
     if model not in ALLOWED_CHAT_MODELS:
         supported = ", ".join(sorted(ALLOWED_CHAT_MODELS))
-        raise ValueError(
+        raise ValidationError(
             f"Unsupported model {model!r}. Choose one of: {supported}."
         )

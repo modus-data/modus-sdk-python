@@ -22,6 +22,7 @@ from typing import Any, Dict, Iterable, Optional
 
 from pydantic import BaseModel, ConfigDict
 
+from ..._exceptions import ValidationError
 from ._serialize import dump_optional_model
 
 #: Integrations a skill can use once connected to your workspace.
@@ -62,13 +63,13 @@ class Toolset(BaseModel):
         silently produce malformed single-character entries; reject it explicitly.
         """
         if isinstance(values, str):
-            raise ValueError(
+            raise ValidationError(
                 f"{field} must be a list of strings, not a single string "
                 f"(did you mean [{values!r}]?)."
             )
         items = list(values)
         if not items:
-            raise ValueError(f"{field} requires at least one value.")
+            raise ValidationError(f"{field} requires at least one value.")
         return items
 
     # ---- connected integrations (Slack, ClickUp, GitHub, ...) ----
@@ -97,7 +98,7 @@ class Toolset(BaseModel):
         key = name.strip().lower()
         if key not in INTEGRATIONS:
             allowed = ", ".join(INTEGRATIONS)
-            raise ValueError(
+            raise ValidationError(
                 f"Unknown integration {name!r}. Supported integrations: {allowed}."
             )
         action_list = cls._require_str_list(actions, field=f"{key} actions")

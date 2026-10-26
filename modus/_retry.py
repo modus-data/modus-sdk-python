@@ -1,14 +1,14 @@
 """
 Retry logic for transient errors.
 
-RateLimitError, InternalServerError, and APIConnectionError are retried.
-Client errors (4xx except 429) are not retried — they represent caller mistakes.
+The transport marks each ModusError ``retryable`` with :func:`is_retry_safe`; with_retry
+re-sends only those. Client errors (4xx except 408/429) are never retried.
 
 Backoff strategy:
   - attempt 0 -> no sleep (immediate retry)
   - attempt 1 -> ~1s + jitter
   - attempt 2 -> ~2s + jitter
-  - If Retry-After header is present on 429, use that value instead.
+  - A 429's Retry-After (60 s or less) is slept instead.
 """
 
 from __future__ import annotations
@@ -16,21 +16,57 @@ from __future__ import annotations
 import asyncio
 import random
 import time
-from typing import Awaitable, Callable, TypeVar
+from typing import Awaitable, Callable, Optional, TypeVar
 
-from ._exceptions import APIConnectionError, InternalServerError, NotFoundError, RateLimitError
+import httpx
+
+from ._exceptions import ModusError, NotFoundError, RateLimitError
 
 T = TypeVar("T")
 
-_RETRYABLE_ERRORS = (RateLimitError, InternalServerError, APIConnectionError)
+#: The longest Retry-After the SDK sleeps; a longer one is raised as RateLimitError at once.
+MAX_RETRY_AFTER_SECONDS = 60
+
+_RETRY_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
+# Raised before any request byte was written.
+_CONNECT_PHASE_ERRORS = (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout)
 _DEPLOY_NOT_FOUND_BACKOFF_SECONDS = 0.5
 _MAX_DEPLOY_NOT_FOUND_RETRIES = 1
 
 
-def _backoff_seconds(attempt: int, exc: Exception) -> float:
+def is_retry_safe(
+    method: str,
+    idempotent: bool,
+    *,
+    status: Optional[int] = None,
+    retry_after: Optional[int] = None,
+    exc: Optional[Exception] = None,
+) -> bool:
+    """
+    The SDK's one retry rule: may this request be sent again without doing its work twice?
+
+    - 429: yes (the rate limiter rejected it before any work), unless Retry-After exceeds 60 s.
+    - A connect-phase failure (refused, DNS, connect or pool timeout): yes, nothing was sent.
+    - 408, 500, 502, 503, 504, or a failure after sending (reset, read timeout): only for
+      GET/PUT/PATCH/DELETE, and for a POST whose operation only reads or sets a state.
+      Any other POST may already have run on the server.
+
+    Pass ``status`` for an HTTP response, or ``exc`` for an httpx transport error.
+    """
+    if status is not None:
+        if status == 429:
+            return (retry_after or 0) <= MAX_RETRY_AFTER_SECONDS
+        if status not in _RETRY_STATUSES:
+            return False
+    elif isinstance(exc, _CONNECT_PHASE_ERRORS):
+        return True
+    return method != "POST" or idempotent
+
+
+def _backoff_seconds(attempt: int, exc: ModusError) -> float:
     """Calculate how long to sleep before the next retry attempt."""
     if isinstance(exc, RateLimitError) and exc.retry_after is not None:
-        return max(0.0, float(exc.retry_after))
+        return float(exc.retry_after)
     if attempt == 0:
         return 0.0
     # Exponential backoff: 1s, 2s, ... with ±0.3s jitter
@@ -44,7 +80,7 @@ def with_retry(
     retry_not_found_on_deploy: bool = False,
 ) -> T:
     """
-    Call func, retrying on RateLimitError, InternalServerError, and APIConnectionError.
+    Call func, re-sending while it raises a ModusError marked ``retryable``.
 
     Args:
         func:        Zero-argument callable to invoke.
@@ -75,8 +111,8 @@ def with_retry(
                 time.sleep(_DEPLOY_NOT_FOUND_BACKOFF_SECONDS)
                 continue
             raise
-        except _RETRYABLE_ERRORS as exc:
-            if attempt >= max_retries:
+        except ModusError as exc:
+            if not exc.retryable or attempt >= max_retries:
                 raise
             time.sleep(_backoff_seconds(attempt, exc))
             attempt += 1
@@ -116,8 +152,8 @@ async def async_with_retry(
                 await asyncio.sleep(_DEPLOY_NOT_FOUND_BACKOFF_SECONDS)
                 continue
             raise
-        except _RETRYABLE_ERRORS as exc:
-            if attempt >= max_retries:
+        except ModusError as exc:
+            if not exc.retryable or attempt >= max_retries:
                 raise
             await asyncio.sleep(_backoff_seconds(attempt, exc))
             attempt += 1

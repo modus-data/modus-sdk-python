@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Any, Mapping, Optional, Sequence, Union
 
 from ..._config import ModusConfig
+from ..._exceptions import ValidationError
 from ..._generated.models import SuggestionQuestionDto
 from ..._http import AsyncHttpClient, HttpClient
 from ..._openapi_invoke import invoke_operation, invoke_operation_async
@@ -43,7 +44,7 @@ def _list_params(
     if scope_ids is not None:
         if not scope_ids:
             # The server rejects ``scopeIds=``; dropping the filter would broaden the result.
-            raise ValueError("scope_ids requires at least one id; omit it to list every scope")
+            raise ValidationError("scope_ids requires at least one id; omit it to list every scope")
         params["scopeIds"] = ",".join(str(item) for item in scope_ids)
     return params
 
@@ -90,7 +91,7 @@ class SuggestionsResource:
             page_token: Cursor from a previous page, if any.
             scope_id: Optional single scope id filter.
             scope_ids: Optional multi-scope id filter (comma-joined on the wire).
-                An empty list raises ``ValueError``; omit it for every scope.
+                An empty list raises ``modus.ValidationError``; omit it for every scope.
         """
         validate_page_size(page_size, max_page_size=MAX_SUGGESTIONS_PAGE_SIZE)
         return self._list_page(page_size, page_token, scope_id, scope_ids)
@@ -169,7 +170,7 @@ class AsyncSuggestionsResource:
             page_token: Cursor from a previous page, if any.
             scope_id: Optional single scope id filter.
             scope_ids: Optional multi-scope id filter (comma-joined on the wire).
-                An empty list raises ``ValueError``; omit it for every scope.
+                An empty list raises ``modus.ValidationError``; omit it for every scope.
         """
         validate_page_size(page_size, max_page_size=MAX_SUGGESTIONS_PAGE_SIZE)
         return await self._list_page(page_size, page_token, scope_id, scope_ids)

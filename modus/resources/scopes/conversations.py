@@ -11,6 +11,7 @@ from modus._generated.resources.consumption.scopes.conversations import (
 )
 
 from ..._config import ModusConfig
+from ..._exceptions import ValidationError
 from ..._http import AsyncHttpClient, HttpClient
 from ..._openapi_invoke import invoke_operation, invoke_operation_async
 from ..._retry import async_with_retry, with_retry
@@ -37,7 +38,7 @@ def _get_query(
     before_message_index: Optional[int],
 ) -> Optional[dict]:
     if before_message_index is not None and message_limit is None:
-        raise ValueError("before_message_index requires message_limit")
+        raise ValidationError("before_message_index requires message_limit")
     query: dict = {}
     if message_limit is not None:
         query["messageLimit"] = message_limit

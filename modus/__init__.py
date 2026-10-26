@@ -22,6 +22,7 @@ from ._client import AsyncModus, Modus
 from ._exceptions import (
     APIConnectionError,
     AuthenticationError,
+    BadRequestError,
     ConflictError,
     InternalServerError,
     ModusError,
@@ -31,6 +32,7 @@ from ._exceptions import (
     RunCancelledError,
     StreamTimeoutError,
     UnprocessableError,
+    ValidationError,
 )
 from .types import (
     Agent,
@@ -114,6 +116,7 @@ __all__ = [
     "AsyncModus",
     "AsyncPage",
     "AuthenticationError",
+    "BadRequestError",
     "CancelledEvent",
     "ChatResult",
     "ConflictError",
@@ -169,6 +172,7 @@ __all__ = [
     "StreamTimeoutEvent",
     "TokenEvent",
     "UnprocessableError",
+    "ValidationError",
     "Workflow",
     "WorkflowActionRequest",
     "WorkflowStatus",

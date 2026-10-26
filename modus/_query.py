@@ -6,10 +6,12 @@ from urllib.parse import quote
 
 from pydantic import BaseModel
 
+from ._exceptions import ValidationError
+
 
 def _validate_update_mask(update_mask: str) -> None:
     if not update_mask.strip():
-        raise ValueError(
+        raise ValidationError(
             "update_mask must be a non-empty comma-separated list of field names"
         )
 

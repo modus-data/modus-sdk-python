@@ -5,6 +5,7 @@ All exceptions raised by the SDK are subclasses of ModusError.
 HTTP errors are mapped from status codes; run errors are raised from SSE events.
 
 HTTP mapping:
+    400 -> BadRequestError
     401 -> AuthenticationError
     403 -> PermissionDeniedError
     404 -> NotFoundError
@@ -21,11 +22,26 @@ SSE event mapping:
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional
+from typing import Any, Dict, Mapping, Optional
 
 
 class ModusError(Exception):
-    """Base class for all Modus SDK errors."""
+    """
+    Base class for all Modus SDK errors.
+
+    Attributes:
+        request_id: The error envelope's ``requestId`` (or the ``x-request-id`` header);
+            quote it to support.
+        code: Machine-readable error code from the envelope, e.g. ``NOT_FOUND``.
+        info: Structured detail from the envelope, e.g. ``{"missing": ["scopes:write"]}``
+            on a 403.
+        retryable: Whether the SDK's retry rule allows re-sending this call. True for a
+            429 whose Retry-After is absent or at most 60 s, and for a connection that
+            never opened. For 408, 500, 502, 503, 504, a dropped connection or a timeout:
+            true on GET, PUT, PATCH and DELETE and on POSTs that only read or set a
+            state, false on any other POST, which may already have run. The SDK already
+            retried a retryable error up to ``max_retries`` times.
+    """
 
     def __init__(
         self,
@@ -36,6 +52,8 @@ class ModusError(Exception):
         response_headers: Optional[Mapping[str, str]] = None,
         body: Optional[str] = None,
         code: Optional[str] = None,
+        info: Optional[Dict[str, Any]] = None,
+        retryable: bool = False,
     ) -> None:
         super().__init__(message)
         self.message = message
@@ -44,23 +62,38 @@ class ModusError(Exception):
         self.response_headers = dict(response_headers) if response_headers else None
         self.body = body
         self.code = code
+        self.info = info
+        self.retryable = retryable
 
     def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__}("
             f"message={self.message!r}, "
             f"status_code={self.status_code!r}, "
+            f"code={self.code!r}, "
             f"request_id={self.request_id!r})"
         )
 
 
 class APIConnectionError(ModusError):
     """
-    Network-level failure (ConnectError, ReadTimeout, etc.) after all
-    automatic retries are exhausted.
+    Network-level failure (connection refused, reset, timeout, etc.).
+
+    ``retryable`` says whether the SDK re-sent it: always when the connection never
+    opened, otherwise only for GET/PUT/PATCH/DELETE and POSTs that only read or set a state.
     """
-    def __init__(self, message: str) -> None:
-        super().__init__(message)
+    def __init__(self, message: str, *, retryable: bool = False) -> None:
+        super().__init__(message, retryable=retryable)
+
+
+class BadRequestError(ModusError):
+    """
+    The request was malformed (HTTP 400): a parameter or body field failed schema
+    validation, an unknown property was sent, or an id was not a number. ``message``
+    names the field.
+    """
+    def __init__(self, message: str, **kwargs: Any) -> None:
+        super().__init__(message, status_code=400, **kwargs)
 
 
 class AuthenticationError(ModusError):
@@ -100,8 +133,12 @@ class ConflictError(ModusError):
 
 class UnprocessableError(ModusError):
     """
-    Request validation failed (HTTP 422).
-    The `errors` attribute contains the full validation error detail.
+    The request was well-formed but failed a business rule (HTTP 422, ``code: VALIDATION``),
+    for example a toolset rule or a disallowed file type. Schema failures raise
+    :class:`BadRequestError` (400) instead.
+
+    ``info`` carries the rule detail when the server sends one (e.g. ``info["violations"]``);
+    ``errors`` is the whole parsed error envelope.
     """
     def __init__(self, message: str, *, errors: Optional[Any] = None, **kwargs: Any) -> None:
         super().__init__(message, status_code=422, **kwargs)
@@ -112,10 +149,9 @@ class RateLimitError(ModusError):
     """
     Rate limit exceeded (HTTP 429).
 
-    The `retry_after` attribute contains the number of seconds to wait
-    before retrying, if the server provided a Retry-After header.
-    The SDK retries automatically — this error only surfaces after all
-    retry attempts are exhausted.
+    ``retry_after`` is the server's requested wait in whole seconds, when it sent one
+    (``retry-after-ms``, or ``Retry-After`` as seconds or an HTTP date). The SDK waits it
+    out and retries when it is 60 s or less; a longer wait is raised at once.
     """
     def __init__(self, message: str, *, retry_after: Optional[int] = None, **kwargs: Any) -> None:
         super().__init__(message, status_code=429, **kwargs)
@@ -124,9 +160,10 @@ class RateLimitError(ModusError):
 
 class InternalServerError(ModusError):
     """
-    The server encountered an internal error (HTTP 5xx).
-    The SDK retries automatically — this error only surfaces after all
-    retry attempts are exhausted.
+    The server or a gateway failed (HTTP 5xx).
+
+    The SDK retries 500/502/503/504 except on a POST that may already have run (POSTs
+    that only read or set a state are retried); ``retryable`` says which applied.
     """
     def __init__(self, message: str, *, status_code: int, **kwargs: Any) -> None:
         super().__init__(message, status_code=status_code, **kwargs)
@@ -148,4 +185,16 @@ class StreamTimeoutError(ModusError):
     """Raised when a chat stream times out before completion."""
 
     def __init__(self, message: str = "Stream timed out.") -> None:
+        super().__init__(message)
+
+
+class ValidationError(ModusError, ValueError):
+    """
+    An argument failed client-side validation before any request was sent (for example a
+    blank or ``".."`` id, or an unsupported chat model).
+
+    It is also a ``ValueError``, so ``except ValueError`` keeps catching it.
+    """
+
+    def __init__(self, message: str) -> None:
         super().__init__(message)

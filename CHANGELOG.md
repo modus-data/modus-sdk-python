@@ -14,6 +14,12 @@ release, including pre-1.0 (`0.x`) releases.
 - **`deepseek-v4.1-flash-1017` model.** The October 17, 2026 snapshot of DeepSeek V4.1 Flash is an
   accepted chat model id.
 - **Async scope evaluations.** `AsyncModusManagement().scopes.evaluations(id)` has the same methods as the sync client: `get_config`, `update_config`, `trigger_run`, `list_runs`, `get_run`, `add_case`, `update_case`, and `delete_case`.
+- **`BadRequestError`** for HTTP 400 (a schema or parse failure), a `ModusError` subclass, so
+  existing `except modus.ModusError` code is unaffected.
+- **`ModusError.info`** carries the error envelope's structured detail, for example
+  `info["missing"]` (the token scopes a 403 lacks) or `info["violations"]` on a 422.
+- **`ModusError.retryable`** says whether the SDK's retry rule allowed re-sending the failed call.
+- **`Retry-After` as an HTTP date, and `retry-after-ms`,** fill `RateLimitError.retry_after`.
 
 ### Changed
 
@@ -24,6 +30,15 @@ release, including pre-1.0 (`0.x`) releases.
 - **Breaking (pre-1.0): `scopes.memories(id).update()` returns `None`.** The server answers 204 with no body; the method raised a `ValidationError` after the update had been applied.
 - **Breaking (pre-1.0): `manager_id` is an `int`.** `scopes.update(manager_id=...)` takes the numeric id of the manager scope. It was typed `str`, which the server rejects with 400. To detach, pass `update_mask="managerId"`.
 - **Breaking (pre-1.0): evaluation runs `page_size` is checked.** `mgmt.scopes.evaluations(id).list_runs()` rejects a `page_size` outside 1..100 with 400, like every other list (it was clamped above 100).
+- **Breaking (pre-1.0): a POST that fails after being sent now raises instead of being
+  re-sent.** Retries depend on the method: GET, PUT, PATCH and DELETE retry 408, 429, 500, 502,
+  503, 504, dropped connections and timeouts. A POST retries only on 429 or a connection that
+  never opened (`ConnectError`, `ConnectTimeout`, `PoolTimeout`), except the POSTs that only
+  read or set a state (context compose, item lookup, memory search, active-run lookup, run cancel, run interrupt, workflow-action cancel, workflow toggle, ingested-data upload), which retry like a GET. Before, a `scopes.create` that hit
+  a gateway 504 or a read timeout was sent again and could create a second scope; now it raises
+  and you decide whether to re-create.
+- **A `Retry-After` over 60 s raises `RateLimitError` at once** (with `retry_after` set)
+  instead of sleeping that long. Up to 60 s is still waited out.
 - **Breaking (pre-1.0): `runs.interrupt` and `runs.edit_queued` take the turn to send.** `runs.interrupt(run_id, next_run, *, last_seen_event_id=None)` and `runs.edit_queued(run_id, next_run)` send `next_run` (`message` and `sessionId`, the run's conversation id) as `nextRun` and return the admitted run as `RunAdmission` (`run_id`, `status`), sync and async. For `interrupt`, that is the new run that carries the follow-up turn; stream it with `runs.stream(run_id)`. The old optional `body` defaulted to `{}`, which the server always rejected, and the methods returned `None`. `interrupt` sets `nextRun.runId` when you omit it, so a retried request returns the same run instead of starting a second turn. On a run that has already finished, `interrupt` starts a follow-up turn.
 - **`runs.resume` requires `sessionId` and sends no message.** A missing or blank `sessionId` raises `ValueError` before any request; it was replaced by a random id, so the server answered "no longer pending". The documented example sends only `decision` and `sessionId`; a non-empty `message` is rejected by the server.
 
@@ -36,8 +51,24 @@ release, including pre-1.0 (`0.x`) releases.
 - **Evaluation runs page in a stable order.** Runs that started at the same time are no longer repeated or skipped across pages.
 - **`update_mask` sends only what you set.** `scopes.update`, `workflows.update`, `context.items.update`, and `workflows.interfaces(id).update` sent `null` for every unset field whenever `update_mask` was given, and the server rejected the call with 400. The body now holds the fields you set, plus `null` for each field the mask names and you left unset, which the server clears.
 - **`Toolset.empty()` clears a scope's tools.** `scopes.update(toolset=Toolset.empty())` sends `{}`; it was dropped, so the tools stayed.
-- **`suggestions.list(scope_ids=[])` raises `ValueError`** before any request. It sent `scopeIds=`, which the server rejects with 400.
+- **`suggestions.list(scope_ids=[])` raises `modus.ValidationError`** before any request. It sent `scopeIds=`, which the server rejects with 400.
 - **Docs: ids are numeric.** The getting-started example took a slug (`scopes.get("revenue-analysis")`), which the server rejects with 400; it now takes an id from `list()`. Docstrings no longer say "id or slug". `type="task"` is documented as a deprecated alias on create; `workflows.update` accepts only `"workflow"`.
+- **Client-side argument errors are `ModusError`s.** An invalid id, path segment or other
+  argument the SDK rejects before sending raises `modus.ValidationError`, which subclasses both
+  `ModusError` and `ValueError`, so `except modus.ModusError` now catches it and existing
+  `except ValueError` code keeps working.
+- **Error messages are the API's message.** `ModusError.message` was the whole error envelope
+  as a dict repr (`"{'code': 'NOT_FOUND', ...}"`); it is now the envelope's `message`.
+  `code` and `request_id` were always `None`; they now come from the envelope (`request_id`
+  falls back to the `x-request-id` header).
+- **Every httpx transport error is an `APIConnectionError`.** `ReadError`, `WriteError`,
+  `CloseError` (a reset keep-alive connection) and other `httpx.TransportError`s escaped as raw
+  httpx exceptions and were never retried; they are now wrapped and retried for safe methods.
+- **A 2xx response that is not JSON** raises a `ModusError` naming the status, content type and
+  the first 200 characters, instead of a raw `JSONDecodeError`. An empty 200 on a GET returns
+  `None` instead of raising.
+- **`UnprocessableError` documentation:** 422 is a business-rule failure; schema failures are
+  400 (`BadRequestError`).
 
 ## [0.9.0] — 2026-10-24
 

@@ -254,13 +254,41 @@ try:
     scope = client.scopes.get(999)
 except modus.NotFoundError:
     print("Scope not found")
+except modus.BadRequestError as e:
+    print(f"Invalid request: {e.message}")
 except modus.AuthenticationError:
     print("Check your MODUS_API_KEY")
+except modus.PermissionDeniedError as e:
+    print("Token is missing scopes:", (e.info or {}).get("missing"))
 except modus.RateLimitError as e:
     print(f"Rate limited. Retry after {e.retry_after}s")
 except modus.ModusError as e:
-    print(f"API error {e.status_code}: {e.message}")
+    print(f"API error {e.status_code} {e.code}: {e.message} (request {e.request_id})")
 ```
+
+Every error carries `code` (for example `NOT_FOUND`), `request_id` (quote it to support)
+and, when the server sends one, `info` with structured detail. A request that fails schema
+validation raises `BadRequestError` (400); one that is well-formed but breaks a business
+rule raises `UnprocessableError` (422), with the rule in `info`.
+
+## Retries
+
+A failed request is re-sent up to `max_retries` times (default 2, with exponential
+backoff), but only when sending it twice cannot do the work twice:
+
+- **429**, for every method. A `Retry-After` (or `retry-after-ms`) of up to 60 s is waited
+  out; a longer one raises `RateLimitError` at once with `retry_after` set.
+- **A connection that never opened** (refused, DNS failure, connect or pool timeout), for
+  every method.
+- **408, 500, 502, 503, 504, a dropped connection or a timeout**, for GET, PUT, PATCH and
+  DELETE, and for the POSTs that only read or set a state (context compose, item lookup,
+  memory search, active-run lookup, run cancel, run interrupt, workflow-action cancel, workflow toggle,
+  ingested-data upload).
+
+Any other POST (a create, an add, an evaluation run) may already have run on the server,
+so it raises instead of being re-sent: check whether the resource exists before creating
+it again. `e.retryable` tells you whether the SDK considered the failure safe to re-send.
+Pass `max_retries=0` to turn retries off.
 
 ## Examples
 

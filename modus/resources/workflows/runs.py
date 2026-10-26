@@ -18,6 +18,7 @@ from uuid import uuid4
 
 from ..._agent_run_request import with_agent_run_session_id
 from ..._config import ModusConfig
+from ..._exceptions import ValidationError
 from ..._generated.models import (
     ActiveRunsBySessionResponseDto,
     ActiveRunsResponseDto,
@@ -96,7 +97,7 @@ def _dedupe_session_ids(session_ids: Sequence[str]) -> list[str]:
         seen.add(trimmed)
         result.append(trimmed)
     if len(result) > 100:
-        raise ValueError("session_ids must contain at most 100 ids")
+        raise ValidationError("session_ids must contain at most 100 ids")
     return result
 
 
@@ -367,7 +368,7 @@ class WorkflowRunsResource:
         """
         validate_id(workflow_id, name="workflow_id")
         if not run_id or not str(run_id).strip():
-            raise ValueError("run_id must be a non-empty string")
+            raise ValidationError("run_id must be a non-empty string")
         query: Dict[str, Any] = {}
         if temporal_run_id is not None:
             query["temporalRunId"] = temporal_run_id
@@ -836,7 +837,7 @@ class AsyncWorkflowRunsResource:
         """
         validate_id(workflow_id, name="workflow_id")
         if not run_id or not str(run_id).strip():
-            raise ValueError("run_id must be a non-empty string")
+            raise ValidationError("run_id must be a non-empty string")
         query: Dict[str, Any] = {}
         if temporal_run_id is not None:
             query["temporalRunId"] = temporal_run_id

@@ -29,7 +29,7 @@ def _default_timeout() -> httpx.Timeout:
 
 
 DEFAULT_TIMEOUT: Union[float, httpx.Timeout] = _default_timeout()
-DEFAULT_MAX_RETRIES = 2  # retried on 429 + 5xx only
+DEFAULT_MAX_RETRIES = 2  # see modus._retry.is_retry_safe for what is retried
 
 
 def _normalize_base_url(value: str) -> str:

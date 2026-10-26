@@ -67,7 +67,9 @@ def test_retried_add_case_sends_the_same_body_and_surfaces_409():
     def respond(request: httpx.Request) -> httpx.Response:
         bodies.append(json.loads(request.content))
         if len(bodies) == 1:
-            return httpx.Response(500, json={"error": {"message": "upstream"}})
+            return httpx.Response(
+                429, json={"error": {"message": "slow down"}}, headers={"retry-after": "0"}
+            )
         return httpx.Response(
             409,
             json={"error": {"message": "An evaluation case with this id already exists."}},
