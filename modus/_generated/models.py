@@ -1949,8 +1949,8 @@ class SkillChatResponseDto(BaseModel):
     thread_id: str = Field(
         ...,
         alias='threadId',
-        description='Conversation thread id. For follow-up messages use POST …/conversations/{threadId}/chat (same id as GET …/conversations/{threadId}).',
-        examples=['api-skill-42-550e8400-e29b-41d4-a716-446655440000'],
+        description='Conversation thread id, `agent_{scopeId}_…`: the id GET …/conversations lists. Use it for GET …/conversations/{threadId} and for follow-up messages via POST …/conversations/{threadId}/chat.',
+        examples=['agent_42_550e8400-e29b-41d4-a716-446655440000'],
     )
     run_id: str = Field(
         ...,

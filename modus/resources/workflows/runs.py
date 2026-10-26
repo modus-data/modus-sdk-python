@@ -627,20 +627,25 @@ class WorkflowRunsResource:
             )
         )
 
-    def events(self, run_id: str) -> Iterator[RunEvent]:
+    def events(self, run_id: str) -> Dict[str, Any]:
         """
-        Stream run lifecycle events.
+        Poll a run's buffered events once (the JSON transport, not SSE).
 
         Args:
-            run_id: Run ID to follow.
+            run_id: Run ID to read.
+
+        Returns:
+            The poll response: ``events`` (each with its stream ``id``),
+            ``cursor``, ``status`` and ``done``.
         """
         validate_id(run_id, name="run_id")
-        return _parse_events(
-            invoke_operation_stream(
+        return with_retry(
+            lambda: invoke_operation(
                 self._http,
                 "RunLifecycleController_events",
                 path_params={"runId": run_id},
-            )
+            ),
+            self._config.max_retries,
         )
 
     def stream(self, run_id: str) -> Iterator[RunEvent]:
@@ -1019,22 +1024,25 @@ class AsyncWorkflowRunsResource:
             )
         )
 
-    async def events(self, run_id: str) -> AsyncIterator[RunEvent]:
+    async def events(self, run_id: str) -> Dict[str, Any]:
         """
-        Stream run lifecycle events.
+        Poll a run's buffered events once (the JSON transport, not SSE).
 
         Args:
-            run_id: Run ID to follow.
+            run_id: Run ID to read.
+
+        Returns:
+            The poll response: ``events``, ``cursor``, ``status`` and ``done``.
         """
         validate_id(run_id, name="run_id")
-        async for event in _parse_events_async(
-            invoke_operation_stream_async(
+        return await async_with_retry(
+            lambda: invoke_operation_async(
                 self._http,
                 "RunLifecycleController_events",
                 path_params={"runId": run_id},
-            )
-        ):
-            yield event
+            ),
+            self._config.max_retries,
+        )
 
     async def stream(self, run_id: str) -> AsyncIterator[RunEvent]:
         """

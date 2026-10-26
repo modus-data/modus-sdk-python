@@ -392,3 +392,33 @@ async def test_async_run_stream_refused_raises_typed_error(
             pass
     assert raised.value.status_code == status
     assert message in str(raised.value)
+
+
+_POLL = {
+    "events": [{"id": "1-0", "type": "token", "content": "hi"}],
+    "cursor": "1-0",
+    "status": "running",
+    "done": False,
+}
+
+
+@respx.mock
+def test_runs_events_returns_the_json_poll_response():
+    route = respx.get(f"{AGENT_BASE}/agent/v1/runs/run-1/events").mock(
+        return_value=httpx.Response(200, json=_POLL)
+    )
+
+    assert _agent_client().workflows.runs.events("run-1") == _POLL
+    assert route.called
+
+
+@respx.mock
+async def test_async_runs_events_returns_the_json_poll_response():
+    from modus import AsyncModus
+
+    respx.get(f"{AGENT_BASE}/agent/v1/runs/run-1/events").mock(
+        return_value=httpx.Response(200, json=_POLL)
+    )
+    client = AsyncModus(api_key="modus_test_key_abc123", base_url=BASE, agent_host=AGENT_BASE)
+
+    assert await client.workflows.runs.events("run-1") == _POLL
