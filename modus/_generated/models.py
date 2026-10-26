@@ -4443,7 +4443,10 @@ class WorkflowDto(BaseModel):
 
 class RunConfigDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    model: str | None = Field(None, description='Model id, e.g. anthropic/claude-sonnet-4.6.')
+    model: str | None = Field(
+        None,
+        description='Model id, e.g. claude-sonnet-4.6. API tokens must send one of: default, claude-sonnet-5, claude-sonnet-5.5, claude-sonnet-4.6, claude-opus-4.8, claude-opus-5.5, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-5.6-luna, gpt-6-luna, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, deepseek-v4.1-flash-1017, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, grok-4.7, kimi-k3.',
+    )
     model_settings: RunModelSettingsDto | None = Field(
         None, alias='modelSettings', description='Model-specific runtime controls.'
     )
@@ -4470,7 +4473,11 @@ class RunConfigDto(BaseModel):
 
 class SkillRunDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    message: str = Field(..., description='The user message to send.')
+    message: str = Field(
+        ...,
+        description='The user message to send. API tokens are held to the 32,000-character limit; a longer message is refused before the run starts.',
+        max_length=32000,
+    )
     session_id: str = Field(
         ...,
         alias='sessionId',
@@ -4482,7 +4489,8 @@ class SkillRunDto(BaseModel):
         description="Organization id. Ignored for authenticated callers — the server uses the principal's org.",
     )
     version: Version | None = Field(
-        None, description='Saved version to run (scope/workflow; ignored for Modus).'
+        None,
+        description='Saved version to run (scope/workflow; ignored for Modus). API tokens may not run a scope draft.',
     )
     file_thread_id: str | None = Field(
         None, alias='fileThreadId', description='Document-scoped conversation thread id.'
@@ -4491,7 +4499,9 @@ class SkillRunDto(BaseModel):
     attachments: AttachmentsDto | None = None
     user_context: UserContextDto | None = Field(None, alias='userContext')
     supplemental_context: SupplementalContextDto | None = Field(None, alias='supplementalContext')
-    source: RunSource | None = Field(None, description='Origin of the run.')
+    source: RunSource | None = Field(
+        None, description='Origin of the run. Set by the server for API tokens.'
+    )
     run_id: str | None = Field(
         None, alias='runId', description='Client-supplied run id (Idempotency-Key header wins).'
     )
@@ -4653,7 +4663,11 @@ class ScopeDto(BaseModel):
 
 class AgentRunDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    message: str = Field(..., description='The user message to send.')
+    message: str = Field(
+        ...,
+        description='The user message to send. API tokens are held to the 32,000-character limit; a longer message is refused before the run starts.',
+        max_length=32000,
+    )
     session_id: str = Field(
         ...,
         alias='sessionId',
@@ -4665,7 +4679,8 @@ class AgentRunDto(BaseModel):
         description="Organization id. Ignored for authenticated callers — the server uses the principal's org.",
     )
     version: Version | None = Field(
-        None, description='Saved version to run (scope/workflow; ignored for Modus).'
+        None,
+        description='Saved version to run (scope/workflow; ignored for Modus). API tokens may not run a scope draft.',
     )
     file_thread_id: str | None = Field(
         None, alias='fileThreadId', description='Document-scoped conversation thread id.'
@@ -4674,7 +4689,9 @@ class AgentRunDto(BaseModel):
     attachments: AttachmentsDto | None = None
     user_context: UserContextDto | None = Field(None, alias='userContext')
     supplemental_context: SupplementalContextDto | None = Field(None, alias='supplementalContext')
-    source: RunSource | None = Field(None, description='Origin of the run.')
+    source: RunSource | None = Field(
+        None, description='Origin of the run. Set by the server for API tokens.'
+    )
     run_id: str | None = Field(
         None, alias='runId', description='Client-supplied run id (Idempotency-Key header wins).'
     )
@@ -4689,7 +4706,11 @@ class AgentRunDto(BaseModel):
 
 class FollowUpRunDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    message: str = Field(..., description='The user message to send.')
+    message: str = Field(
+        ...,
+        description='The user message to send. API tokens are held to the 32,000-character limit; a longer message is refused before the run starts.',
+        max_length=32000,
+    )
     session_id: str = Field(
         ...,
         alias='sessionId',
@@ -4701,7 +4722,8 @@ class FollowUpRunDto(BaseModel):
         description="Organization id. Ignored for authenticated callers — the server uses the principal's org.",
     )
     version: Version | None = Field(
-        None, description='Saved version to run (scope/workflow; ignored for Modus).'
+        None,
+        description='Saved version to run (scope/workflow; ignored for Modus). API tokens may not run a scope draft.',
     )
     file_thread_id: str | None = Field(
         None, alias='fileThreadId', description='Document-scoped conversation thread id.'
@@ -4710,7 +4732,9 @@ class FollowUpRunDto(BaseModel):
     attachments: AttachmentsDto | None = None
     user_context: UserContextDto | None = Field(None, alias='userContext')
     supplemental_context: SupplementalContextDto | None = Field(None, alias='supplementalContext')
-    source: RunSource | None = Field(None, description='Origin of the run.')
+    source: RunSource | None = Field(
+        None, description='Origin of the run. Set by the server for API tokens.'
+    )
     run_id: str | None = Field(
         None, alias='runId', description='Client-supplied run id (Idempotency-Key header wins).'
     )
@@ -4749,7 +4773,11 @@ class InterruptRunDto(BaseModel):
 
 class ModusRunDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    message: str = Field(..., description='The user message to send.')
+    message: str = Field(
+        ...,
+        description='The user message to send. API tokens are held to the 32,000-character limit; a longer message is refused before the run starts.',
+        max_length=32000,
+    )
     session_id: str = Field(
         ...,
         alias='sessionId',
@@ -4761,7 +4789,8 @@ class ModusRunDto(BaseModel):
         description="Organization id. Ignored for authenticated callers — the server uses the principal's org.",
     )
     version: Version | None = Field(
-        None, description='Saved version to run (scope/workflow; ignored for Modus).'
+        None,
+        description='Saved version to run (scope/workflow; ignored for Modus). API tokens may not run a scope draft.',
     )
     file_thread_id: str | None = Field(
         None, alias='fileThreadId', description='Document-scoped conversation thread id.'
@@ -4770,7 +4799,9 @@ class ModusRunDto(BaseModel):
     attachments: AttachmentsDto | None = None
     user_context: UserContextDto | None = Field(None, alias='userContext')
     supplemental_context: SupplementalContextDto | None = Field(None, alias='supplementalContext')
-    source: RunSource | None = Field(None, description='Origin of the run.')
+    source: RunSource | None = Field(
+        None, description='Origin of the run. Set by the server for API tokens.'
+    )
     run_id: str | None = Field(
         None, alias='runId', description='Client-supplied run id (Idempotency-Key header wins).'
     )
@@ -4799,7 +4830,8 @@ class ResumeRunDto(BaseModel):
         description="Organization id. Ignored for authenticated callers — the server uses the principal's org.",
     )
     version: Version | None = Field(
-        None, description='Saved version to run (scope/workflow; ignored for Modus).'
+        None,
+        description='Saved version to run (scope/workflow; ignored for Modus). API tokens may not run a scope draft.',
     )
     file_thread_id: str | None = Field(
         None, alias='fileThreadId', description='Document-scoped conversation thread id.'
@@ -4808,7 +4840,9 @@ class ResumeRunDto(BaseModel):
     attachments: AttachmentsDto | None = None
     user_context: UserContextDto | None = Field(None, alias='userContext')
     supplemental_context: SupplementalContextDto | None = Field(None, alias='supplementalContext')
-    source: RunSource | None = Field(None, description='Origin of the run.')
+    source: RunSource | None = Field(
+        None, description='Origin of the run. Set by the server for API tokens.'
+    )
     run_id: str | None = Field(
         None, alias='runId', description='Client-supplied run id (Idempotency-Key header wins).'
     )
