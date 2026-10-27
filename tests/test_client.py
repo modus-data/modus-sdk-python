@@ -42,7 +42,7 @@ def test_sync_client_has_scopes():
 
 
 def test_sync_client_has_chat_not_old_run_stubs():
-    """run()/stream() stubs are not on the public surface; use chat/chat_stream."""
+    """run()/stream() stubs are not on the public surface; use chat."""
     client = Modus(api_key="modus_test")
     assert not hasattr(client.scopes, "run")
     assert not hasattr(client.scopes, "stream")
@@ -51,7 +51,7 @@ def test_sync_client_has_chat_not_old_run_stubs():
 def test_sync_client_exposes_chat_and_runs():
     client = Modus(api_key="modus_test")
     assert hasattr(client.scopes, "chat")
-    assert hasattr(client.scopes, "chat_stream")
+    assert not hasattr(client.scopes, "chat_stream")
     assert hasattr(client.scopes, "get_context")
     assert hasattr(client.workflows, "runs")
 
@@ -78,7 +78,7 @@ def test_sync_client_has_scopes_and_workflows_aliases():
     assert hasattr(client.scopes, "list")
     assert hasattr(client.scopes, "get")
     assert hasattr(client.scopes, "chat")
-    assert hasattr(client.scopes, "chat_stream")
+    assert not hasattr(client.scopes, "chat_stream")
     assert hasattr(client.scopes, "conversations")
     assert hasattr(client, "workflows")
     assert hasattr(client.workflows, "list")
@@ -89,7 +89,7 @@ def test_sync_client_has_scopes_and_workflows_aliases():
 def test_async_client_has_scopes_and_workflows_aliases():
     client = AsyncModus(api_key="modus_test")
     assert hasattr(client, "scopes")
-    assert hasattr(client.scopes, "chat_stream")
+    assert not hasattr(client.scopes, "chat_stream")
     assert hasattr(client, "workflows")
     assert hasattr(client.workflows, "runs")
 

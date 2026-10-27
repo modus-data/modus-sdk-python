@@ -4,20 +4,12 @@ from __future__ import annotations
 
 from typing import Optional
 
-from ..._chat import (
-    AsyncChatStream,
-    ChatStream,
-    modus_chat_buffered,
-    modus_chat_buffered_async,
-    modus_stream_session,
-    modus_stream_session_async,
-)
+from ..._chat import AsyncChatSession, ChatSession, start_chat, start_chat_async
 from ..._config import ModusConfig
 from ..._generated.models import ModusContextRequestDto
 from ..._http import AsyncHttpClient, HttpClient
 from ..._openapi_invoke import invoke_operation, invoke_operation_async
 from ..._retry import async_with_retry, with_retry
-from ...types.chat import ChatResult
 from ...types.context_compose import SkillContextComposition
 from .conversations import AsyncModusConversationsResource, ModusConversationsResource
 
@@ -32,8 +24,7 @@ class ModusResource:
 
     When to use which method:
 
-    - ``chat`` — one complete reply (simplest).
-    - ``chat_stream`` — print tokens as they arrive.
+    - ``chat`` — stream a reply live; ``result()`` gives the complete answer.
     - ``get_context`` — preview composed context without running a chat turn.
     - ``conversations`` — list/get prior Modus threads.
 
@@ -43,7 +34,7 @@ class ModusResource:
         >>> result = client.modus.chat(
         ...     "What tables describe revenue?",
         ...     model="claude-sonnet-5",
-        ... )
+        ... ).result()
         >>> print(result.content)
         >>> print(result.thread_id)  # pass as thread_id on the next message
     """
@@ -60,77 +51,35 @@ class ModusResource:
         *,
         model: str,
         thread_id: Optional[str] = None,
-    ) -> ChatResult:
+    ) -> ChatSession:
         """
-        Send a message to Modus and wait for the complete reply.
+        Chat with Modus, the org-wide assistant. The reply streams live from the
+        agent host: iterate ``text_stream`` for tokens, or call ``result()`` for
+        the final answer.
 
         Args:
             message:   User message text.
-            model:     Model id, e.g. ``"claude-sonnet-5"``. Unsupported ids raise
+            model:     Model id, e.g. ``"claude-sonnet-5.5"``. Unsupported ids raise
                        ``ValueError`` before the request is sent.
-            thread_id: Continue an existing conversation; omit to start a new thread.
+            thread_id: Continue an existing conversation; omit to start a new one.
 
         Returns:
-            ``ChatResult`` with:
-
-            - ``content`` — final assistant text
-            - ``thread_id`` — pass to the next ``chat`` / ``chat_stream`` call
-            - ``run_id`` — opaque id for logging
+            ``ChatSession``; ``result()`` gives ``content``, ``thread_id`` and ``run_id``,
+            plus ``approval`` when the run stopped for a decision.
 
         Raises:
-            AuthenticationError: Invalid or missing API key.
-            NotFoundError: ``thread_id`` does not exist.
-            APIError: Upstream request failure.
+            ModusError: No agent host is known for a custom ``base_url``.
 
         Example:
-            >>> result = client.modus.chat(
-            ...     "What tables describe revenue?",
-            ...     model="claude-sonnet-5",
-            ... )
-            >>> print(result.content, result.thread_id)
-            >>> follow = client.modus.chat(
-            ...     "Break that down by region.",
-            ...     model="claude-sonnet-5",
-            ...     thread_id=result.thread_id,
-            ... )
-        """
-        return modus_chat_buffered(
-            self._http, message, model=model, thread_id=thread_id
-        )
-
-    def chat_stream(
-        self,
-        message: str,
-        *,
-        model: str,
-        thread_id: Optional[str] = None,
-    ) -> ChatStream:
-        """
-        Stream a Modus reply token by token (SSE).
-
-        The HTTP request starts when you consume ``text_stream`` or
-        ``event_stream``. Always use the context manager and iterate.
-
-        Args:
-            message:   User message text.
-            model:     Model id, e.g. ``"claude-sonnet-5"``.
-            thread_id: Continue an existing conversation; omit to start new.
-
-        Returns:
-            ``ChatStream``. After the stream finishes,
-            ``stream.get_final_result()`` exposes ``content`` and ``thread_id``.
-
-        Example:
-            >>> with client.modus.chat_stream(
-            ...     "Summarize ARR in three bullets.",
-            ...     model="claude-sonnet-5",
-            ... ) as stream:
-            ...     for token in stream.text_stream:
+            >>> result = client.modus.chat("What tables describe revenue?", model="claude-sonnet-5.5").result()
+            >>> print(result.content)
+            >>> with client.modus.chat("Break that down by region.", model="claude-sonnet-5.5",
+            ...                        thread_id=result.thread_id) as chat:
+            ...     for token in chat.text_stream:
             ...         print(token, end="", flush=True)
-            >>> print(stream.get_final_result().thread_id)
         """
-        return modus_stream_session(
-            self._agent_http, message, model=model, thread_id=thread_id
+        return start_chat(
+            self._agent_http, self._config, "modus", None, message, model=model, thread_id=thread_id
         )
 
     def get_context(
@@ -192,48 +141,16 @@ class AsyncModusResource:
         self._config = config
         self.conversations = AsyncModusConversationsResource(http, config)
 
-    async def chat(
+    def chat(
         self,
         message: str,
         *,
         model: str,
         thread_id: Optional[str] = None,
-    ) -> ChatResult:
-        """
-        Send a message to Modus and wait for the complete reply.
-
-        Args:
-            message:   User message text.
-            model:     Model id, e.g. ``"claude-sonnet-5"``.
-            thread_id: Continue an existing conversation; omit to start new.
-
-        Returns:
-            ``ChatResult`` with ``content``, ``thread_id``, and ``run_id``.
-        """
-        return await modus_chat_buffered_async(
-            self._http, message, model=model, thread_id=thread_id
-        )
-
-    def chat_stream(
-        self,
-        message: str,
-        *,
-        model: str,
-        thread_id: Optional[str] = None,
-    ) -> AsyncChatStream:
-        """
-        Stream a Modus reply token by token (async).
-
-        Args:
-            message:   User message text.
-            model:     Model id, e.g. ``"claude-sonnet-5"``.
-            thread_id: Continue an existing conversation; omit to start new.
-
-        Returns:
-            ``AsyncChatStream`` — ``async for token in stream.text_stream``.
-        """
-        return modus_stream_session_async(
-            self._agent_http, message, model=model, thread_id=thread_id
+    ) -> AsyncChatSession:
+        """Chat with Modus; ``await`` the session for the final answer. See the sync ``chat``."""
+        return start_chat_async(
+            self._agent_http, self._config, "modus", None, message, model=model, thread_id=thread_id
         )
 
     async def get_context(

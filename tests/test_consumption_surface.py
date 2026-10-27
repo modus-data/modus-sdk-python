@@ -75,14 +75,12 @@ def test_context_items_has_list_and_get():
 def test_skills_resource_has_chat_and_context():
     client = Modus(api_key="modus_test_key")
     assert hasattr(client.scopes, "chat")
-    assert hasattr(client.scopes, "chat_stream")
     assert hasattr(client.scopes, "get_context")
 
 
 def test_modus_resource_has_chat_context_and_conversations():
     client = Modus(api_key="modus_test_key")
     assert hasattr(client.modus, "chat")
-    assert hasattr(client.modus, "chat_stream")
     assert hasattr(client.modus, "get_context")
     assert hasattr(client.modus.conversations, "list")
     assert hasattr(client.modus.conversations, "get")
@@ -94,6 +92,6 @@ def test_agents_resource_has_runs():
     assert hasattr(client.workflows.runs, "get")
 
 
-def test_agents_resource_has_chat_stream():
+def test_agents_resource_has_chat():
     client = Modus(api_key="modus_test_key")
-    assert hasattr(client.workflows, "chat_stream")
+    assert hasattr(client.workflows, "chat")

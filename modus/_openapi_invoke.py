@@ -13,6 +13,17 @@ from ._validation import validate_id
 HttpLike = Union[HttpClient, AsyncHttpClient]
 
 
+def path_segment(value: Any) -> str:
+    """Encode one URL path segment.
+
+    Ids parsed from responses can arrive as integral floats (``42.0``); the
+    API's numeric ids take the integer form.
+    """
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
+    return quote(str(value), safe="")
+
+
 def _format_path(template: str, path_params: Mapping[str, Any]) -> str:
     segments = template.split("/")
     formatted: list[str] = []
@@ -21,9 +32,9 @@ def _format_path(template: str, path_params: Mapping[str, Any]) -> str:
             key = segment[1:-1]
             if key not in path_params:
                 raise ValidationError(f"Missing path parameter {key!r} for {template!r}")
-            value = str(path_params[key])
-            validate_id(value, name=key)
-            formatted.append(quote(value, safe=""))
+            value = path_params[key]
+            validate_id(str(value), name=key)
+            formatted.append(path_segment(value))
         else:
             formatted.append(segment)
     return "/".join(formatted)

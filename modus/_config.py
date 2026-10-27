@@ -13,9 +13,10 @@ from typing import Mapping, Optional, Union
 
 import httpx
 
+from ._exceptions import ModusError
+
 # Defaults — override via Modus(base_url=..., agent_host=..., timeout=..., max_retries=...)
 DEFAULT_BASE_URL = "https://api.getmodus.com"
-DEFAULT_AGENT_HOST = "https://agent.getmodus.com"
 
 
 def _default_timeout() -> httpx.Timeout:
@@ -88,8 +89,23 @@ def resolve_service_base_url(
         return config.base_url
     if service in config.base_urls:
         return config.base_urls[service]
-    if service == "agent-service" and config.agent_host:
-        return config.agent_host
+    if service == "agent-service":
+        return require_agent_host(config)
     if server_url:
         return _normalize_base_url(server_url)
     return config.base_url
+
+
+def require_agent_host(config: ModusConfig) -> str:
+    """Return the agent host for chat and runs.
+
+    Raises:
+        ModusError: when a custom ``base_url`` left the agent host unknown, so
+            the key is never sent to the production agent host by default.
+    """
+    if not config.agent_host:
+        raise ModusError(
+            f"No agent host for base_url {config.base_url!r}. Pass agent_host "
+            "(or set MODUS_AGENT_HOST) to chat or run with a custom base_url."
+        )
+    return config.agent_host

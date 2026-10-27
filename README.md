@@ -89,18 +89,12 @@ Use `client.modus.chat()` for native Modus — not `scopes.chat(0)` or any other
 ```python
 MODEL = "claude-sonnet-5"
 
-result = client.modus.chat("What were our top revenue drivers last quarter?", model=MODEL)
+result = client.modus.chat("What were our top revenue drivers last quarter?", model=MODEL).result()
 print(result.content, result.thread_id)
 
-follow_up = client.modus.chat(
-    "Break that down by region.",
-    model=MODEL,
-    thread_id=result.thread_id,
-)
-print(follow_up.content)
-
-with client.modus.chat_stream("Summarize this week", model=MODEL) as stream:
-    for chunk in stream.text_stream:
+# Every chat streams live from the agent host; iterate it to print tokens as they arrive.
+with client.modus.chat("Break that down by region.", model=MODEL, thread_id=result.thread_id) as chat:
+    for chunk in chat.text_stream:
         print(chunk, end="")
 
 ctx = client.modus.get_context("What tables describe customer churn?", limit=10)
@@ -115,13 +109,25 @@ for row in client.modus.conversations.list(kind="modus", page_size=10):
 ```python
 MODEL = "claude-sonnet-5"
 
-result = client.scopes.chat(scope_id, "Hello", model=MODEL)
+result = client.scopes.chat(scope_id, "Hello", model=MODEL).result()
 print(result.content, result.thread_id)
 
-with client.scopes.chat_stream(scope_id, "Hi", model=MODEL) as stream:
-    for chunk in stream.text_stream:
+with client.scopes.chat(scope_id, "Hi", model=MODEL, thread_id=result.thread_id) as chat:
+    for chunk in chat.text_stream:
         print(chunk, end="")
 ```
+
+### Approvals
+
+A run that needs approval for a write stops with `result.approval` set. Continue it with `resume`:
+
+```python
+chat = client.modus.chat("Fix the typo in the accounts table", model=MODEL)
+if chat.result().approval:
+    print(chat.resume(decision="approve").result().content)
+```
+
+Async: `await client.modus.chat(...)` returns the result; `async with` / `async for` stream it.
 
 ### Context
 
@@ -167,9 +173,11 @@ The token must include the `context:write` permission.
 workflow = client.workflows.get(workflow_id)
 for run in client.workflows.runs.list(workflow_id, page_size=20):
     print(run.id, run.status)
-```
 
-Workflow chat is not on the public PAT surface. Use `client.modus.chat()` for org-wide conversation or `client.scopes.chat()` for a published scope.
+# Chat with a published workflow; result() returns its final output.
+digest = client.workflows.chat(workflow_id, "Run this week's digest", model="claude-sonnet-5").result()
+print(digest.content)
+```
 
 ## Managing your org
 
@@ -299,7 +307,6 @@ Runnable scripts ship with the package:
 - `examples/scripts/chat.py` — buffered scope chat with thread follow-up
 - `examples/scripts/manage_skill.py` — create and deploy a scope (`ModusManagement`, `--write` optional)
 
-Optional Streamlit demo: `examples/apps/modus_skill_chat/` (streaming vs buffered scope chat side by side).
 
 ## Docs
 

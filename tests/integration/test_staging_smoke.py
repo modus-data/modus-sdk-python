@@ -194,24 +194,25 @@ def test_staging_context_files_upload(tmp_path) -> None:
 
 @pytest.mark.skipif(not _has_live, reason="MODUS_API_KEY not set")
 def test_staging_chat_and_stream() -> None:
-    """Buffered chat + streaming against staging agent host (hard gate)."""
+    """chat() result and live stream against the staging agent host (hard gate)."""
     model = os.getenv("MODUS_SMOKE_MODEL") or "claude-sonnet-5"
     agent_host = os.getenv("MODUS_AGENT_HOST") or "https://agent.staging.getmodus.com"
     client = Modus(base_url=_base_url(), agent_host=agent_host, timeout=180.0)
 
-    buffered = client.modus.chat(
+    awaited = client.modus.chat(
         "sdk staging smoke — reply with one short word",
         model=model,
-    )
-    assert buffered.content
-    assert buffered.thread_id
+    ).result()
+    assert awaited.content
+    assert awaited.thread_id
 
-    with client.modus.chat_stream(
+    with client.modus.chat(
         "sdk staging smoke — stream one short word",
         model=model,
+        thread_id=awaited.thread_id,
     ) as stream:
         tokens = list(stream.text_stream)
-        final = stream.get_final_result()
+        final = stream.result()
 
     assert tokens
     assert final.content

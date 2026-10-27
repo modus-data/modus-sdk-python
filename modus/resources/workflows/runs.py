@@ -124,7 +124,7 @@ def _runs_list_params(
 
 
 def _request_body(body: Mapping[str, Any]) -> Dict[str, Any]:
-    """Copy body and mint sessionId when omitted (parity with chat_stream)."""
+    """Copy body and mint sessionId when omitted (parity with chat)."""
     return with_agent_run_session_id(body)
 
 

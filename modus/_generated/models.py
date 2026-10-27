@@ -1624,87 +1624,6 @@ class MemoryDto(BaseModel):
     )
 
 
-class Model(str, Enum):
-    claude_sonnet_5 = 'claude-sonnet-5'
-    claude_sonnet_5_5 = 'claude-sonnet-5.5'
-    claude_sonnet_4_6 = 'claude-sonnet-4.6'
-    claude_opus_4_8 = 'claude-opus-4.8'
-    claude_opus_5_5 = 'claude-opus-5.5'
-    gpt_5_2 = 'gpt-5.2'
-    gpt_5_5 = 'gpt-5.5'
-    gpt_5_mini = 'gpt-5-mini'
-    gpt_5_6_luna = 'gpt-5.6-luna'
-    gpt_6_luna = 'gpt-6-luna'
-    gpt_oss_120b = 'gpt-oss-120b'
-    gpt_oss_20b = 'gpt-oss-20b'
-    qwen3_235b_a22b_2507 = 'qwen3-235b-a22b-2507'
-    qwen3_coder = 'qwen3-coder'
-    qwen3_32b = 'qwen3-32b'
-    deepseek_chat_v3_1 = 'deepseek-chat-v3.1'
-    deepseek_v4_pro = 'deepseek-v4-pro'
-    deepseek_v4_flash_latest = 'deepseek-v4-flash-latest'
-    deepseek_v4_1_flash_1017 = 'deepseek-v4.1-flash-1017'
-    minimax_m2_7 = 'minimax-m2.7'
-    llama_4_maverick = 'llama-4-maverick'
-    llama_4_scout = 'llama-4-scout'
-    llama_3_3_70b_instruct = 'llama-3.3-70b-instruct'
-    gemini_3_1_pro_preview = 'gemini-3.1-pro-preview'
-    gemini_3_flash_preview = 'gemini-3-flash-preview'
-    grok_4_3_fast = 'grok-4.3-fast'
-    grok_4_3 = 'grok-4.3'
-    grok_4_7 = 'grok-4.7'
-    kimi_k3 = 'kimi-k3'
-
-
-class ApprovalDecision(str, Enum):
-    approve = 'approve'
-    deny = 'deny'
-
-
-class ModusChatRequestDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    message: str | None = Field(
-        None,
-        description='User message sent to Modus. Omit when `approvalContinuation` is true.',
-        examples=['What were our top revenue drivers last quarter?'],
-        min_length=1,
-    )
-    model: Model = Field(
-        ...,
-        description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-5.5, claude-sonnet-4.6, claude-opus-4.8, claude-opus-5.5, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-5.6-luna, gpt-6-luna, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, deepseek-v4.1-flash-1017, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, grok-4.7, kimi-k3.',
-        examples=['claude-sonnet-4.6'],
-    )
-    approval_continuation: bool | None = Field(
-        None,
-        alias='approvalContinuation',
-        description='Continue a pending write-approval interrupt from a prior turn. When true, `message` is ignored.',
-    )
-    approval_decision: ApprovalDecision | None = Field(
-        None, alias='approvalDecision', description='Required when `approvalContinuation` is true.'
-    )
-
-
-class ModusChatResponseDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    content: str = Field(
-        ...,
-        description='Final assistant text for the run.',
-        examples=['Revenue grew 12% quarter over quarter…'],
-    )
-    thread_id: str = Field(
-        ...,
-        alias='threadId',
-        description='Conversation thread id. For follow-up use POST …/conversations/{threadId}/chat.',
-        examples=['agent_0_550e8400-e29b-41d4-a716-446655440000'],
-    )
-    run_id: str = Field(
-        ...,
-        alias='runId',
-        description='Opaque run id for this chat invocation.',
-        examples=['550e8400-e29b-41d4-a716-446655440001'],
-    )
-
-
 class ModusContextRequestDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     message: str = Field(
@@ -1922,42 +1841,6 @@ class SetSupervisionRequestDto(BaseModel):
 class SharedUserPermission(str, Enum):
     use = 'use'
     manage = 'manage'
-
-
-class SkillChatRequestDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    message: str = Field(
-        ...,
-        description='User message sent to the published scope supervisor.',
-        examples=['Summarize open support tickets from last week.'],
-        min_length=1,
-    )
-    model: Model = Field(
-        ...,
-        description='Canonical model id for this run (required). Allowed values: claude-sonnet-5, claude-sonnet-5.5, claude-sonnet-4.6, claude-opus-4.8, claude-opus-5.5, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-5.6-luna, gpt-6-luna, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, deepseek-v4.1-flash-1017, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, grok-4.7, kimi-k3.',
-        examples=['claude-sonnet-4.6'],
-    )
-
-
-class SkillChatResponseDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    content: str = Field(
-        ...,
-        description='Final assistant text for the run.',
-        examples=['There were 12 open tickets last week…'],
-    )
-    thread_id: str = Field(
-        ...,
-        alias='threadId',
-        description='Conversation thread id, `agent_{scopeId}_…`: the id GET …/conversations lists. Use it for GET …/conversations/{threadId} and for follow-up messages via POST …/conversations/{threadId}/chat.',
-        examples=['agent_42_550e8400-e29b-41d4-a716-446655440000'],
-    )
-    run_id: str = Field(
-        ...,
-        alias='runId',
-        description='Opaque run id for this chat invocation (for logging and correlation).',
-        examples=['550e8400-e29b-41d4-a716-446655440001'],
-    )
 
 
 class SkillMcpInterfaceConfigDto(BaseModel):

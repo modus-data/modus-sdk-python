@@ -1,7 +1,7 @@
 """Chat request/response types for Modus and scope conversations.
 
 Pass a **model id** as ``model`` to ``client.modus.chat(...)``,
-``client.scopes.chat(...)``, and matching stream methods. Unsupported values
+``client.scopes.chat(...)`` or ``client.workflows.chat(...)``. Unsupported values
 raise ``ValueError`` before the request is sent.
 
 Allowed model ids:
@@ -19,12 +19,27 @@ Allowed model ids:
 - ``content`` — final assistant text for the run
 - ``thread_id`` — conversation id for follow-up messages
 - ``run_id`` — opaque run id for logging or correlation
+- ``approval`` — set when the run stopped for a decision; continue with ``resume``
 """
 
 from __future__ import annotations
 
-from .._generated.models import SkillChatRequestDto, SkillChatResponseDto
+from typing import Optional
 
-ChatResult = SkillChatResponseDto
+from pydantic import BaseModel, ConfigDict, Field
 
-__all__ = ["ChatResult", "SkillChatRequestDto", "SkillChatResponseDto"]
+from .runs import ApprovalRequiredEvent
+
+
+class ChatResult(BaseModel):
+    """The final answer of a chat turn."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    content: str
+    thread_id: str = Field(alias="threadId")
+    run_id: str = Field(alias="runId")
+    approval: Optional[ApprovalRequiredEvent] = None
+
+
+__all__ = ["ChatResult"]

@@ -38,7 +38,7 @@ def validate_id(resource_id: Union[int, str], *, name: str = "id") -> None:
         raise ValidationError(f"{name} must not be {resource_id!r}")
 
 
-# Canonical chat model ids from SkillChatRequestDto (keep in sync with the API spec).
+# The canonical model ids the agent host accepts for config.model.
 ALLOWED_CHAT_MODELS = frozenset({
     "claude-sonnet-5",
     "claude-sonnet-5.5",

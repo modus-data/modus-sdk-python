@@ -34,8 +34,9 @@ async def test_async_get_rejects_bad_id(bad, respx_mock):
     assert respx_mock.calls.call_count == 0
 
 
-@pytest.mark.parametrize("bad", [".", ".."])
-def test_chat_rejects_dot_thread_id(bad, respx_mock):
+# A chat's thread_id travels as the body's sessionId; its path id is the scope id.
+@pytest.mark.parametrize("bad", BAD_IDS)
+def test_chat_rejects_bad_scope_id(bad, respx_mock):
     with pytest.raises(ValueError):
-        Modus(api_key=KEY, base_url=BASE).scopes.chat(7, "hi", model="claude-sonnet-5", thread_id=bad)
+        Modus(api_key=KEY, base_url=BASE).scopes.chat(bad, "hi", model="claude-sonnet-5")
     assert respx_mock.calls.call_count == 0

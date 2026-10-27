@@ -72,13 +72,6 @@ def test_context_item_matches_openapi(openapi):
     _assert_dto_covers_schema(openapi, "ContextItemDto", ContextItem)
 
 
-def test_skill_chat_dto_matches_openapi(openapi):
-    from modus.types.chat import ChatResult, SkillChatRequestDto
-
-    _assert_dto_covers_schema(openapi, "SkillChatRequestDto", SkillChatRequestDto)
-    _assert_dto_covers_schema(openapi, "SkillChatResponseDto", ChatResult)
-
-
 def test_compose_context_dto_matches_openapi(openapi):
     from modus.types.context_compose import (
         ComposeSkillContextRequest,

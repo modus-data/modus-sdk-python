@@ -9,22 +9,13 @@ from modus._generated.resources.consumption.scopes import (
     _ScopesResourceBase,
 )
 
-from ..._chat import (
-    AsyncChatStream,
-    ChatStream,
-    RunVersion,
-    chat_buffered,
-    chat_buffered_async,
-    scope_stream_session,
-    scope_stream_session_async,
-)
+from ..._chat import AsyncChatSession, ChatSession, start_chat, start_chat_async
 from ..._config import ModusConfig
 from ..._generated.models import ComposeSkillContextRequestDto
 from ..._http import AsyncHttpClient, HttpClient
 from ..._openapi_invoke import invoke_operation, invoke_operation_async
 from ..._retry import async_with_retry, with_retry
 from ..._validation import validate_id
-from ...types.chat import ChatResult
 from ...types.context_compose import SkillContextComposition
 from .conversations import (
     AsyncScopeConversationsResource,
@@ -42,8 +33,7 @@ class ScopesResource(_ScopesResourceBase):
     When to use which method:
 
     - ``list`` / ``get`` — find an active scope's numeric id
-    - ``chat`` — one complete reply from that scope
-    - ``chat_stream`` — print tokens as they arrive
+    - ``chat`` — stream a reply from that scope; ``result()`` gives the complete answer
     - ``get_context`` — preview composed context without chatting
     - ``conversations(scope_id)`` — list/get prior threads for that scope
 
@@ -57,7 +47,7 @@ class ScopesResource(_ScopesResourceBase):
         ... )
         >>> result = client.scopes.chat(
         ...     scope.id, "What is our ARR trend?", model="claude-sonnet-5"
-        ... )
+        ... ).result()
         >>> print(result.content)
     """
 
@@ -87,91 +77,40 @@ class ScopesResource(_ScopesResourceBase):
         *,
         model: str,
         thread_id: Optional[str] = None,
-    ) -> ChatResult:
+    ) -> ChatSession:
         """
-        Send a message to a **published scope** and wait for the complete reply.
+        Chat with a **published scope**. The reply streams live from the agent host:
+        iterate ``text_stream`` for tokens, or call ``result()`` for the final answer.
 
         For the org-wide assistant use ``client.modus.chat`` instead.
 
         Args:
-            scope_id:  Numeric scope id (must be active/deployed for chat).
+            scope_id:  Numeric scope id.
             message:   User message text.
-            model:     Model id, e.g. ``"claude-sonnet-5"``. Unsupported ids raise
+            model:     Model id, e.g. ``"claude-sonnet-5.5"``. Unsupported ids raise
                        ``ValueError`` before the request is sent.
             thread_id: Continue an existing conversation; omit to start a new one.
 
         Returns:
-            ``ChatResult`` with ``content``, ``thread_id``, and ``run_id``.
+            ``ChatSession``; ``result()`` gives ``content``, ``thread_id`` and ``run_id``.
 
         Raises:
-            NotFoundError: Scope or ``thread_id`` does not exist.
-            AuthenticationError: Invalid or missing API key.
+            ModusError: No agent host is known for a custom ``base_url``.
 
         Example:
-            >>> result = client.scopes.chat(
-            ...     scope_id,
-            ...     "What is our ARR trend?",
-            ...     model="claude-sonnet-5",
-            ... )
-            >>> print(result.content)
+            >>> with client.scopes.chat(scope_id, "What is our ARR trend?", model="claude-sonnet-5.5") as chat:
+            ...     for token in chat.text_stream:
+            ...         print(token, end="", flush=True)
             >>> follow = client.scopes.chat(
             ...     scope_id,
             ...     "Break that down by segment.",
-            ...     model="claude-sonnet-5",
-            ...     thread_id=result.thread_id,
-            ... )
+            ...     model="claude-sonnet-5.5",
+            ...     thread_id=chat.result().thread_id,
+            ... ).result()
+            >>> print(follow.content)
         """
-        return chat_buffered(
-            self._http,
-            "scopes",
-            scope_id,
-            message,
-            model=model,
-            thread_id=thread_id,
-        )
-
-    def chat_stream(
-        self,
-        scope_id: Union[int, str],
-        message: str,
-        *,
-        model: str,
-        thread_id: Optional[str] = None,
-        version: Optional[RunVersion] = None,
-    ) -> ChatStream:
-        """
-        Stream a scope reply token by token (SSE).
-
-        The HTTP request starts when you consume ``text_stream`` or
-        ``event_stream``. Always use the context manager and iterate.
-
-        Args:
-            scope_id:  Numeric scope id.
-            message:   User message text.
-            model:     Model id, e.g. ``"claude-sonnet-5"``.
-            thread_id: Continue an existing conversation; omit to start new.
-            version:   Run a specific variation — ``"published"`` or ``"draft"``.
-
-        Returns:
-            ``ChatStream``. After iteration,
-            ``stream.get_final_result()`` exposes ``content`` and ``thread_id``.
-
-        Example:
-            >>> with client.scopes.chat_stream(
-            ...     scope_id,
-            ...     "Summarize in three bullets.",
-            ...     model="claude-sonnet-5",
-            ... ) as stream:
-            ...     for token in stream.text_stream:
-            ...         print(token, end="", flush=True)
-        """
-        return scope_stream_session(
-            self._agent_http,
-            scope_id,
-            message,
-            model=model,
-            thread_id=thread_id,
-            version=version,
+        return start_chat(
+            self._agent_http, self._config, "scopes", scope_id, message, model=model, thread_id=thread_id
         )
 
     def get_context(
@@ -242,41 +181,17 @@ class AsyncScopesResource(_AsyncScopesResourceBase):
         """Return the conversations sub-resource scoped to ``scope_id``."""
         return AsyncScopeConversationsResource(self._http, self._config, scope_id)
 
-    async def chat(
+    def chat(
         self,
         scope_id: Union[int, str],
         message: str,
         *,
         model: str,
         thread_id: Optional[str] = None,
-    ) -> ChatResult:
-        """Send a message to a scope and get the complete reply. See the sync ``chat`` for argument details."""
-        return await chat_buffered_async(
-            self._http,
-            "scopes",
-            scope_id,
-            message,
-            model=model,
-            thread_id=thread_id,
-        )
-
-    def chat_stream(
-        self,
-        scope_id: Union[int, str],
-        message: str,
-        *,
-        model: str,
-        thread_id: Optional[str] = None,
-        version: Optional[RunVersion] = None,
-    ) -> AsyncChatStream:
-        """Stream a scope reply token by token. See the sync ``chat_stream`` for argument details."""
-        return scope_stream_session_async(
-            self._agent_http,
-            scope_id,
-            message,
-            model=model,
-            thread_id=thread_id,
-            version=version,
+    ) -> AsyncChatSession:
+        """Chat with a scope; ``await`` the session for the final answer. See the sync ``chat``."""
+        return start_chat_async(
+            self._agent_http, self._config, "scopes", scope_id, message, model=model, thread_id=thread_id
         )
 
     async def get_context(

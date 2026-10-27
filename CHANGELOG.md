@@ -11,6 +11,9 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Added
 
+- **`client.workflows.chat()`.** Send a published workflow a message and stream its node output; `result()` returns the workflow's final output.
+- **`AssistantContentResetEvent.sub_agent`** marks a correction to a sub-agent's output; a reset without it corrects the assistant's own reply.
+- **Approvals on chat.** A run that stops for a write approval returns `result().approval`; `chat.resume(decision="approve" | "deny")` continues the same conversation.
 - **Connection selection preferences on scopes.** A `connection_set` entry on create and update takes
   `preferences` (`mode` `all` or `manual`, `include` / `exclude` rules of id steps); reads return
   `preferences` on the connection's first row.
@@ -55,6 +58,15 @@ release, including pre-1.0 (`0.x`) releases.
   until Modus enables them for the organization.
 - **Breaking (pre-1.0): `runs.interrupt` and `runs.edit_queued` take the turn to send.** `runs.interrupt(run_id, next_run, *, last_seen_event_id=None)` and `runs.edit_queued(run_id, next_run)` send `next_run` (`message` and `sessionId`, the run's conversation id) as `nextRun` and return the admitted run as `RunAdmission` (`run_id`, `status`), sync and async. For `interrupt`, that is the new run that carries the follow-up turn; stream it with `runs.stream(run_id)`. The old optional `body` defaulted to `{}`, which the server always rejected, and the methods returned `None`. `interrupt` sets `nextRun.runId` when you omit it, so a retried request returns the same run instead of starting a second turn. On a run that has already finished, `interrupt` starts a follow-up turn.
 - **`runs.resume` requires `sessionId` and sends no message.** A missing or blank `sessionId` raises `ValueError` before any request; it was replaced by a random id, so the server answered "no longer pending". The documented example sends only `decision` and `sessionId`; a non-empty `message` is rejected by the server.
+- **Breaking (pre-1.0): `chat()` streams from the agent host.** `client.scopes.chat()`, `client.modus.chat()` and `client.workflows.chat()` return a `ChatSession`. Iterate `text_stream` / `event_stream` for the reply as it arrives, or call `result()` for `ChatResult` (`content`, `thread_id`, `run_id`). On `AsyncModus`, `await client.scopes.chat(...)` returns the result as before; `chat()` itself is no longer a coroutine, so wrap it with `asyncio.ensure_future(...)` (not `create_task`) to run it as a task. The request is sent when you first iterate, call `result()` or `await` the session, not when `chat()` is called. Runs are no longer cut off after 30 seconds, and `content` is the server's final answer: interim narration and sub-agent output are left out. A session sends one request; iterating it again replays what arrived. A session that reaches `done` releases its connection; use the session as a context manager, or call `close()`, if you stop reading before then. Iterating `text_stream` after the run applies the server's mid-run corrections (`assistant_content_reset`), so the text matches what `content` was built from. **Migrate:** `client.scopes.chat(...).content` becomes `client.scopes.chat(...).result().content` (likewise `thread_id`, `run_id`, `approval`, and on `client.modus` / `client.workflows`); the old spelling raises an `AttributeError` that names the new one. Async code that awaits `chat()` keeps working unchanged.
+- **Ids from responses work in paths.** A numeric id parsed as `42.0` is sent as `42`, so passing `scope.id` from a list straight back to the API no longer returns 400.
+- **Workflow streams show their output.** Node tokens are unwrapped, `workflow_done` carries the workflow's final output, and a workflow that fails or is cancelled raises instead of ending the stream silently.
+- **Breaking (pre-1.0): a custom `base_url` needs `agent_host` to chat.** When the agent host cannot be derived from `base_url` (anything other than `api.<env>.getmodus.com`), chat and runs raise instead of sending your key to the production agent host. Pass `agent_host` or set `MODUS_AGENT_HOST`; a blank value counts as unset.
+
+### Removed
+
+- **Breaking (pre-1.0): `chat_stream()`, `ChatStream`, `AsyncChatStream` and `get_final_result()`.** Use `chat()`, which streams; call `result()` instead of `get_final_result()`.
+- **Breaking (pre-1.0): `version="draft"` on scope and workflow chat, and the `SkillChatRequestDto` / `SkillChatResponseDto` exports.** API tokens run published scopes only; `ChatResult` is the chat result type.
 
 ### Deprecated
 
