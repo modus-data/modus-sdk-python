@@ -104,11 +104,14 @@ def invoke_operation_stream(
     *,
     path_params: Optional[Mapping[str, Any]] = None,
     json_body: Optional[Dict[str, Any]] = None,
+    headers: Optional[Mapping[str, str]] = None,
 ) -> Iterator[str]:
     """Stream a spec operation through HttpClient."""
     op = get_operation(operation_id)
     path = _format_path(op["path"], path_params or {})
-    return http.stream(op["method"], path, json=json_body, base_url=operation_base_url(http, op))
+    return http.stream(
+        op["method"], path, json=json_body, base_url=operation_base_url(http, op), headers=headers
+    )
 
 
 async def invoke_operation_async(
@@ -147,8 +150,11 @@ def invoke_operation_stream_async(
     *,
     path_params: Optional[Mapping[str, Any]] = None,
     json_body: Optional[Dict[str, Any]] = None,
+    headers: Optional[Mapping[str, str]] = None,
 ) -> AsyncIterator[str]:
     """Stream a spec operation through AsyncHttpClient."""
     op = get_operation(operation_id)
     path = _format_path(op["path"], path_params or {})
-    return http.stream(op["method"], path, json=json_body, base_url=operation_base_url(http, op))
+    return http.stream(
+        op["method"], path, json=json_body, base_url=operation_base_url(http, op), headers=headers
+    )

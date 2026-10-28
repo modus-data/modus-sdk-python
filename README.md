@@ -179,6 +179,32 @@ digest = client.workflows.chat(workflow_id, "Run this week's digest", model="cla
 print(digest.content)
 ```
 
+`client.workflows.runs.stream(run_id)` follows a run's events. Each event carries an `id` when the server sends one. If the connection drops, call `stream` again with `last_event_id` set to the last `id` you handled: the stream resumes after it instead of replaying the run from the start. Without an `id` it can only replay from the start. The stream ends after a `done`, `error` or `cancelled` event; only `done` is a completed run.
+
+```python
+from modus import APIConnectionError
+
+
+def follow_run(run_id, handle):
+    last_id = None
+    while True:
+        events = iter(client.workflows.runs.stream(run_id, last_event_id=last_id))
+        while True:
+            try:
+                event = next(events)
+            except StopIteration:
+                break  # ended without a final event: resume
+            except APIConnectionError:
+                break  # dropped: resume after last_id
+            handle(event)  # a handler error propagates; it is not a disconnect
+            last_id = event.id or last_id
+            if event.type == "done":
+                return
+            # A stream_timeout event is followed by an error event.
+            if event.type in ("error", "cancelled"):
+                raise RuntimeError(f"Run {run_id} ended with {event.type}")
+```
+
 ## Managing your org
 
 ```python

@@ -35,7 +35,7 @@ from ..._openapi_invoke import (
 )
 from ..._pagination import aip_list_params, normalize_page_token
 from ..._retry import async_with_retry, with_retry
-from ..._streaming import parse_sse_stream
+from ..._streaming import parse_sse_stream, parse_sse_stream_async
 from ..._validation import validate_id, validate_page_size
 from ...types.agent_runs import (
     ActiveConversationRun,
@@ -163,14 +163,17 @@ def _resume_body(body: Mapping[str, Any]) -> Dict[str, Any]:
     return dict(body)
 
 
+def _last_event_id_header(last_event_id: Optional[str]) -> Optional[Dict[str, str]]:
+    return {"Last-Event-ID": last_event_id} if last_event_id else None
+
+
 def _parse_events(lines: Iterator[str]) -> Iterator[RunEvent]:
     yield from parse_sse_stream(lines)
 
 
 async def _parse_events_async(lines: AsyncIterator[str]) -> AsyncIterator[RunEvent]:
-    async for line in lines:
-        for event in parse_sse_stream(iter([line])):
-            yield event
+    async for event in parse_sse_stream_async(lines):
+        yield event
 
 
 class WorkflowRunsResource:
@@ -648,17 +651,21 @@ class WorkflowRunsResource:
             self._config.max_retries,
         )
 
-    def stream(self, run_id: str) -> Iterator[RunEvent]:
+    def stream(self, run_id: str, *, last_event_id: Optional[str] = None) -> Iterator[RunEvent]:
         """
-        Reconnect to an in-progress run and stream output events.
+        Reconnect to a run and stream its output events.
 
         Args:
             run_id: Run ID to follow.
+            last_event_id: The ``id`` of the last event you handled; the stream resumes
+                after it. Omit to replay the run from its first event.
 
         Example:
-            >>> for event in client.workflows.runs.stream(run_id):
+            >>> last_id = None
+            >>> for event in client.workflows.runs.stream(run_id, last_event_id=last_id):
             ...     if event.type == "token":
             ...         print(event.content, end="", flush=True)
+            ...     last_id = event.id  # after handling it: reconnect with it if the connection drops
         """
         validate_id(run_id, name="run_id")
         return _parse_events(
@@ -666,6 +673,7 @@ class WorkflowRunsResource:
                 self._http,
                 "RunLifecycleController_stream",
                 path_params={"runId": run_id},
+                headers=_last_event_id_header(last_event_id),
             )
         )
 
@@ -1044,12 +1052,21 @@ class AsyncWorkflowRunsResource:
             self._config.max_retries,
         )
 
-    async def stream(self, run_id: str) -> AsyncIterator[RunEvent]:
+    async def stream(
+        self, run_id: str, *, last_event_id: Optional[str] = None
+    ) -> AsyncIterator[RunEvent]:
         """
-        Stream run output events.
+        Reconnect to a run and stream its output events.
 
         Args:
             run_id: Run ID to follow.
+            last_event_id: The ``id`` of the last event you handled; the stream resumes
+                after it. Omit to replay the run from its first event.
+
+        Example:
+            >>> async for event in client.workflows.runs.stream(run_id, last_event_id=last_id):
+            ...     handle(event)
+            ...     last_id = event.id  # after handling it: reconnect with it if the connection drops
         """
         validate_id(run_id, name="run_id")
         async for event in _parse_events_async(
@@ -1057,6 +1074,7 @@ class AsyncWorkflowRunsResource:
                 self._http,
                 "RunLifecycleController_stream",
                 path_params={"runId": run_id},
+                headers=_last_event_id_header(last_event_id),
             )
         ):
             yield event

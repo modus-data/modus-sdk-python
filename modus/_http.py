@@ -20,7 +20,7 @@ import re
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from importlib.metadata import PackageNotFoundError, version
-from typing import Any, AsyncIterator, Dict, Iterator, NamedTuple, Optional
+from typing import Any, AsyncIterator, Dict, Iterator, Mapping, NamedTuple, Optional
 
 import httpx
 
@@ -384,6 +384,7 @@ class HttpClient:
         *,
         json: Optional[Dict[str, Any]] = None,
         base_url: Optional[str] = None,
+        headers: Optional[Mapping[str, str]] = None,
     ) -> Iterator[str]:
         """Make a streaming request and yield raw SSE lines."""
         effective_base_url = base_url or self._config.base_url
@@ -394,7 +395,7 @@ class HttpClient:
                 method,
                 _request_url(path, base_url),
                 json=json,
-                headers={"Accept": "text/event-stream"},
+                headers={**(headers or {}), "Accept": "text/event-stream"},
             ) as response:
                 _raise_for_status(response, method)
                 ct = (response.headers.get("content-type") or "").lower()
@@ -524,6 +525,7 @@ class AsyncHttpClient:
         *,
         json: Optional[Dict[str, Any]] = None,
         base_url: Optional[str] = None,
+        headers: Optional[Mapping[str, str]] = None,
     ) -> AsyncIterator[str]:
         """Streaming request — yields raw SSE lines."""
         effective_base_url = base_url or self._config.base_url
@@ -532,7 +534,7 @@ class AsyncHttpClient:
                 method,
                 _request_url(path, base_url),
                 json=json,
-                headers={"Accept": "text/event-stream"},
+                headers={**(headers or {}), "Accept": "text/event-stream"},
             ) as response:
                 await _raise_for_status_async(response, method)
                 ct = (response.headers.get("content-type") or "").lower()

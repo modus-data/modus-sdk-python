@@ -21,7 +21,7 @@ from ._config import ModusConfig, require_agent_host
 from ._exceptions import ModusError, RunCancelledError, StreamTimeoutError
 from ._http import AsyncHttpClient, HttpClient
 from ._openapi_invoke import format_operation_path, path_segment
-from ._streaming import parse_sse_stream
+from ._streaming import SseParser
 from ._validation import validate_chat_model, validate_id
 from .types.chat import ChatResult
 from .types.runs import (
@@ -60,7 +60,7 @@ def _effective_thread_id(thread_id: Optional[str]) -> Optional[str]:
 
 def _raise_for_event(event: RunEvent) -> None:
     if isinstance(event, ErrorEvent):
-        raise ModusError(event.message)
+        raise ModusError(event.message, request_id=event.request_id)
     if isinstance(event, CancelledEvent):
         raise RunCancelledError()
     if isinstance(event, StreamTimeoutEvent):
@@ -256,8 +256,9 @@ class ChatSession:
 
     def _open(self, reset_aware: bool) -> Generator[RunEvent, None, None]:
         state = self._state
+        parser = SseParser()
         for line in self._http.stream_post(state.request.path, json=state.body(reset_aware)):
-            for event in parse_sse_stream(iter([line])):
+            for event in parser.feed(line):
                 ends = state.accept(event)
                 yield event
                 if ends:
@@ -355,9 +356,10 @@ class AsyncChatSession:
     async def _open(self, reset_aware: bool) -> AsyncIterator[RunEvent]:
         state = self._state
         lines = self._http.stream_post(state.request.path, json=state.body(reset_aware))
+        parser = SseParser()
         try:
             async for line in lines:
-                for event in parse_sse_stream(iter([line])):
+                for event in parser.feed(line):
                     ends = state.accept(event)
                     yield event
                     if ends:

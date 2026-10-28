@@ -18,6 +18,8 @@ class TokenEvent:
     content: str = ""
     sub_agent: Optional[str] = None
     """Set when a sub-agent produced the token; None for the assistant's own reply."""
+    id: Optional[str] = None
+    """The SSE event id. Pass it as ``last_event_id`` to ``runs.stream`` to resume after this event."""
 
 
 @dataclass
@@ -29,6 +31,8 @@ class DoneEvent:
     thread_id: str = ""
     content: Optional[str] = None
     """The run's final answer."""
+    id: Optional[str] = None
+    """The SSE event id. Pass it as ``last_event_id`` to ``runs.stream`` to resume after this event."""
 
 
 @dataclass
@@ -37,6 +41,10 @@ class ErrorEvent:
 
     type: str = field(default="error", init=False)
     message: str = ""
+    request_id: Optional[str] = None
+    """The id to quote to support for this failure."""
+    id: Optional[str] = None
+    """The SSE event id. Pass it as ``last_event_id`` to ``runs.stream`` to resume after this event."""
 
 
 @dataclass
@@ -44,6 +52,8 @@ class CancelledEvent:
     """The run was cancelled."""
 
     type: str = field(default="cancelled", init=False)
+    id: Optional[str] = None
+    """The SSE event id. Pass it as ``last_event_id`` to ``runs.stream`` to resume after this event."""
 
 
 @dataclass
@@ -51,6 +61,8 @@ class StreamTimeoutEvent:
     """The stream timed out without a terminal event."""
 
     type: str = field(default="stream_timeout", init=False)
+    id: Optional[str] = None
+    """The SSE event id. Pass it as ``last_event_id`` to ``runs.stream`` to resume after this event."""
 
 
 @dataclass
@@ -64,6 +76,8 @@ class AssistantContentResetEvent:
     reason: str = "provider_stream_failed"
     sub_agent: Optional[Dict[str, Any]] = None
     """Set when the reset belongs to a sub-agent's timeline; None for the assistant's own reply."""
+    id: Optional[str] = None
+    """The SSE event id. Pass it as ``last_event_id`` to ``runs.stream`` to resume after this event."""
 
 
 @dataclass
@@ -84,6 +98,8 @@ class ApprovalRequiredEvent:
     node_id: Optional[str] = None
     prompt: Optional[str] = None
     options: Optional[List[Dict[str, str]]] = None
+    id: Optional[str] = None
+    """The SSE event id. Pass it as ``last_event_id`` to ``runs.stream`` to resume after this event."""
 
 
 # Union of all event types the _streaming.py parser can produce.

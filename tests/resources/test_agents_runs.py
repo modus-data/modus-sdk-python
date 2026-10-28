@@ -394,6 +394,52 @@ async def test_async_run_stream_refused_raises_typed_error(
     assert message in str(raised.value)
 
 
+_SSE_HEADERS = {"content-type": "text/event-stream"}
+_RESUMED_BODY = 'id: 7-1\ndata: {"type":"done","runId":"r1","threadId":"t1"}\n\n'
+
+
+@respx.mock
+def test_run_stream_resumes_after_an_event_id(client):
+    route = respx.get(f"{BASE}/agent/v1/runs/r1/stream").mock(
+        return_value=httpx.Response(200, headers=_SSE_HEADERS, text=_RESUMED_BODY)
+    )
+    events = list(client.workflows.runs.stream("r1", last_event_id="7-0"))
+    assert route.calls.last.request.headers["last-event-id"] == "7-0"
+    assert [(e.type, e.id) for e in events] == [("done", "7-1")]
+
+
+@respx.mock
+def test_run_stream_without_an_event_id_sends_no_last_event_id(client):
+    route = respx.get(f"{BASE}/agent/v1/runs/r1/stream").mock(
+        return_value=httpx.Response(200, headers=_SSE_HEADERS, text=_RESUMED_BODY)
+    )
+    list(client.workflows.runs.stream("r1"))
+    assert "last-event-id" not in route.calls.last.request.headers
+
+
+@respx.mock
+async def test_async_run_stream_resumes_after_an_event_id(async_client):
+    route = respx.get(f"{BASE}/agent/v1/runs/r1/stream").mock(
+        return_value=httpx.Response(200, headers=_SSE_HEADERS, text=_RESUMED_BODY)
+    )
+    events = [e async for e in async_client.workflows.runs.stream("r1", last_event_id="7-0")]
+    assert route.calls.last.request.headers["last-event-id"] == "7-0"
+    assert [(e.type, e.id) for e in events] == [("done", "7-1")]
+
+
+@respx.mock
+def test_stale_resume_is_refused_before_any_stream(client):
+    respx.post(f"{BASE}/agent/v1/runs/r1/resume").mock(
+        return_value=_admission_rejection(
+            409, "CONFLICT", "No write approval is pending for this conversation."
+        )
+    )
+    with pytest.raises(ConflictError) as raised:
+        list(client.workflows.runs.resume("r1", {"sessionId": "s1", "decision": "approve"}))
+    assert raised.value.code == "CONFLICT"
+    assert raised.value.request_id == "req_1"
+
+
 _POLL = {
     "events": [{"id": "1-0", "type": "token", "content": "hi"}],
     "cursor": "1-0",

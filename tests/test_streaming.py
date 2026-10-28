@@ -166,3 +166,43 @@ def test_mixed_stream():
     assert isinstance(events[0], TokenEvent)
     assert isinstance(events[1], TokenEvent)
     assert isinstance(events[2], DoneEvent)
+
+
+def test_event_carries_the_sse_id_that_precedes_it():
+    events = list(
+        parse_sse_stream(
+            lines(
+                "id: 1761500000000-0",
+                'data: {"type":"token","content":"a"}',
+                "id: 1761500000000-1",
+                'data: {"type":"done","runId":"r1","threadId":"t1"}',
+            )
+        )
+    )
+    assert [e.id for e in events] == ["1761500000000-0", "1761500000000-1"]
+
+
+def test_event_without_an_sse_id_has_none():
+    events = list(parse_sse_stream(lines('data: {"type":"token","content":"a"}')))
+    assert events[0].id is None
+
+
+def test_error_event_carries_request_id():
+    events = list(
+        parse_sse_stream(
+            lines("id: 9-0", 'data: {"type":"error","error":"boom","requestId":"req_abc"}')
+        )
+    )
+    assert isinstance(events[0], ErrorEvent)
+    assert (events[0].message, events[0].request_id, events[0].id) == ("boom", "req_abc", "9-0")
+
+
+async def test_async_parser_keeps_the_sse_id_across_lines():
+    from modus._streaming import parse_sse_stream_async
+
+    async def agen():
+        for line in ("id: 5-0", 'data: {"type":"token","content":"x"}'):
+            yield line
+
+    events = [event async for event in parse_sse_stream_async(agen())]
+    assert [(e.content, e.id) for e in events] == [("x", "5-0")]

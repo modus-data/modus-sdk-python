@@ -1,7 +1,8 @@
 """
 SSE stream parser.
 
-parse_sse_stream() converts raw SSE lines into typed RunEvent objects.
+parse_sse_stream() converts raw SSE lines into typed RunEvent objects; each event
+carries the SSE ``id`` that preceded it (pass it to ``runs.stream(last_event_id=...)``).
 
 Events and their handling:
     token          -> TokenEvent  (yielded to text_stream; sub-agent tokens carry sub_agent)
@@ -19,7 +20,7 @@ Events and their handling:
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Iterator, Optional
+from typing import Any, AsyncIterator, Dict, Iterator, Optional
 
 from .types.runs import (
     ApprovalRequiredEvent,
@@ -49,20 +50,6 @@ def _parse_line(line: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def parse_sse_stream(lines: Iterator[str]) -> Iterator[RunEvent]:
-    """
-    Convert a raw SSE line iterator into typed RunEvent objects.
-
-    Silently drops keepalive and unrecognized event types.
-    Yields only: TokenEvent, DoneEvent, ErrorEvent, CancelledEvent,
-    StreamTimeoutEvent.
-    """
-    for line in lines:
-        data = _parse_line(line)
-        if data is not None:
-            yield from _parse_data(data)
-
-
 def _optional_str(value: Any) -> Optional[str]:
     return value if isinstance(value, str) else None
 
@@ -70,7 +57,7 @@ def _optional_str(value: Any) -> Optional[str]:
 _NODE_TERMINAL_TYPES = frozenset({"done", "error", "cancelled", "stream_timeout"})
 
 
-def _parse_data(data: Dict[str, Any]) -> Iterator[RunEvent]:
+def _events(data: Dict[str, Any], event_id: Optional[str]) -> Iterator[RunEvent]:
     event_type = data.get("type", "unknown")
 
     if event_type == "node_content":
@@ -78,15 +65,20 @@ def _parse_data(data: Dict[str, Any]) -> Iterator[RunEvent]:
         # A node's own terminal frame does not end the workflow: only workflow_* does.
         inner = data.get("event")
         if isinstance(inner, dict) and inner.get("type") not in _NODE_TERMINAL_TYPES:
-            yield from _parse_data(inner)
+            yield from _events(inner, event_id)
     elif event_type == "token":
-        yield TokenEvent(content=data.get("content", ""), sub_agent=_optional_str(data.get("subAgent")))
+        yield TokenEvent(
+            content=data.get("content", ""),
+            sub_agent=_optional_str(data.get("subAgent")),
+            id=event_id,
+        )
     elif event_type in ("done", "workflow_done"):
         content = data.get("content") if event_type == "done" else data.get("finalOutput")
         yield DoneEvent(
             run_id=data.get("runId", ""),
             thread_id=data.get("threadId", ""),
             content=_optional_str(content),
+            id=event_id,
         )
     elif event_type == "approval_required":
         yield ApprovalRequiredEvent(
@@ -98,21 +90,19 @@ def _parse_data(data: Dict[str, Any]) -> Iterator[RunEvent]:
             node_id=_optional_str(data.get("nodeId")),
             prompt=_optional_str(data.get("prompt")),
             options=data.get("options") if isinstance(data.get("options"), list) else None,
+            id=event_id,
         )
-    elif event_type == "workflow_cancelled":
-        yield CancelledEvent()
     elif event_type in ("error", "workflow_error"):
-        msg = (
-            data.get("error")
-            or data.get("message")
-            or data.get("content")
-            or "Unknown run error"
+        msg = data.get("error") or data.get("message") or data.get("content") or "Unknown run error"
+        yield ErrorEvent(
+            message=str(msg),
+            request_id=_optional_str(data.get("requestId")),
+            id=event_id,
         )
-        yield ErrorEvent(message=str(msg))
-    elif event_type == "cancelled":
-        yield CancelledEvent()
+    elif event_type in ("cancelled", "workflow_cancelled"):
+        yield CancelledEvent(id=event_id)
     elif event_type == "stream_timeout":
-        yield StreamTimeoutEvent()
+        yield StreamTimeoutEvent(id=event_id)
     elif event_type == "assistant_content_reset":
         content = data.get("content")
         if not isinstance(content, str):
@@ -120,9 +110,7 @@ def _parse_data(data: Dict[str, Any]) -> Iterator[RunEvent]:
         yield AssistantContentResetEvent(
             content=content,
             visible_content=(
-                str(data["visibleContent"])
-                if isinstance(data.get("visibleContent"), str)
-                else None
+                str(data["visibleContent"]) if isinstance(data.get("visibleContent"), str) else None
             ),
             attempt=(int(data["attempt"]) if isinstance(data.get("attempt"), int) else 1),
             reason=(
@@ -131,6 +119,45 @@ def _parse_data(data: Dict[str, Any]) -> Iterator[RunEvent]:
                 else "provider_stream_failed"
             ),
             sub_agent=data["subAgent"] if isinstance(data.get("subAgent"), dict) else None,
+            id=event_id,
         )
-    # Everything else (keepalives, tool frames, unknown future types) is
-    # ignored for forward compatibility.
+    # Keepalives, tool and progress events, and unknown future types yield nothing.
+
+
+class SseParser:
+    """
+    Line-at-a-time SSE parser. An ``id:`` line names every event after it until the
+    next ``id:`` line, so one parser must see every line of a stream.
+    """
+
+    def __init__(self) -> None:
+        self._last_id: Optional[str] = None
+
+    def feed(self, line: str) -> Iterator[RunEvent]:
+        if line.startswith("id:"):
+            self._last_id = line[3:].strip() or None
+            return iter(())
+        data = _parse_line(line)
+        return iter(()) if data is None else _events(data, self._last_id)
+
+
+def parse_sse_stream(lines: Iterator[str]) -> Iterator[RunEvent]:
+    """
+    Convert a raw SSE line iterator into typed RunEvent objects, each carrying its
+    SSE ``id``.
+
+    Silently drops keepalive and unrecognized event types.
+    Yields only: TokenEvent, DoneEvent, ErrorEvent, CancelledEvent,
+    StreamTimeoutEvent, AssistantContentResetEvent, ApprovalRequiredEvent.
+    """
+    parser = SseParser()
+    for line in lines:
+        yield from parser.feed(line)
+
+
+async def parse_sse_stream_async(lines: AsyncIterator[str]) -> AsyncIterator[RunEvent]:
+    """Async :func:`parse_sse_stream`."""
+    parser = SseParser()
+    async for line in lines:
+        for event in parser.feed(line):
+            yield event
