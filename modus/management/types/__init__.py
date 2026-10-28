@@ -4,9 +4,15 @@ from .agent_selection import AgentSelection, AgentSelectionEntry
 from .agents import Agent, AgentStatus, AgentType
 from .context import (
     ContextItem,
+    ContextItemAccess,
+    ContextItemAccessUpdate,
     ContextItemDeletion,
+    ContextItemGroupPermission,
     ContextItemMove,
+    ContextItemSharedUser,
+    ContextItemSharePermission,
     ContextItemUpdate,
+    ContextItemVisibility,
     ContextType,
     CreatedContextItem,
 )
@@ -39,6 +45,12 @@ __all__ = [
     "ContextItem",
     "ContextItemDeletion",
     "ContextItemMove",
+    "ContextItemAccess",
+    "ContextItemAccessUpdate",
+    "ContextItemGroupPermission",
+    "ContextItemSharedUser",
+    "ContextItemSharePermission",
+    "ContextItemVisibility",
     "ContextItemUpdate",
     "ContextType",
     "Conversation",

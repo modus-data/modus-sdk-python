@@ -241,6 +241,15 @@ moved = mgmt.context.items.move(
 )
 print(moved.moved_items)
 
+# Who can view and manage a note, saved query, link or uploaded file; all three settings replace the current ones.
+access = mgmt.context.items.update_access(
+    note.uid,
+    visibility="private",
+    group_permissions={},
+    shared_with=[{"email": "ana@example.com", "permission": "use"}],
+)
+print(access.can_manage)
+
 upserted = mgmt.context.custom_items.create_relations([
     {
         "from_uid": note.uid,

@@ -61,6 +61,7 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "IngestedDataController_upload": {"integration_type", "request", "response"},
     "ContextItemsController_update": _model_wire_fields(ContextItemUpdate),
     "ContextItemsController_move": {"destinationFolderUid"},
+    "ContextItemAccessController_updateAccess": {"visibility", "groupPermissions", "sharedWith"},
     "ModusContextComposeController_compose": _model_wire_fields(ModusContextRequestDto),
     "ModusContextController_compose": _model_wire_fields(ModusContextRequestDto),
     "SuggestionsController_recordEvent": {

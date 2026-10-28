@@ -162,6 +162,17 @@ OPERATIONS: dict[str, OperationSpec] = {
         "response_schema": 'BulkUploadUrlsResponseDto',
         "idempotent": False,
     },
+    "ContextItemAccessController_updateAccess": {
+        "method": "PATCH",
+        "path": '/api/v1/context/items/{uid}/access',
+        "service": 'modus-api',
+        "server_url": 'https://api.getmodus.com',
+        "path_params": ('uid',),
+        "query_params": (),
+        "request_schema": 'UpdateContextItemAccessDto',
+        "response_schema": 'ContextItemAccessResponseDto',
+        "idempotent": False,
+    },
     "ContextItemsController_delete": {
         "method": "DELETE",
         "path": '/api/v1/context/items/{uid}',

@@ -130,10 +130,11 @@ def _draft_body(
 
 
 def _access_body(
-    visibility: VisibilityInput,
-    group_permissions: Mapping[str, GroupPermissionInput],
-    shared_with: Sequence[SharedUserInput],
+    visibility: Union[str, Enum],
+    group_permissions: Mapping[str, Union[BaseModel, Mapping[str, bool]]],
+    shared_with: Sequence[Union[BaseModel, Mapping[str, Any]]],
 ) -> Dict[str, Any]:
+    """The View/Manage access body dashboards and context items share."""
     return {
         "visibility": _enum_value(visibility),
         "groupPermissions": {

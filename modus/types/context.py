@@ -3,8 +3,14 @@
 from __future__ import annotations
 
 from .._generated.models import (
+    ContextItemAccessDto,
+    ContextItemAccessResponseDto,
     ContextItemAncestorDto,
     ContextItemDto,
+    ContextItemGroupPermissionDto,
+    ContextItemSharedUserDto,
+    ContextItemSharePermission,
+    ContextItemVisibility,
     CreatedContextItemResponseDto,
     DeleteContextItemResponseDto,
     LookupContextItemRowDto,
@@ -16,6 +22,10 @@ ContextItemAncestor = ContextItemAncestorDto
 ContextItemLookupRow = LookupContextItemRowDto
 ContextItemDeletion = DeleteContextItemResponseDto
 ContextItemMove = MoveContextItemResponseDto
+ContextItemAccess = ContextItemAccessDto
+ContextItemAccessUpdate = ContextItemAccessResponseDto
+ContextItemGroupPermission = ContextItemGroupPermissionDto
+ContextItemSharedUser = ContextItemSharedUserDto
 
 
 class CreatedContextItem(CreatedContextItemResponseDto):
@@ -32,6 +42,12 @@ ContextType = str
 
 __all__ = [
     "ContextItem",
+    "ContextItemAccess",
+    "ContextItemAccessUpdate",
+    "ContextItemGroupPermission",
+    "ContextItemSharedUser",
+    "ContextItemSharePermission",
+    "ContextItemVisibility",
     "ContextItemAncestor",
     "ContextItemAncestorDto",
     "ContextItemDeletion",

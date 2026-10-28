@@ -494,84 +494,11 @@ class UserFeedback(str, Enum):
     positive = 'positive'
 
 
-class ContextItemDto(BaseModel):
+class ContextItemGroupPermissionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    uid: str = Field(
-        ...,
-        description='Stable UUID for the context item. Use this on PATCH / DELETE / values endpoints.',
-        examples=['7a3f9d2c-1111-4000-a000-000000000abc'],
-    )
-    org_id: str = Field(
-        ...,
-        alias='orgId',
-        description='Org UUID this item belongs to. Matches the caller’s principal.',
-        examples=['00000000-0000-0000-0000-000000000001'],
-    )
-    context_type: str = Field(
-        ...,
-        alias='contextType',
-        description='Per-row context type identifier — one of `note`, `link`, `saved_query`, plus the dozens of integration-driven types (e.g. `looker_dashboard_metadata`, `salesforce_object_field`).',
-        examples=['note'],
-    )
-    content: dict[str, Any] = Field(
-        ...,
-        description='Type-specific JSON content. Shape varies by `contextType`; treat as opaque unless you know the kind.',
-    )
-    description: str | None = Field(
-        None,
-        description='Human-readable description (separate from the type-specific `content` blob).',
-        examples=['Q3 churn analysis notes'],
-    )
-    user_feedback: UserFeedback = Field(
-        ...,
-        alias='userFeedback',
-        description='User-supplied verification verdict. `positive` ≈ approved/verified; `negative` ≈ rejected/dismissed; `neutral` is the default.',
-        examples=['neutral'],
-    )
-    topics: list[str] = Field(
-        ...,
-        description='Free-form topic tags. Used for sidebar filtering on the SPA.',
-        examples=[['analytics', 'q3']],
-    )
-    connection_id: str | None = Field(
-        None,
-        alias='connectionId',
-        description='Originating integration connection id, or a virtual connection id such as `custom` or `files` for org-owned context.',
-        examples=['00000000-0000-4000-a000-000000000111'],
-    )
-    selection_id: str | None = Field(
-        None,
-        alias='selectionId',
-        description='Datamap selection id. For custom context, this is the customer-defined source id.',
-        examples=['00000000-0000-4000-a000-000000000222'],
-    )
-    data_path: list[str] = Field(
-        ...,
-        alias='dataPath',
-        description='Hierarchical path that places the item inside the data map (used for filtering by data asset).',
-        examples=[['salesforce', '00000000-0000-4000-a000-000000000111', 'Account', 'Name']],
-    )
-    ancestry: list[ContextItemAncestorDto] | None = Field(
-        None,
-        description='Ordered ancestors. Omitted on older responses that do not yet include the field. Null means stored ancestry is unknown. An empty array means the item has no ancestors. Each entry uses `uid`, `display_name`, and `type`.',
-    )
-    created_at: str = Field(
-        ...,
-        alias='createdAt',
-        description='Creation timestamp.',
-        examples=['2026-05-01T10:00:00.000Z'],
-    )
-    updated_at: str = Field(
-        ...,
-        alias='updatedAt',
-        description='Most recent update timestamp.',
-        examples=['2026-05-11T10:00:00.000Z'],
-    )
-    last_update_metadata: dict[str, Any] | None = Field(
-        None,
-        alias='lastUpdateMetadata',
-        description='Audit blob recording who/what last edited the item (`action`, `user_id`/`editedByName`/`editedByEmail`, `timestamp`). Used by the SPA to render the "Last Update" column.',
-        examples=[{'action': 'auto_analysis', 'timestamp': '2026-05-11T10:00:00.000Z'}],
+    use: bool = Field(..., description='Group members can view the item.')
+    manage: bool = Field(
+        ..., description='Group members can edit, delete and change access to the item.'
     )
 
 
@@ -579,6 +506,26 @@ class ContextItemKind(str, Enum):
     note = 'note'
     saved_query = 'saved_query'
     link = 'link'
+
+
+class ContextItemSharePermission(str, Enum):
+    use = 'use'
+    manage = 'manage'
+
+
+class ContextItemSharedUserDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    email: str = Field(
+        ...,
+        description='Empty for a user whose email is unknown; such an entry is matched by userId.',
+    )
+    user_id: str | None = Field(None, alias='userId')
+    permission: ContextItemSharePermission | None = None
+
+
+class ContextItemVisibility(str, Enum):
+    shared = 'shared'
+    private = 'private'
 
 
 class ConversationListItemDto(BaseModel):
@@ -1430,27 +1377,6 @@ class ListContextItemValuesResponseDto(BaseModel):
     )
 
 
-class ListContextItemsResponseDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    context_items: list[ContextItemDto] = Field(
-        ...,
-        alias='contextItems',
-        description='Page of context items. Empty when no items match the filter.',
-    )
-    next_page_token: str | None = Field(
-        ...,
-        alias='nextPageToken',
-        description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request. Required-but-nullable — the field is always present on every response.',
-        examples=['eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTAxIiwidWlkIjoiYWJjIn0'],
-    )
-    total_count: float | None = Field(
-        None,
-        alias='totalCount',
-        description='Approximate total count of matching items (when known). Some filter combinations skip this for cost reasons.',
-        examples=[142],
-    )
-
-
 class ListConversationsResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     conversations: list[ConversationListItemDto] = Field(
@@ -1478,23 +1404,6 @@ class ListConversationsResponseDto(BaseModel):
         alias='pageSize',
         description='Legacy echo of the requested `pageSize`. Retained for SPA backwards-compatibility.',
         examples=[10],
-    )
-
-
-class ListCustomContextItemsResponseDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    context_items: list[ContextItemDto] = Field(
-        ..., alias='contextItems', description='Page of custom context items.'
-    )
-    next_page_token: str | None = Field(
-        ...,
-        alias='nextPageToken',
-        description='Opaque token for the next page; `null` when this was the last page.',
-    )
-    total_count: float | None = Field(
-        ...,
-        alias='totalCount',
-        description='Approximate total count of matching custom context items, when known.',
     )
 
 
@@ -2063,6 +1972,24 @@ class UpdateAgentInterfaceDto(BaseModel):
         None,
         description='Replacement chat interface settings (`accessMode`, `allowedEmails`, `availableChannelIds`). An MCP interface accepts no config keys. Replaces the stored config.',
         examples=[{}],
+    )
+
+
+class UpdateContextItemAccessDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    visibility: ContextItemVisibility = Field(
+        ...,
+        description='shared: the owner and the groups granted in groupPermissions; private: the owner and the users in sharedWith.',
+    )
+    group_permissions: dict[str, ContextItemGroupPermissionDto] = Field(
+        ...,
+        alias='groupPermissions',
+        description='Group id to permissions. Used only when visibility is shared; ignored when private.',
+    )
+    shared_with: list[ContextItemSharedUserDto] = Field(
+        ...,
+        alias='sharedWith',
+        description='Users granted access. Used only when visibility is private; ignored when shared.',
     )
 
 
@@ -2690,6 +2617,126 @@ class BulkUploadUrlsResponseDto(BaseModel):
     )
 
 
+class ContextItemAccessDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    visibility: ContextItemVisibility
+    group_permissions: dict[str, ContextItemGroupPermissionDto] = Field(
+        ..., alias='groupPermissions', description='Permissions by group id.'
+    )
+    shared_with: list[ContextItemSharedUserDto] = Field(..., alias='sharedWith')
+    owner_user_id: str | None = Field(
+        ...,
+        alias='ownerUserId',
+        description='Null for an item created before items had owners; the first access change sets it.',
+    )
+    owner_email: str | None = Field(..., alias='ownerEmail')
+    hides_direct_grants: bool = Field(
+        ...,
+        alias='hidesDirectGrants',
+        description='True when some users have access through direct grants this configuration does not show. Saving it removes their access.',
+    )
+
+
+class ContextItemAccessResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    uid: str = Field(..., description='UUID of the context item.')
+    access: ContextItemAccessDto
+    can_manage: bool = Field(
+        ...,
+        alias='canManage',
+        description='Whether the caller can edit, delete and change access to the item.',
+    )
+
+
+class ContextItemDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    uid: str = Field(
+        ...,
+        description='Stable UUID for the context item. Use this on PATCH / DELETE / values endpoints.',
+        examples=['7a3f9d2c-1111-4000-a000-000000000abc'],
+    )
+    org_id: str = Field(
+        ...,
+        alias='orgId',
+        description='Org UUID this item belongs to. Matches the caller’s principal.',
+        examples=['00000000-0000-0000-0000-000000000001'],
+    )
+    context_type: str = Field(
+        ...,
+        alias='contextType',
+        description='Per-row context type identifier — one of `note`, `link`, `saved_query`, plus the dozens of integration-driven types (e.g. `looker_dashboard_metadata`, `salesforce_object_field`).',
+        examples=['note'],
+    )
+    content: dict[str, Any] = Field(
+        ...,
+        description='Type-specific JSON content. Shape varies by `contextType`; treat as opaque unless you know the kind.',
+    )
+    description: str | None = Field(
+        None,
+        description='Human-readable description (separate from the type-specific `content` blob).',
+        examples=['Q3 churn analysis notes'],
+    )
+    user_feedback: UserFeedback = Field(
+        ...,
+        alias='userFeedback',
+        description='User-supplied verification verdict. `positive` ≈ approved/verified; `negative` ≈ rejected/dismissed; `neutral` is the default.',
+        examples=['neutral'],
+    )
+    topics: list[str] = Field(
+        ...,
+        description='Free-form topic tags. Used for sidebar filtering on the SPA.',
+        examples=[['analytics', 'q3']],
+    )
+    connection_id: str | None = Field(
+        None,
+        alias='connectionId',
+        description='Originating integration connection id, or a virtual connection id such as `custom` or `files` for org-owned context.',
+        examples=['00000000-0000-4000-a000-000000000111'],
+    )
+    selection_id: str | None = Field(
+        None,
+        alias='selectionId',
+        description='Datamap selection id. For custom context, this is the customer-defined source id.',
+        examples=['00000000-0000-4000-a000-000000000222'],
+    )
+    data_path: list[str] = Field(
+        ...,
+        alias='dataPath',
+        description='Hierarchical path that places the item inside the data map (used for filtering by data asset).',
+        examples=[['salesforce', '00000000-0000-4000-a000-000000000111', 'Account', 'Name']],
+    )
+    ancestry: list[ContextItemAncestorDto] | None = Field(
+        None,
+        description='Ordered ancestors. Omitted on older responses that do not yet include the field. Null means stored ancestry is unknown. An empty array means the item has no ancestors. Each entry uses `uid`, `display_name`, and `type`.',
+    )
+    created_at: str = Field(
+        ...,
+        alias='createdAt',
+        description='Creation timestamp.',
+        examples=['2026-05-01T10:00:00.000Z'],
+    )
+    updated_at: str = Field(
+        ...,
+        alias='updatedAt',
+        description='Most recent update timestamp.',
+        examples=['2026-05-11T10:00:00.000Z'],
+    )
+    last_update_metadata: dict[str, Any] | None = Field(
+        None,
+        alias='lastUpdateMetadata',
+        description='Audit blob recording who/what last edited the item (`action`, `user_id`/`editedByName`/`editedByEmail`, `timestamp`). Used by the SPA to render the "Last Update" column.',
+        examples=[{'action': 'auto_analysis', 'timestamp': '2026-05-11T10:00:00.000Z'}],
+    )
+    access: ContextItemAccessDto | None = Field(
+        None, description='Present for notes, saved queries, links and uploaded files.'
+    )
+    can_manage: bool | None = Field(
+        None,
+        alias='canManage',
+        description='Present for notes, saved queries, links and uploaded files.',
+    )
+
+
 class ConversationMessageDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     type: ConversationMessageType = Field(
@@ -3173,6 +3220,44 @@ class ListAgentInterfacesResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     interfaces: list[AgentInterfaceDto] = Field(
         ..., description='All interfaces attached to the workflow (in creation order).'
+    )
+
+
+class ListContextItemsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    context_items: list[ContextItemDto] = Field(
+        ...,
+        alias='contextItems',
+        description='Page of context items. Empty when no items match the filter.',
+    )
+    next_page_token: str | None = Field(
+        ...,
+        alias='nextPageToken',
+        description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request. Required-but-nullable — the field is always present on every response.',
+        examples=['eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTAxIiwidWlkIjoiYWJjIn0'],
+    )
+    total_count: float | None = Field(
+        None,
+        alias='totalCount',
+        description='Approximate total count of matching items (when known). Some filter combinations skip this for cost reasons.',
+        examples=[142],
+    )
+
+
+class ListCustomContextItemsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    context_items: list[ContextItemDto] = Field(
+        ..., alias='contextItems', description='Page of custom context items.'
+    )
+    next_page_token: str | None = Field(
+        ...,
+        alias='nextPageToken',
+        description='Opaque token for the next page; `null` when this was the last page.',
+    )
+    total_count: float | None = Field(
+        ...,
+        alias='totalCount',
+        description='Approximate total count of matching custom context items, when known.',
     )
 
 
