@@ -136,7 +136,7 @@ def _require_session_id(body: Mapping[str, Any]) -> None:
     """Interrupt, queue-edit and resume continue an existing conversation: never mint one."""
     session_id = body.get("sessionId")
     if not isinstance(session_id, str) or not session_id.strip():
-        raise ValueError("sessionId must be the run's conversation id (a non-empty string)")
+        raise ValidationError("sessionId must be the run's conversation id (a non-empty string)")
 
 
 def _interrupt_body(

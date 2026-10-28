@@ -5,7 +5,7 @@ import json
 import httpx
 import pytest
 import respx
-from modus import Modus
+from modus import Modus, ValidationError
 from modus._exceptions import (
     ConflictError,
     ModusError,
@@ -295,8 +295,8 @@ async def test_async_runs_interrupt_pins_the_run_id_and_returns_the_new_run():
 )
 @respx.mock
 def test_runs_continuations_refuse_a_missing_session_id_before_any_request(call):
-    # No route is mocked, so a request would raise respx's error instead of ValueError.
-    with pytest.raises(ValueError, match="sessionId"):
+    # No route is mocked, so a request would raise respx's error instead of ValidationError.
+    with pytest.raises(ValidationError, match="sessionId"):
         call(_agent_client().workflows.runs)
 
 
