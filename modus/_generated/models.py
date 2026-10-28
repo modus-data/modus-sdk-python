@@ -654,79 +654,6 @@ class CreateCustomContextItemRelationDto(BaseModel):
     )
 
 
-class CreateLinkDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    url: str = Field(
-        ...,
-        description='URL to extract content from. Invoked via Tavily.',
-        examples=['https://example.com/blog/post'],
-    )
-    title: str | None = Field(
-        None,
-        description='Optional title override. When omitted, Tavily-derived metadata or the URL hostname is used.',
-        examples=['Example blog post'],
-    )
-    is_crawl: bool | None = Field(
-        False,
-        alias='isCrawl',
-        description='When true, runs a web search for the supplied URL and stores up to `pageLimit` results, which may come from other sites. It does not crawl the site’s pages.',
-        examples=[False],
-    )
-    page_limit: float | None = Field(
-        None,
-        alias='pageLimit',
-        description='Maximum number of search results to store when `isCrawl` is true. Ignored otherwise.',
-        examples=[10],
-        ge=1.0,
-        le=200.0,
-    )
-    access: AccessPolicyDto | None = None
-
-
-class CreateNoteDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    title: str = Field(
-        ...,
-        description='Display title for the note. Used in the SPA list and as the s3 object filename.',
-        examples=['Q3 churn analysis'],
-    )
-    content: str = Field(
-        ...,
-        description='Note body — markdown text. Stored in tenant S3 + context_items.',
-        examples=['## Findings\n\nChurn rate increased 2.3% MoM.'],
-    )
-    access: AccessPolicyDto | None = None
-
-
-class CreateSavedQueryDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    name: str = Field(
-        ..., description='Display name for the saved query.', examples=['Top customers Q3']
-    )
-    query: str | None = Field(
-        None,
-        description='SQL text. Stored in tenant S3 + context_items. May be omitted or empty when creating a placeholder saved query.',
-        examples=['SELECT customer_id, SUM(amount) FROM orders GROUP BY 1 ORDER BY 2 DESC LIMIT 10'],
-    )
-    connection_id: str = Field(
-        ...,
-        alias='connectionId',
-        description='Data connection id this query targets. Must reference an existing integration connection in the org.',
-        examples=['00000000-0000-4000-a000-000000000111'],
-    )
-    description: str | None = Field(
-        None,
-        description='Optional one-line description shown in the SPA list.',
-        examples=['Quarterly cohort by amount.'],
-    )
-    path: list[str] | None = Field(
-        None,
-        description='Optional hierarchical path identifying the data scope (e.g. `["database", "schema"]` for Snowflake; `["dataset"]` for BigQuery).',
-        examples=[['my_dataset']],
-    )
-    access: AccessPolicyDto | None = None
-
-
 class CreatedContextItemResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     context_item_id: str = Field(
@@ -2878,6 +2805,88 @@ class CreateDashboardElementDto(BaseModel):
         min_length=1,
     )
     layout: DashboardElementLayoutDto = Field(..., description='Grid position of the new element.')
+
+
+class CreateLinkDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    url: str = Field(
+        ...,
+        description='URL to extract content from. Invoked via Tavily.',
+        examples=['https://example.com/blog/post'],
+    )
+    title: str | None = Field(
+        None,
+        description='Optional title override. When omitted, Tavily-derived metadata or the URL hostname is used.',
+        examples=['Example blog post'],
+    )
+    is_crawl: bool | None = Field(
+        False,
+        alias='isCrawl',
+        description='When true, runs a web search for the supplied URL and stores up to `pageLimit` results, which may come from other sites. It does not crawl the site’s pages.',
+        examples=[False],
+    )
+    page_limit: float | None = Field(
+        None,
+        alias='pageLimit',
+        description='Maximum number of search results to store when `isCrawl` is true. Ignored otherwise.',
+        examples=[10],
+        ge=1.0,
+        le=200.0,
+    )
+    access: UpdateContextItemAccessDto | None = Field(
+        None,
+        description='Who can view and manage the item. Omit to share it with everyone in the organization, with you as owner. A service-account token cannot set it (403); without it, the item has no owner.',
+    )
+
+
+class CreateNoteDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    title: str = Field(
+        ...,
+        description='Display title for the note. Used in the SPA list and as the s3 object filename.',
+        examples=['Q3 churn analysis'],
+    )
+    content: str = Field(
+        ...,
+        description='Note body — markdown text. Stored in tenant S3 + context_items.',
+        examples=['## Findings\n\nChurn rate increased 2.3% MoM.'],
+    )
+    access: UpdateContextItemAccessDto | None = Field(
+        None,
+        description='Who can view and manage the item. Omit to share it with everyone in the organization, with you as owner. A service-account token cannot set it (403); without it, the item has no owner.',
+    )
+
+
+class CreateSavedQueryDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    name: str = Field(
+        ..., description='Display name for the saved query.', examples=['Top customers Q3']
+    )
+    query: str | None = Field(
+        None,
+        description='SQL text. Stored in tenant S3 + context_items. May be omitted or empty when creating a placeholder saved query.',
+        examples=['SELECT customer_id, SUM(amount) FROM orders GROUP BY 1 ORDER BY 2 DESC LIMIT 10'],
+    )
+    connection_id: str = Field(
+        ...,
+        alias='connectionId',
+        description='Data connection id this query targets. Must reference an existing integration connection in the org.',
+        examples=['00000000-0000-4000-a000-000000000111'],
+    )
+    description: str | None = Field(
+        None,
+        description='Optional one-line description shown in the SPA list.',
+        examples=['Quarterly cohort by amount.'],
+    )
+    path: list[str] | None = Field(
+        None,
+        description='Optional hierarchical path identifying the data scope (e.g. `["database", "schema"]` for Snowflake; `["dataset"]` for BigQuery).',
+        examples=[['my_dataset']],
+    )
+    access: UpdateContextItemAccessDto | None = Field(
+        None,
+        description='Who can view and manage the item. Omit to share it with everyone in the organization, with you as owner. A service-account token cannot set it (403); without it, the item has no owner.',
+    )
 
 
 class DashboardAccessDto(BaseModel):
