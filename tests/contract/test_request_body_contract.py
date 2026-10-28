@@ -61,6 +61,7 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "IngestedDataController_upload": {"integration_type", "request", "response"},
     "ContextItemsController_update": _model_wire_fields(ContextItemUpdate),
     "ContextItemsController_move": {"destinationFolderUid"},
+    "ModusContextComposeController_compose": _model_wire_fields(ModusContextRequestDto),
     "ModusContextController_compose": _model_wire_fields(ModusContextRequestDto),
     "SuggestionsController_recordEvent": {
         "eventType",
@@ -120,6 +121,7 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "ScopesController_update": _model_wire_fields(_ScopeUpdateBody),
     "ScopesController_addEvaluationCase": {"id", "task", "expectedOutput"},
     "ScopesController_updateEvaluationCase": {"task", "expectedOutput"},
+    "ScopeContextComposeController_compose": _model_wire_fields(ComposeSkillContextRequestDto),
     "ScopeContextController_compose": _model_wire_fields(ComposeSkillContextRequestDto),
     "ScopeMemoriesController_search": _model_wire_fields(MemorySearchRequest),
     "ScopeMemoriesController_update": _model_wire_fields(MemoryUpdate),

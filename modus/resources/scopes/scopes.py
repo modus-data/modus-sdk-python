@@ -123,6 +123,10 @@ class ScopesResource(_ScopesResourceBase):
         """
         Compose context this scope would use for an intent, without running chat.
 
+        Runs on the agent host, like ``chat``, so a compose may take up to 90
+        seconds; keep ``timeout`` above that. A compose still running at 90
+        seconds raises with ``UPSTREAM_TIMEOUT`` (HTTP 504).
+
         Args:
             scope_id: Numeric scope id.
             message:  Natural-language query used to select context.
@@ -148,7 +152,7 @@ class ScopesResource(_ScopesResourceBase):
         data = with_retry(
             lambda: invoke_operation(
                 self._http,
-                "ScopeContextController_compose",
+                "ScopeContextComposeController_compose",
                 path_params={"id": scope_id},
                 json_body=body.model_dump(by_alias=True, exclude_none=True),
             ),
@@ -204,6 +208,10 @@ class AsyncScopesResource(_AsyncScopesResourceBase):
         """
         Return composed context Modus would use for a scope query, without running chat.
 
+        Runs on the agent host, like ``chat``, so a compose may take up to 90
+        seconds; keep ``timeout`` above that. A compose still running at 90
+        seconds raises with ``UPSTREAM_TIMEOUT`` (HTTP 504).
+
         Args:
             scope_id: Numeric scope id.
             message:  Natural-language query used to select context.
@@ -214,7 +222,7 @@ class AsyncScopesResource(_AsyncScopesResourceBase):
         data = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,
-                "ScopeContextController_compose",
+                "ScopeContextComposeController_compose",
                 path_params={"id": scope_id},
                 json_body=body.model_dump(by_alias=True, exclude_none=True),
             ),

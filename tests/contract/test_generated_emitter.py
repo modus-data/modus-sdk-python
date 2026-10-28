@@ -615,17 +615,16 @@ def test_unwrap_refuses_an_invalid_envelope_field(shape: str) -> None:
         emit_resource_files(hints, _envelope_spec({"type": "string"}) if shape == "non-array" else _envelope_spec())
 
 
-@pytest.mark.parametrize("by_alias,exclude_none", [(False, True), (True, False)])
-def test_body_keeps_python_argument_and_model_dump_options(by_alias: bool, exclude_none: bool) -> None:
+@pytest.mark.parametrize("exclude_none", [True, False])
+def test_body_keeps_python_argument_and_dumps_wire_names(exclude_none: bool) -> None:
     hints = _hints([])
     hints["operations"]["ProbeController_update"]["exposures"][0]["body"] = {
         "arg": "request", "pyArg": "replacement", "type": "Probe",
-        "pyDump": {"byAlias": by_alias, "excludeNone": exclude_none},
+        "pyDump": {"excludeNone": exclude_none},
     }
     source = emit_resource_files(hints, _spec("patch", []))[0][1]
     assert source.count("replacement: Probe") == 2
-    assert source.count(f"body = replacement.model_dump(by_alias={by_alias}, exclude_none={exclude_none})") == 2
-
+    assert source.count(f"body = replacement.model_dump(by_alias=True, exclude_none={exclude_none})") == 2
 
 
 @pytest.mark.parametrize("paginated", [False, True])

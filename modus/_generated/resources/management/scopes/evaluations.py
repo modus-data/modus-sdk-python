@@ -85,7 +85,7 @@ class _ScopesEvaluationsResourceBase:
             update: Request body; see :class:`UpdateEvaluationConfig`.
         """
         validate_id(self._scope_id, name="scope_id")
-        body = update.model_dump(by_alias=False, exclude_none=True)
+        body = update.model_dump(by_alias=True, exclude_none=True)
         raw = with_retry(
             lambda: invoke_operation(
                 self._http,
@@ -235,7 +235,7 @@ class _AsyncScopesEvaluationsResourceBase:
             update: Request body; see :class:`UpdateEvaluationConfig`.
         """
         validate_id(self._scope_id, name="scope_id")
-        body = update.model_dump(by_alias=False, exclude_none=True)
+        body = update.model_dump(by_alias=True, exclude_none=True)
         raw = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,

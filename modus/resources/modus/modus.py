@@ -91,6 +91,10 @@ class ModusResource:
         """
         Compose full-environment context for an intent without running chat.
 
+        Runs on the agent host, like ``chat``, so a compose may take up to 90
+        seconds; keep ``timeout`` above that. A compose still running at 90
+        seconds raises with ``UPSTREAM_TIMEOUT`` (HTTP 504).
+
         Use this to inspect what Modus would retrieve before (or instead of)
         calling ``chat``.
 
@@ -114,7 +118,7 @@ class ModusResource:
         data = with_retry(
             lambda: invoke_operation(
                 self._http,
-                "ModusContextController_compose",
+                "ModusContextComposeController_compose",
                 json_body=body.model_dump(by_alias=True, exclude_none=True),
             ),
             self._config.max_retries,
@@ -162,6 +166,10 @@ class AsyncModusResource:
         """
         Compose full-environment context for an intent without running chat.
 
+        Runs on the agent host, like ``chat``, so a compose may take up to 90
+        seconds; keep ``timeout`` above that. A compose still running at 90
+        seconds raises with ``UPSTREAM_TIMEOUT`` (HTTP 504).
+
         Args:
             message: Natural-language intent used to select context.
             limit:   Maximum context items to return. Omit to return all
@@ -171,7 +179,7 @@ class AsyncModusResource:
         data = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,
-                "ModusContextController_compose",
+                "ModusContextComposeController_compose",
                 json_body=body.model_dump(by_alias=True, exclude_none=True),
             ),
             self._config.max_retries,

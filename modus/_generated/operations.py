@@ -602,6 +602,17 @@ OPERATIONS: dict[str, OperationSpec] = {
         "response_schema": 'ListMemberGroupsResponseDto',
         "idempotent": False,
     },
+    "ModusContextComposeController_compose": {
+        "method": "POST",
+        "path": '/agent/v1/modus/context',
+        "service": 'agent-service',
+        "server_url": 'https://agent.getmodus.com',
+        "path_params": (),
+        "query_params": (),
+        "request_schema": 'ModusContextRequestDto',
+        "response_schema": 'ModusContextResponseDto',
+        "idempotent": True,
+    },
     "ModusContextController_compose": {
         "method": "POST",
         "path": '/api/v1/modus/context',
@@ -611,7 +622,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'ModusContextRequestDto',
         "response_schema": 'ModusContextResponseDto',
-        "idempotent": True,
+        "idempotent": False,
     },
     "ModusConversationsController_get": {
         "method": "GET",
@@ -745,6 +756,17 @@ OPERATIONS: dict[str, OperationSpec] = {
         "response_schema": None,
         "idempotent": False,
     },
+    "ScopeContextComposeController_compose": {
+        "method": "POST",
+        "path": '/agent/v1/scopes/{id}/context',
+        "service": 'agent-service',
+        "server_url": 'https://agent.getmodus.com',
+        "path_params": ('id',),
+        "query_params": (),
+        "request_schema": 'ComposeSkillContextRequestDto',
+        "response_schema": 'ComposeSkillContextResponseDto',
+        "idempotent": True,
+    },
     "ScopeContextController_compose": {
         "method": "POST",
         "path": '/api/v1/scopes/{id}/context',
@@ -754,7 +776,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'ComposeSkillContextRequestDto',
         "response_schema": 'ComposeSkillContextResponseDto',
-        "idempotent": True,
+        "idempotent": False,
     },
     "ScopeConversationsController_get": {
         "method": "GET",

@@ -112,7 +112,16 @@ def test_staging_journey() -> None:
                 f"{label}: found {composed.original_count} items but rendered no context"
             )
 
-        assert elapsed_s < 25, f"{label}: took {elapsed_s:.1f}s; the edge caps at 30s"
+        # Compose runs on the agent host, which has no 30 s edge limit; the
+        # server stops a compose at 90 s with a 504, so a 200 is always under it.
+        assert elapsed_s < 95, f"{label}: took {elapsed_s:.1f}s; the server deadline is 90s"
+
+    # Every compose must reach the agent host's route, never the API host's
+    # deprecated one behind the 30 s gateway limit.
+    compose_urls: list[str] = []
+    client._http._client.event_hooks["request"].append(
+        lambda request: compose_urls.append(str(request.url)) if "/context" in request.url.path else None
+    )
 
     started = time.monotonic()
     composed = client.modus.get_context("sdk staging smoke — list relevant tables", limit=3)
@@ -124,6 +133,10 @@ def test_staging_journey() -> None:
             scope_id, "sdk staging smoke — brief context", limit=3
         )
         assert_composition("scope get_context", scope_composed, time.monotonic() - started)
+
+    agent_host = client._config.agent_host
+    assert compose_urls, "no compose request recorded"
+    assert all(url.startswith(f"{agent_host}/agent/v1/") for url in compose_urls), compose_urls
 
     # Management reads
     mgmt_scopes = mgmt.scopes.list(page_size=5)
