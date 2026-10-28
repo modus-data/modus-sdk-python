@@ -11,6 +11,7 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Added
 
+- **`access` on file finalize and URL uploads.** `FinalizeUploadDto`, each `BulkFinalizeItemDto`, `UploadFromUrlDto` and each `BulkUploadFromUrlItemDto` take an optional `access` (visibility, group permissions, shared-with) that applies only when the file is first created; omitted, the file is shared with everyone with you as owner. A service-account token cannot set it.
 - **Access on notes, saved queries, links and uploaded files.** `mgmt.context.items.update_access(uid, visibility=..., group_permissions=..., shared_with=...)` replaces who can view and manage one of these items; an item with no owner becomes yours. `ContextItem` reads of these types carry `access` and `can_manage`.
 - **`client.workflows.chat()`.** Send a published workflow a message and stream its node output; `result()` returns the workflow's final output.
 - **`AssistantContentResetEvent.sub_agent`** marks a correction to a sub-agent's output; a reset without it corrects the assistant's own reply.

@@ -222,56 +222,6 @@ class BatchCreateCustomContextItemRelationsResponseDto(BaseModel):
     )
 
 
-class BulkFinalizeItemDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    upload_id: str = Field(
-        ...,
-        alias='uploadId',
-        description='Upload id returned by `uploadUrl` / `uploadUrls`.',
-        examples=['7a3f9d2c-1111-4000-a000-000000000abc'],
-    )
-    file_name: str = Field(
-        ...,
-        alias='fileName',
-        description='File name returned alongside the upload id.',
-        examples=['Q3-churn-report.pdf'],
-    )
-    folder_path: str | None = Field(
-        None,
-        alias='folderPath',
-        description='Root-relative folder path for this upload (for example `reports/2026`). Omit to store at the Files root. To reuse a folder created by an upload, pass its `folderPath`.',
-        examples=['reports/2026/Q3'],
-    )
-
-
-class BulkUploadFromUrlItemDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    url: str | None = Field(
-        None,
-        description='Source URL to fetch.',
-        examples=['https://example.com/reports/Q3-churn-report.pdf'],
-    )
-    file_name: str | None = Field(
-        None,
-        alias='fileName',
-        description='Override file name. Inferred from the URL path when omitted.',
-        examples=['Q3-churn-report.pdf'],
-    )
-    folder_path: str | None = Field(
-        None,
-        alias='folderPath',
-        description='Root-relative folder path for this upload (for example `reports/2026`). Omit to store at the Files root. To reuse a folder created by an upload, pass its `folderPath`.',
-        examples=['reports/2026/Q3'],
-    )
-
-
-class BulkUploadFromUrlsDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    urls: list[BulkUploadFromUrlItemDto] = Field(
-        ..., description='URLs to fetch and upload. Max 100 per request.'
-    )
-
-
 class BulkUploadUrlItemDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     file_name: str | None = Field(
@@ -1134,22 +1084,6 @@ class FileUploadResourceStatus(str, Enum):
     processing = 'processing'
     ready = 'ready'
     failed = 'failed'
-
-
-class FinalizeUploadDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    file_name: str = Field(
-        ...,
-        alias='fileName',
-        description='File name returned by `uploadUrl`, used to locate the uploaded object.',
-        examples=['Q3-churn-report.pdf'],
-    )
-    folder_path: str | None = Field(
-        None,
-        alias='folderPath',
-        description='Root-relative folder path for this upload (for example `reports/2026`). Omit to store at the Files root. To reuse a folder created by an upload, pass its `folderPath`.',
-        examples=['reports/2026/Q3'],
-    )
 
 
 class StatusReason(str, Enum):
@@ -2082,6 +2016,10 @@ class UploadFromUrlDto(BaseModel):
         description='Root-relative folder path for this upload (for example `reports/2026`). Omit to store at the Files root. To reuse a folder created by an upload, pass its `folderPath`.',
         examples=['reports/2026/Q3'],
     )
+    access: UpdateContextItemAccessDto | None = Field(
+        None,
+        description='Who can view and manage this file. Applies only when the file is first created; omit to share it with everyone in the organization, with you as owner. A service-account token cannot set it (403); without it, the file has no owner.',
+    )
 
 
 class UploadUrlDto(BaseModel):
@@ -2526,10 +2464,61 @@ class BatchCreateCustomContextItemsResponseDto(BaseModel):
     )
 
 
-class BulkFinalizeDto(BaseModel):
+class BulkFinalizeItemDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    uploads: list[BulkFinalizeItemDto] = Field(
-        ..., description='Uploads to finalize. Max 100 per request.'
+    upload_id: str = Field(
+        ...,
+        alias='uploadId',
+        description='Upload id returned by `uploadUrl` / `uploadUrls`.',
+        examples=['7a3f9d2c-1111-4000-a000-000000000abc'],
+    )
+    file_name: str = Field(
+        ...,
+        alias='fileName',
+        description='File name returned alongside the upload id.',
+        examples=['Q3-churn-report.pdf'],
+    )
+    folder_path: str | None = Field(
+        None,
+        alias='folderPath',
+        description='Root-relative folder path for this upload (for example `reports/2026`). Omit to store at the Files root. To reuse a folder created by an upload, pass its `folderPath`.',
+        examples=['reports/2026/Q3'],
+    )
+    access: UpdateContextItemAccessDto | None = Field(
+        None,
+        description='Who can view and manage this file. Applies only when the file is first created; omit to share it with everyone in the organization, with you as owner. A service-account token cannot set it (403); without it, the file has no owner.',
+    )
+
+
+class BulkUploadFromUrlItemDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    url: str | None = Field(
+        None,
+        description='Source URL to fetch.',
+        examples=['https://example.com/reports/Q3-churn-report.pdf'],
+    )
+    file_name: str | None = Field(
+        None,
+        alias='fileName',
+        description='Override file name. Inferred from the URL path when omitted.',
+        examples=['Q3-churn-report.pdf'],
+    )
+    folder_path: str | None = Field(
+        None,
+        alias='folderPath',
+        description='Root-relative folder path for this upload (for example `reports/2026`). Omit to store at the Files root. To reuse a folder created by an upload, pass its `folderPath`.',
+        examples=['reports/2026/Q3'],
+    )
+    access: UpdateContextItemAccessDto | None = Field(
+        None,
+        description='Who can view and manage this file. Applies only when the file is first created; omit to share it with everyone in the organization, with you as owner. A service-account token cannot set it (403); without it, the file has no owner.',
+    )
+
+
+class BulkUploadFromUrlsDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    urls: list[BulkUploadFromUrlItemDto] = Field(
+        ..., description='URLs to fetch and upload. Max 100 per request.'
     )
 
 
@@ -3192,6 +3181,26 @@ class FileUploadResourceDto(BaseModel):
     )
 
 
+class FinalizeUploadDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    file_name: str = Field(
+        ...,
+        alias='fileName',
+        description='File name returned by `uploadUrl`, used to locate the uploaded object.',
+        examples=['Q3-churn-report.pdf'],
+    )
+    folder_path: str | None = Field(
+        None,
+        alias='folderPath',
+        description='Root-relative folder path for this upload (for example `reports/2026`). Omit to store at the Files root. To reuse a folder created by an upload, pass its `folderPath`.',
+        examples=['reports/2026/Q3'],
+    )
+    access: UpdateContextItemAccessDto | None = Field(
+        None,
+        description='Who can view and manage this file. Applies only when the file is first created; omit to share it with everyone in the organization, with you as owner. A service-account token cannot set it (403); without it, the file has no owner.',
+    )
+
+
 class HttpIngestedDataRequestDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     type: Literal['http'] = Field(..., examples=['http'])
@@ -3828,6 +3837,13 @@ class BatchCreateCustomContextItemsDto(BaseModel):
     items: list[CreateCustomContextItemDto] = Field(
         ...,
         description='Custom context items to upsert. Batch imports are idempotent by item hierarchy.',
+    )
+
+
+class BulkFinalizeDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    uploads: list[BulkFinalizeItemDto] = Field(
+        ..., description='Uploads to finalize. Max 100 per request.'
     )
 
 
