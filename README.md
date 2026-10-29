@@ -49,7 +49,8 @@ import modus
 # Reads MODUS_API_KEY env var, or pass api_key= explicitly
 client = modus.Modus()
 
-for scope in client.scopes.list():
+# list() returns one page; auto_paging_iter() follows every page
+for scope in client.scopes.list().auto_paging_iter():
     print(scope.name, scope.status)
 
 # Ids are numeric: take one from list()
@@ -57,7 +58,7 @@ first = client.scopes.list().items[0]
 scope = client.scopes.get(first.id)
 print(scope.name, scope.description)
 
-for item in client.context.items.list():
+for item in client.context.items.list().auto_paging_iter():
     print(item.uid, item.context_type, modus.context_item_label(item))
 ```
 
@@ -66,12 +67,36 @@ for item in client.context.items.list():
 Create an API token in the Modus app (**Settings → API Tokens** on your Modus home page). Prefer an environment variable over hardcoding keys in source:
 
 ```bash
-export MODUS_API_KEY=modus_xxx
+export MODUS_API_KEY=modus_pat_xxx
 ```
 
 ```python
-client = modus.Modus(api_key="modus_xxx")
+client = modus.Modus(api_key="modus_pat_xxx")
 ```
+
+### Staging and custom hosts
+
+The client talks to `https://api.getmodus.com` by default. Chat and runs go to the agent host,
+which for a Modus API origin is derived from it (`api.staging.getmodus.com` →
+`agent.staging.getmodus.com`). Point the client elsewhere with arguments or environment variables:
+
+| Argument | Environment variable | Default |
+|----------|----------------------|---------|
+| `base_url` | `MODUS_BASE_URL` | `https://api.getmodus.com` |
+| `agent_host` | `MODUS_AGENT_HOST` | derived from `base_url`: `api.getmodus.com` → `agent.getmodus.com`, `api.<env>.getmodus.com` → `agent.<env>.getmodus.com`; none for any other host |
+
+```python
+staging = modus.Modus(base_url="https://api.staging.getmodus.com")
+
+# A host that is not api.getmodus.com or api.<env>.getmodus.com needs its agent host too, or chat and runs raise
+self_hosted = modus.Modus(
+    base_url="https://modus-api.internal.example.com",
+    agent_host="https://modus-agent.internal.example.com",
+)
+```
+
+An argument wins over its environment variable. `ModusManagement` and the async clients take the
+same arguments.
 
 ## Using Modus
 
@@ -132,7 +157,7 @@ Async: `await client.modus.chat(...)` returns the result; `async with` / `async 
 ### Context
 
 ```python
-for item in client.context.items.list():
+for item in client.context.items.list().auto_paging_iter():
     print(item.uid, modus.context_item_label(item))
 ```
 
@@ -235,17 +260,20 @@ root_folders = mgmt.context.items.list(
 )
 print(len(root_folders.items))
 
-moved = mgmt.context.items.move(
-    root_folders.items[0].uid,
-    destination_folder_uid=None,
-)
-print(moved.moved_items)
+# Move the uploaded file into a root folder (destination_folder_uid=None moves it back to the root)
+if root_folders.items:
+    moved = mgmt.context.items.move(
+        upload.upload_id,
+        destination_folder_uid=root_folders.items[0].uid,
+    )
+    print(moved.moved_items)  # 1, or 0 when it was already there
 
 # Who can view and manage a note, saved query, link or uploaded file; all three settings replace the current ones.
 access = mgmt.context.items.update_access(
     note.uid,
     visibility="private",
     group_permissions={},
+    # Replace with the email of a member of your organization; anyone else is a 422
     shared_with=[{"email": "ana@example.com", "permission": "use"}],
 )
 print(access.can_manage)
@@ -260,7 +288,10 @@ upserted = mgmt.context.custom_items.create_relations([
 print(upserted)
 ```
 
-Requires a token with write access to scopes, workflows, and context (same as the Modus UI). Custom context items and relations need the `context:write` permission.
+Requires a token with write access to scopes, workflows, and context (same as the Modus UI). Custom context items and relations need the `context:write` permission, and custom
+context item writes must be enabled for your organization. They are off by default: until Modus
+enables them, `custom_items` writes raise `PermissionDeniedError` ("Custom context item writes are
+not enabled"). Ask Modus to turn them on.
 
 ## Pagination
 
@@ -284,7 +315,7 @@ async def main():
         result = await client.modus.chat("Hello", model="claude-sonnet-5")
         print(result.content)
 
-        async for scope in client.scopes.list().auto_paging_iter():
+        async for scope in (await client.scopes.list()).auto_paging_iter():
             print(scope.name)
 
 asyncio.run(main())
@@ -305,12 +336,19 @@ except modus.PermissionDeniedError as e:
     print("Token is missing scopes:", (e.info or {}).get("missing"))
 except modus.RateLimitError as e:
     print(f"Rate limited. Retry after {e.retry_after}s")
+except modus.ValidationError as e:
+    # Rejected by the SDK before any request was sent, so there is no status or request_id
+    print(f"Invalid argument: {e.message}")
 except modus.ModusError as e:
-    print(f"API error {e.status_code} {e.code}: {e.message} (request {e.request_id})")
+    print(f"API error {e.status_code} {e.code}: {e.message} (request {e.request_id}, trace {e.trace_id})")
 ```
 
-Every error carries `code` (for example `NOT_FOUND`), `request_id` and `trace_id` (quote
-both to support; `trace_id` also names a call that never reached Modus) and, when the server sends one, `info` with structured detail. A request that fails schema
+Every error the server returns carries `status_code`, `code` (for example `NOT_FOUND`) and
+`trace_id`, plus `request_id` when the response supplies one (quote both to support), and, when
+the server sends one, `info` with structured detail. An `APIConnectionError` (the request never got a response) carries only
+`trace_id`, which names the call even though it never reached Modus. A `ValidationError` (for
+example an unsupported chat model) is raised by the SDK before a request is sent, so it has none
+of these. A request that fails schema
 validation raises `BadRequestError` (400); one that is well-formed but breaks a business
 rule raises `UnprocessableError` (422), with the rule in `info`.
 
@@ -335,11 +373,12 @@ Pass `max_retries=0` to turn retries off.
 
 ## Examples
 
-Runnable scripts ship with the package:
+Runnable scripts live in the [GitHub repository](https://github.com/modus-data/modus-sdk-python/tree/main/examples/scripts),
+not in the installed package. Clone it to run them:
 
 - `examples/scripts/quickstart.py` — list scopes and context (`Modus`)
-- `examples/scripts/modus_chat.py` — buffered and streaming Modus chat, context compose, conversations
-- `examples/scripts/chat.py` — buffered scope chat with thread follow-up
+- `examples/scripts/modus_chat.py` — awaited and streamed Modus chat, context compose, conversations
+- `examples/scripts/chat.py` — scope chat with thread follow-up
 - `examples/scripts/manage_skill.py` — create and deploy a scope (`ModusManagement`, `--write` optional)
 
 

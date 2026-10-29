@@ -10,11 +10,13 @@ from pydantic.alias_generators import to_camel
 
 
 class Visibility(str, Enum):
+    __str__ = str.__str__
     shared = 'shared'
     private = 'private'
 
 
 class Scope(str, Enum):
+    __str__ = str.__str__
     all = 'all'
     groups = 'groups'
     users = 'users'
@@ -68,6 +70,7 @@ class AgentGroupPermissionDto(BaseModel):
 
 
 class AgentInterfaceType(str, Enum):
+    __str__ = str.__str__
     slack = 'slack'
     mcp = 'mcp'
     teams = 'teams'
@@ -118,11 +121,13 @@ class AgentSharedUserDto(BaseModel):
 
 
 class AgentType(str, Enum):
+    __str__ = str.__str__
     task = 'task'
     workflow = 'workflow'
 
 
 class ApiErrorCode(str, Enum):
+    __str__ = str.__str__
     validation = 'VALIDATION'
     bad_request = 'BAD_REQUEST'
     unauthorized = 'UNAUTHORIZED'
@@ -137,6 +142,7 @@ class ApiErrorCode(str, Enum):
 
 
 class ApiErrorStatus(str, Enum):
+    __str__ = str.__str__
     invalid_argument = 'INVALID_ARGUMENT'
     unauthenticated = 'UNAUTHENTICATED'
     permission_denied = 'PERMISSION_DENIED'
@@ -203,6 +209,7 @@ class AutomationRunListItemDto(BaseModel):
 
 
 class AutomationRunSource(str, Enum):
+    __str__ = str.__str__
     live_query = 'live-query'
     history = 'history'
 
@@ -247,6 +254,7 @@ class BulkUploadUrlsDto(BaseModel):
 
 
 class ChatInterfaceAccessMode(str, Enum):
+    __str__ = str.__str__
     all = 'all'
     allow_list = 'allow-list'
     allow_org = 'allow-org'
@@ -275,6 +283,7 @@ class ChatInterfaceConfigDto(BaseModel):
 
 
 class ChatInterfaceType(str, Enum):
+    __str__ = str.__str__
     slack = 'slack'
     teams = 'teams'
 
@@ -434,6 +443,7 @@ class ContextItemAncestorDto(BaseModel):
 
 
 class UserFeedback(str, Enum):
+    __str__ = str.__str__
     negative = 'negative'
     neutral = 'neutral'
     positive = 'positive'
@@ -448,12 +458,14 @@ class ContextItemGroupPermissionDto(BaseModel):
 
 
 class ContextItemKind(str, Enum):
+    __str__ = str.__str__
     note = 'note'
     saved_query = 'saved_query'
     link = 'link'
 
 
 class ContextItemSharePermission(str, Enum):
+    __str__ = str.__str__
     use = 'use'
     manage = 'manage'
 
@@ -469,6 +481,7 @@ class ContextItemSharedUserDto(BaseModel):
 
 
 class ContextItemVisibility(str, Enum):
+    __str__ = str.__str__
     shared = 'shared'
     private = 'private'
 
@@ -533,6 +546,7 @@ class ConversationListItemDto(BaseModel):
 
 
 class ConversationMessageType(str, Enum):
+    __str__ = str.__str__
     human = 'human'
     ai = 'ai'
     system = 'system'
@@ -669,6 +683,7 @@ class CustomAttributeDto(BaseModel):
 
 
 class CustomContextItemKind(str, Enum):
+    __str__ = str.__str__
     source = 'source'
     collection = 'collection'
     entity = 'entity'
@@ -690,6 +705,7 @@ class DashboardDraftSnapshotDto(BaseModel):
 
 
 class DashboardElementKind(str, Enum):
+    __str__ = str.__str__
     chart = 'chart'
     kpi = 'kpi'
     table = 'table'
@@ -776,6 +792,7 @@ class DashboardFilterOptionsQueryPatchDto(BaseModel):
 
 
 class DashboardFilterType(str, Enum):
+    __str__ = str.__str__
     text_pattern = 'text_pattern'
     dropdown = 'dropdown'
     query_dropdown = 'query_dropdown'
@@ -791,6 +808,7 @@ class DashboardFilterType(str, Enum):
 
 
 class DashboardFilterValueType(str, Enum):
+    __str__ = str.__str__
     string = 'string'
     number = 'number'
     boolean = 'boolean'
@@ -819,12 +837,14 @@ class DashboardLayoutElementDto(BaseModel):
 
 
 class DashboardQuotationStyle(str, Enum):
+    __str__ = str.__str__
     single = 'single'
     double = 'double'
     none = 'none'
 
 
 class DashboardSharePermission(str, Enum):
+    __str__ = str.__str__
     use = 'use'
     manage = 'manage'
 
@@ -837,6 +857,7 @@ class DashboardSharedUserDto(BaseModel):
 
 
 class DashboardTileKind(str, Enum):
+    __str__ = str.__str__
     chart = 'chart'
     kpi = 'kpi'
     table = 'table'
@@ -844,22 +865,26 @@ class DashboardTileKind(str, Enum):
 
 
 class DashboardValueFormat(str, Enum):
+    __str__ = str.__str__
     number = 'number'
     currency = 'currency'
     percent = 'percent'
 
 
 class DashboardVersionKind(str, Enum):
+    __str__ = str.__str__
     published = 'published'
     draft_snapshot = 'draft_snapshot'
 
 
 class DashboardView(str, Enum):
+    __str__ = str.__str__
     active = 'active'
     draft = 'draft'
 
 
 class DashboardVisibility(str, Enum):
+    __str__ = str.__str__
     shared = 'shared'
     private = 'private'
 
@@ -916,6 +941,7 @@ class ErrorResponseDto(BaseModel):
 
 
 class EvaluationCadenceFrequency(str, Enum):
+    __str__ = str.__str__
     daily = 'daily'
     weekly = 'weekly'
     monthly = 'monthly'
@@ -975,6 +1001,7 @@ class EvaluationResultDto(BaseModel):
 
 
 class EvaluationRunStatus(str, Enum):
+    __str__ = str.__str__
     running = 'running'
     completed = 'completed'
     completed_with_errors = 'completed_with_errors'
@@ -982,6 +1009,7 @@ class EvaluationRunStatus(str, Enum):
 
 
 class EvaluationRunTrigger(str, Enum):
+    __str__ = str.__str__
     scheduled = 'scheduled'
     manual = 'manual'
 
@@ -1076,12 +1104,14 @@ class FailedUploadUrlDto(BaseModel):
 
 
 class FileUploadResourceStatus(str, Enum):
+    __str__ = str.__str__
     processing = 'processing'
     ready = 'ready'
     failed = 'failed'
 
 
 class StatusReason(str, Enum):
+    __str__ = str.__str__
     approval_timeout = 'approval_timeout'
 
 
@@ -1181,10 +1211,12 @@ class GroupPermissionDto(BaseModel):
 
 
 class HttpIngestedDataRequestType(str, Enum):
+    __str__ = str.__str__
     http = 'http'
 
 
 class IngestedDataResponseFormat(str, Enum):
+    __str__ = str.__str__
     csv = 'csv'
     json = 'json'
     xml = 'xml'
@@ -1271,11 +1303,13 @@ class ListDashboardDraftSnapshotsResponseDto(BaseModel):
 
 
 class Rollup(str, Enum):
+    __str__ = str.__str__
     hour = 'hour'
     day = 'day'
 
 
 class GroupBy(str, Enum):
+    __str__ = str.__str__
     all = 'all'
     skill = 'skill'
     agent = 'agent'
@@ -1348,6 +1382,7 @@ class McpCoreToolsConfigDto(BaseModel):
 
 
 class McpToolExposureMode(str, Enum):
+    __str__ = str.__str__
     subset = 'subset'
     discovery = 'discovery'
 
@@ -1357,6 +1392,7 @@ class McpToolExposureVersion(IntEnum):
 
 
 class MemberGroupSource(str, Enum):
+    __str__ = str.__str__
     native = 'native'
     directory = 'directory'
 
@@ -1506,6 +1542,7 @@ class PublishDashboardDto(BaseModel):
 
 
 class ReasoningEffort(str, Enum):
+    __str__ = str.__str__
     none = 'none'
     minimal = 'minimal'
     low = 'low'
@@ -1516,12 +1553,14 @@ class ReasoningEffort(str, Enum):
 
 
 class ResourceLifecycleStatus(str, Enum):
+    __str__ = str.__str__
     draft = 'draft'
     active = 'active'
     deleted = 'deleted'
 
 
 class ManageDenial(str, Enum):
+    __str__ = str.__str__
     not_owner = 'not_owner'
     needs_group_manage = 'needs_group_manage'
 
@@ -1550,6 +1589,7 @@ class ScopeInterfaceDto(BaseModel):
 
 
 class ScopeMcpInterfaceType(str, Enum):
+    __str__ = str.__str__
     mcp = 'mcp'
 
 
@@ -1604,6 +1644,7 @@ class SetSupervisionRequestDto(BaseModel):
 
 
 class SharedUserPermission(str, Enum):
+    __str__ = str.__str__
     use = 'use'
     manage = 'manage'
 
@@ -1623,14 +1664,17 @@ class SkillMcpInterfaceConfigDto(BaseModel):
 
 
 class SqlIngestedDataRequestType(str, Enum):
+    __str__ = str.__str__
     sql = 'sql'
 
 
 class SuggestionEventSource(str, Enum):
+    __str__ = str.__str__
     home = 'home'
 
 
 class SuggestionEventType(str, Enum):
+    __str__ = str.__str__
     shown = 'shown'
     clicked = 'clicked'
     dismissed = 'dismissed'
@@ -1748,6 +1792,7 @@ class TransferOwnershipDto(BaseModel):
 
 
 class TriggerType(str, Enum):
+    __str__ = str.__str__
     schedule = 'schedule'
     webhook = 'webhook'
     api = 'api'
@@ -1764,6 +1809,7 @@ class TriggerEvaluationRunResponseDto(BaseModel):
 
 
 class Frequency(str, Enum):
+    __str__ = str.__str__
     hourly = 'hourly'
     daily = 'daily'
     weekly = 'weekly'
@@ -1772,6 +1818,7 @@ class Frequency(str, Enum):
 
 
 class Weekday(str, Enum):
+    __str__ = str.__str__
     monday = 'monday'
     tuesday = 'tuesday'
     wednesday = 'wednesday'
@@ -2141,6 +2188,7 @@ class WorkflowNodePositionDto(BaseModel):
 
 
 class WorkflowNodeType(str, Enum):
+    __str__ = str.__str__
     start = 'start'
     action = 'action'
     condition = 'condition'
@@ -2183,6 +2231,7 @@ class WorkflowTriggerScheduleResponseDto(BaseModel):
 
 
 class ActiveConversationRunStatus(str, Enum):
+    __str__ = str.__str__
     queued = 'queued'
     pending = 'pending'
     running = 'running'
@@ -2199,6 +2248,7 @@ class ActiveRunsBySessionDto(BaseModel):
 
 
 class Version(str, Enum):
+    __str__ = str.__str__
     published = 'published'
     draft = 'draft'
 
@@ -2271,6 +2321,7 @@ class ImageAttachmentDto(BaseModel):
 
 
 class Decision(str, Enum):
+    __str__ = str.__str__
     approve = 'approve'
     deny = 'deny'
     connected = 'connected'
@@ -2288,6 +2339,7 @@ class RunAdmissionResponseDto(BaseModel):
 
 
 class RunReasoningEffort(str, Enum):
+    __str__ = str.__str__
     none = 'none'
     minimal = 'minimal'
     low = 'low'
@@ -2298,6 +2350,7 @@ class RunReasoningEffort(str, Enum):
 
 
 class RunSource(str, Enum):
+    __str__ = str.__str__
     home = 'home'
     agent_settings = 'agent_settings'
     agent = 'agent'
@@ -2314,6 +2367,7 @@ class RunSource(str, Enum):
 
 
 class SupplementalContextSource(str, Enum):
+    __str__ = str.__str__
     slack = 'slack'
     teams = 'teams'
 
@@ -2331,6 +2385,7 @@ class UserContextDto(BaseModel):
 
 
 class WorkflowActionSource(str, Enum):
+    __str__ = str.__str__
     agent = 'agent'
     api = 'api'
     other = 'other'

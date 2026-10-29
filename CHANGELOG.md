@@ -82,6 +82,9 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Fixed
 
+- **String enums print their value.** `print(scope.status)` and `str(scope.status)` give `active`, as the TypeScript SDK does, not `ResourceLifecycleStatus.active`. Comparison with `"active"` and `.value` are unchanged.
+- **Python-version classifiers.** The package declares Python 3.10 to 3.14, matching `requires-python`, so PyPI lists the supported versions.
+- **README.** The async example awaits the page before paging (`(await client.scopes.list()).auto_paging_iter()`); getting started follows every page; the `move` example moves the uploaded file into a folder; custom context item writes are documented as off until Modus enables them for your organization; it shows how to reach staging or a self-hosted API (`base_url` / `MODUS_BASE_URL`, `agent_host` / `MODUS_AGENT_HOST`); the error example handles a client-side `ValidationError`; tokens are shown as `modus_pat_…`; and the example scripts are said to live in the GitHub repository, not the wheel.
 - **`mgmt.users.list_member_groups()` and `list_org_members()` no longer raise on a null.** `MemberGroupDto.description` and `OrgMemberDto.image_url` are `str | None`, as the API documents; a group with no description or a member with no image raised `ValidationError`.
 - **Stream loops type-check.** Each run event's `type` is a `Literal` (`"token"`, `"done"`, …), so `if event.type == "token": event.content` narrows under mypy and pyright instead of reporting `"ErrorEvent" has no attribute "content"`.
 - **`import modus` then `modus.management.ModusManagement()` type-checks**, as the docstrings write it.
