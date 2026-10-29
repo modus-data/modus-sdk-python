@@ -32,6 +32,9 @@ class ModusError(Exception):
     Attributes:
         request_id: The error envelope's ``requestId`` (or the ``x-request-id`` header);
             quote it to support.
+        trace_id: The W3C trace id of the request that failed (from the ``traceparent``
+            the SDK sent). Quote it with ``request_id``: it also names a request that never
+            reached Modus, and every retry of it.
         code: Machine-readable error code from the envelope, e.g. ``NOT_FOUND``.
         info: Structured detail from the envelope, e.g. ``{"missing": ["scopes:write"]}``
             on a 403.
@@ -59,6 +62,7 @@ class ModusError(Exception):
         self.message = message
         self.status_code = status_code
         self.request_id = request_id
+        self.trace_id: Optional[str] = None
         self.response_headers = dict(response_headers) if response_headers else None
         self.body = body
         self.code = code

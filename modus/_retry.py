@@ -21,6 +21,7 @@ from typing import Awaitable, Callable, Optional, TypeVar
 import httpx
 
 from ._exceptions import ModusError, NotFoundError, RateLimitError
+from ._trace import call_send, new_trace_id
 
 T = TypeVar("T")
 
@@ -99,9 +100,14 @@ def with_retry(
     """
     deploy_not_found_retries = 0
     attempt = 0
+    # One trace for the call and its re-sends; the transport reads it per request.
+    trace_id = new_trace_id()
+    sends = 0
     while True:
         try:
-            return func()
+            with call_send(trace_id, sends):
+                sends += 1
+                return func()
         except NotFoundError:
             if (
                 retry_not_found_on_deploy
@@ -140,9 +146,13 @@ async def async_with_retry(
     """
     deploy_not_found_retries = 0
     attempt = 0
+    trace_id = new_trace_id()
+    sends = 0
     while True:
         try:
-            return await func()
+            with call_send(trace_id, sends):
+                sends += 1
+                return await func()
         except NotFoundError:
             if (
                 retry_not_found_on_deploy

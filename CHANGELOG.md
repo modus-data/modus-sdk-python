@@ -11,6 +11,7 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Added
 
+- **A trace id for every call.** Each request sends a W3C `traceparent` (a new trace per call, kept across its retries, each re-send also carrying `X-Modus-Retry-Attempt`), and every `ModusError` from an HTTP call carries it as `trace_id`, sync and async alike. Quote `trace_id` with `request_id` to support: it also names a call that never reached Modus. A `traceparent` you set in `default_headers` is sent as is.
 - **`access` on file finalize and URL uploads.** `FinalizeUploadDto`, each `BulkFinalizeItemDto`, `UploadFromUrlDto` and each `BulkUploadFromUrlItemDto` take an optional `access` (visibility, group permissions, shared-with) that applies only when the file is first created; omitted, the file is shared with everyone with you as owner. A service-account token cannot set it.
 - **Access on notes, saved queries, links and uploaded files.** `mgmt.context.items.update_access(uid, visibility=..., group_permissions=..., shared_with=...)` replaces who can view and manage one of these items; an item with no owner becomes yours. `ContextItem` reads of these types carry `access` and `can_manage`.
 - **`client.workflows.chat()`.** Send a published workflow a message and stream its node output; `result()` returns the workflow's final output.

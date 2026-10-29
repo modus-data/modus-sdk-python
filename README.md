@@ -309,8 +309,8 @@ except modus.ModusError as e:
     print(f"API error {e.status_code} {e.code}: {e.message} (request {e.request_id})")
 ```
 
-Every error carries `code` (for example `NOT_FOUND`), `request_id` (quote it to support)
-and, when the server sends one, `info` with structured detail. A request that fails schema
+Every error carries `code` (for example `NOT_FOUND`), `request_id` and `trace_id` (quote
+both to support; `trace_id` also names a call that never reached Modus) and, when the server sends one, `info` with structured detail. A request that fails schema
 validation raises `BadRequestError` (400); one that is well-formed but breaks a business
 rule raises `UnprocessableError` (422), with the rule in `info`.
 
