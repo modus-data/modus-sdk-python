@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from modus._generated.models import ContextItemDto, UserFeedback
+from modus._generated.models import ContextItemDto, LookupContextItemRowDto, UserFeedback
 from modus.types.context_accessors import (
     context_item_label,
     is_verified,
@@ -58,6 +58,18 @@ def test_context_item_label_prefers_title_then_description() -> None:
     assert context_item_label(item) == "Fiscal Year"
     item2 = _item("note", {}, description="Fallback description")
     assert context_item_label(item2) == "Fallback description"
+
+
+def test_context_item_label_reads_a_lookup_row() -> None:
+    def row(content: dict) -> LookupContextItemRowDto:
+        return LookupContextItemRowDto.model_validate({
+            "uid": "uid-001", "contextType": "note", "dataPath": ["finance"], "content": content,
+            "connectionId": None, "selectionId": None,
+        })
+
+    assert context_item_label(row(NOTE_CONTENT)) == "Fiscal Year"
+    # A lookup row has no description, so an untitled one falls back.
+    assert context_item_label(row({})) == "(no title)"
 
 
 def test_is_verified() -> None:

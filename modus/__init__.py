@@ -18,6 +18,8 @@ To create or configure scopes, use modus.management.ModusManagement.
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
 
+# Explicit re-export: `import modus; modus.management.ModusManagement()` type-checks.
+from . import management as management
 from ._client import AsyncModus, Modus
 from ._exceptions import (
     APIConnectionError,

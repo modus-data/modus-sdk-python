@@ -316,7 +316,7 @@ def test_every_query_scalar_the_emitter_accepts_has_a_wire_sample() -> None:
 
 def test_a_query_argument_is_sampled_from_the_spec_scalar() -> None:
     assert _query_sample("ConnectionsController_list", "type") == "q"
-    assert _query_sample("ConnectionsController_list", "pageSize") == 1.5
+    assert _query_sample("ConnectionsController_list", "pageSize") == 7
     # A $ref parameter schema resolves before the scalar is read.
     assert _query_sample("DashboardsController_list", "view") == "q"
 

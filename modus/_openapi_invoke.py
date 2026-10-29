@@ -14,13 +14,7 @@ HttpLike = Union[HttpClient, AsyncHttpClient]
 
 
 def path_segment(value: Any) -> str:
-    """Encode one URL path segment.
-
-    Ids parsed from responses can arrive as integral floats (``42.0``); the
-    API's numeric ids take the integer form.
-    """
-    if isinstance(value, float) and value.is_integer():
-        value = int(value)
+    """Encode one URL path segment."""
     return quote(str(value), safe="")
 
 

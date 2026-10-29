@@ -16,8 +16,7 @@ Message = ConversationMessageDto
 
 def conversation_scope_id(item: ConversationListItem) -> int | None:
     """Return scope id for a conversation list item, or None for direct Modus (id 0)."""
-    scope_id = item.scope_id
-    return None if scope_id is None or scope_id == 0 else int(scope_id)
+    return item.scope_id or None
 
 
 def conversation_skill_id(item: ConversationListItem) -> int | None:
@@ -27,8 +26,7 @@ def conversation_skill_id(item: ConversationListItem) -> int | None:
     :func:`conversation_scope_id`, which returns ``None`` for id ``0``).
     """
     warn_deprecated(old="conversation_skill_id", new="conversation_scope_id")
-    scope_id = item.scope_id
-    return None if scope_id is None else int(scope_id)
+    return item.scope_id
 
 
 __all__ = [

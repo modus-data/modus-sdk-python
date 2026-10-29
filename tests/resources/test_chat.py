@@ -82,15 +82,6 @@ def test_buffered_era_thread_id_continues(client: Modus) -> None:
 
 
 @respx.mock
-def test_chat_with_id_from_list_response(client: Modus) -> None:
-    route = respx.post(f"{AGENT}/agent/v1/scopes/42/runs").mock(return_value=sse(ANSWER_FRAMES))
-
-    client.scopes.chat(42.0, "Hi", model=MODEL).result()  # type: ignore[arg-type]
-
-    assert route.called
-
-
-@respx.mock
 def test_approval_and_resume(client: Modus) -> None:
     respx.post(f"{AGENT}/agent/v1/modus/runs").mock(
         return_value=sse(

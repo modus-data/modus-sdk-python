@@ -321,10 +321,10 @@
     },
     "McpToolExposureVersion": {
       "enum": [
-        1.0
+        1
       ],
       "title": "McpToolExposureVersion",
-      "type": "number"
+      "type": "integer"
     },
     "ModelSettingsDto": {
       "properties": {
@@ -343,8 +343,8 @@
         "contextWindow": {
           "anyOf": [
             {
-              "minimum": 1.0,
-              "type": "number"
+              "minimum": 1,
+              "type": "integer"
             },
             {
               "type": "null"
@@ -748,7 +748,7 @@
         42
       ],
       "title": "Id",
-      "type": "number"
+      "type": "integer"
     },
     "slug": {
       "description": "URL-safe slug used in human-readable links. Unique per org.",

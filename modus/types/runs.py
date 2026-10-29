@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 # ---------------------------------------------------------------------------
 # SSE event types — used by _streaming.py
@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Union
 class TokenEvent:
     """A streaming text chunk from the skill."""
 
-    type: str = field(default="token", init=False)
+    type: Literal["token"] = field(default="token", init=False)
     content: str = ""
     sub_agent: Optional[str] = None
     """Set when a sub-agent produced the token; None for the assistant's own reply."""
@@ -26,7 +26,7 @@ class TokenEvent:
 class DoneEvent:
     """The run completed successfully."""
 
-    type: str = field(default="done", init=False)
+    type: Literal["done"] = field(default="done", init=False)
     run_id: str = ""
     thread_id: str = ""
     content: Optional[str] = None
@@ -39,7 +39,7 @@ class DoneEvent:
 class ErrorEvent:
     """The run failed with an error."""
 
-    type: str = field(default="error", init=False)
+    type: Literal["error"] = field(default="error", init=False)
     message: str = ""
     request_id: Optional[str] = None
     """The id to quote to support for this failure."""
@@ -51,7 +51,7 @@ class ErrorEvent:
 class CancelledEvent:
     """The run was cancelled."""
 
-    type: str = field(default="cancelled", init=False)
+    type: Literal["cancelled"] = field(default="cancelled", init=False)
     id: Optional[str] = None
     """The SSE event id. Pass it as ``last_event_id`` to ``runs.stream`` to resume after this event."""
 
@@ -60,7 +60,7 @@ class CancelledEvent:
 class StreamTimeoutEvent:
     """The stream timed out without a terminal event."""
 
-    type: str = field(default="stream_timeout", init=False)
+    type: Literal["stream_timeout"] = field(default="stream_timeout", init=False)
     id: Optional[str] = None
     """The SSE event id. Pass it as ``last_event_id`` to ``runs.stream`` to resume after this event."""
 
@@ -69,7 +69,7 @@ class StreamTimeoutEvent:
 class AssistantContentResetEvent:
     """Replace content emitted by a failed provider attempt."""
 
-    type: str = field(default="assistant_content_reset", init=False)
+    type: Literal["assistant_content_reset"] = field(default="assistant_content_reset", init=False)
     content: str = ""
     visible_content: Optional[str] = None
     attempt: int = 1
@@ -89,7 +89,7 @@ class ApprovalRequiredEvent:
     (``node_id``, ``prompt``, ``options``).
     """
 
-    type: str = field(default="approval_required", init=False)
+    type: Literal["approval_required"] = field(default="approval_required", init=False)
     tool_id: Optional[str] = None
     tool_name: Optional[str] = None
     title: Optional[str] = None

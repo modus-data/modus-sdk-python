@@ -136,18 +136,18 @@
           "examples": [
             17
           ],
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Agentid",
-          "type": "number"
+          "type": "integer"
         },
         "priorityOrder": {
           "description": "Execution order (1-indexed).",
           "examples": [
             1
           ],
-          "minimum": 1.0,
+          "minimum": 1,
           "title": "Priorityorder",
-          "type": "number"
+          "type": "integer"
         },
         "role": {
           "anyOf": [
@@ -398,8 +398,8 @@
         "contextWindow": {
           "anyOf": [
             {
-              "minimum": 1.0,
-              "type": "number"
+              "minimum": 1,
+              "type": "integer"
             },
             {
               "type": "null"
@@ -784,9 +784,9 @@
         "dayOfMonth": {
           "anyOf": [
             {
-              "maximum": 31.0,
-              "minimum": 1.0,
-              "type": "number"
+              "maximum": 31,
+              "minimum": 1,
+              "type": "integer"
             },
             {
               "type": "null"
@@ -852,7 +852,7 @@
         42
       ],
       "title": "Id",
-      "type": "number"
+      "type": "integer"
     },
     "slug": {
       "description": "URL-safe slug used in human-readable links. Unique per org.",

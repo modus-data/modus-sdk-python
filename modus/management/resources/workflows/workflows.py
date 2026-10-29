@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Optional, Union
+from typing import Any, Literal, Optional, Union
 
 from modus._config import ModusConfig
 from modus._generated.models import (
@@ -28,6 +28,11 @@ from ...types.triggers import TriggerInput, dump_trigger
 from ...types.workflow import WorkflowGraphInput, dump_workflow_structure
 from ._update_body import _WorkflowCreateBody, _WorkflowUpdateBody
 from .interfaces import AsyncWorkflowInterfacesResource, WorkflowInterfacesResource
+
+# The enum or its value: `create("Daily report", "workflow")` type-checks as documented.
+WorkflowTypeInput = Union[AgentType, Literal["workflow", "task"]]
+# The server rejects "task" on update (422).
+WorkflowUpdateTypeInput = Literal[AgentType.workflow, "workflow"]
 
 
 @dataclass(frozen=True)
@@ -134,7 +139,7 @@ class WorkflowsResource(_WorkflowsResourceBase):
     def create(
         self,
         name: str,
-        type: AgentType,
+        type: WorkflowTypeInput,
         *,
         description: Optional[str] = None,
         trigger: Optional[TriggerInput] = None,
@@ -179,7 +184,7 @@ class WorkflowsResource(_WorkflowsResourceBase):
         workflow_id: Union[int, str],
         *,
         name: Optional[str] = None,
-        type: Optional[AgentType] = None,
+        type: Optional[WorkflowUpdateTypeInput] = None,
         description: Optional[str] = None,
         trigger: Optional[TriggerInput] = None,
         agent_selection: Optional[AgentSelectionInput] = None,
@@ -325,7 +330,7 @@ class AsyncWorkflowsResource(_AsyncWorkflowsResourceBase):
         """Return the interfaces sub-resource scoped to ``workflow_id``."""
         return AsyncWorkflowInterfacesResource(self._http, self._config, workflow_id)
 
-    async def create(self, name: str, type: AgentType, *,
+    async def create(self, name: str, type: WorkflowTypeInput, *,
                      description: Optional[str] = None,
                      trigger: Optional[TriggerInput] = None,
                      agent_selection: Optional[AgentSelectionInput] = None,
@@ -359,7 +364,7 @@ class AsyncWorkflowsResource(_AsyncWorkflowsResourceBase):
         return _parse_workflow(raw)
 
     async def update(self, workflow_id: Union[int, str], *,
-                     name: Optional[str] = None, type: Optional[AgentType] = None,
+                     name: Optional[str] = None, type: Optional[WorkflowUpdateTypeInput] = None,
                      description: Optional[str] = None,
                      trigger: Optional[TriggerInput] = None,
                      agent_selection: Optional[AgentSelectionInput] = None,
