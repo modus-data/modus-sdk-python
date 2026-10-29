@@ -742,7 +742,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": ('runId',),
         "query_params": (),
         "request_schema": None,
-        "response_schema": None,
+        "response_schema": 'RunEventsPollResponseDto',
         "idempotent": False,
     },
     "RunLifecycleController_interrupt": {

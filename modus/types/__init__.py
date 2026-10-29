@@ -15,6 +15,8 @@ from .agent_runs import (
     ModusRunCreateRequest,
     ResumeRunRequest,
     RunAdmission,
+    RunEventsPoll,
+    RunEventsPollEvent,
     SkillRunCreateRequest,
     WorkflowActionRequest,
 )
@@ -82,6 +84,8 @@ __all__ = [
     "FollowUpRunRequest",
     "InterruptRunRequest",
     "RunAdmission",
+    "RunEventsPoll",
+    "RunEventsPollEvent",
     "context_item_label",
     "is_verified",
     "link_title",

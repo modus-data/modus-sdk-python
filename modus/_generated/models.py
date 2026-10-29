@@ -2338,6 +2338,28 @@ class RunAdmissionResponseDto(BaseModel):
     status: str = Field(..., description='Status of the admitted run, e.g. `pending` or `queued`.')
 
 
+class RunEventsPollEventDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="allow")
+    id: str = Field(
+        ...,
+        description='Stream id of the event. Send the last one as `Last-Event-ID` to resume after it.',
+    )
+    type: str = Field(
+        ...,
+        description='Event type, such as `token`, `done`, `error` or `cancelled`. The other fields depend on it.',
+    )
+
+
+class RunEventsPollStatus(str, Enum):
+    __str__ = str.__str__
+    queued = 'queued'
+    pending = 'pending'
+    running = 'running'
+    succeeded = 'succeeded'
+    cancelled = 'cancelled'
+    failed = 'failed'
+
+
 class RunReasoningEffort(str, Enum):
     __str__ = str.__str__
     none = 'none'
@@ -3731,6 +3753,25 @@ class AttachmentsDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     images: list[ImageAttachmentDto] | None = None
     documents: list[DocumentAttachmentDto] | None = None
+
+
+class RunEventsPollResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    events: list[RunEventsPollEventDto] = Field(
+        ..., description='Events after the request cursor, oldest first.'
+    )
+    cursor: str = Field(
+        ...,
+        description='Stream id of the last event returned. Send it as `Last-Event-ID` on the next poll.',
+    )
+    status: RunEventsPollStatus = Field(
+        ...,
+        description='Current run status. A workflow run reports `pending` until it ends, then its terminal status.',
+    )
+    done: bool = Field(
+        ...,
+        description='True once a terminal event (`done`, `error`, `cancelled` or a `workflow_*` one) is in `events`: stop polling.',
+    )
 
 
 class RunModelSettingsDto(BaseModel):

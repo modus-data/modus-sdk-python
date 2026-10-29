@@ -2,8 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, Union
 from uuid import uuid4
+
+from pydantic import BaseModel
+
+
+def request_dict(body: Union[BaseModel, Mapping[str, Any]]) -> dict[str, Any]:
+    """A request body as its wire dict: a request model by its camelCase aliases, a mapping as is."""
+    if isinstance(body, BaseModel):
+        return body.model_dump(mode="json", by_alias=True, exclude_none=True)
+    return dict(body)
 
 
 def resolve_agent_run_session_id(session_id: Optional[str] = None) -> str:
@@ -13,9 +22,9 @@ def resolve_agent_run_session_id(session_id: Optional[str] = None) -> str:
     return str(uuid4())
 
 
-def with_agent_run_session_id(body: Mapping[str, Any]) -> dict[str, Any]:
+def with_agent_run_session_id(body: Union[BaseModel, Mapping[str, Any]]) -> dict[str, Any]:
     """Copy body and ensure sessionId is set (parity with chat)."""
-    out: dict[str, Any] = dict(body)
+    out = request_dict(body)
     out["sessionId"] = resolve_agent_run_session_id(
         out.get("sessionId") if isinstance(out.get("sessionId"), str) else None
     )

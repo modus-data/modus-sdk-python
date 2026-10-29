@@ -9,6 +9,11 @@ Each snippet failed before its fix:
   ``create("Daily report", "workflow")`` was an ``arg-type`` error.
 - ``context_item_label`` took only ``ContextItem``, so the ``lookup()`` docstring's
   ``context_item_label(found)`` was an ``arg-type`` error.
+- ``runs.events`` returned ``Dict[str, Any]``, so ``poll.done`` was an ``attr-defined`` error.
+- ``runs.create_scope`` took only a ``Mapping``, so passing the exported ``SkillRunCreateRequest``
+  model was an ``arg-type`` error.
+- ``custom_items.create`` took only keyword arguments and returned ``Dict[str, Any]``, so passing
+  a ``CreateCustomContextItemDto`` was a ``call-arg`` error and ``created["dataPath"]`` was ``Any``.
 """
 
 from __future__ import annotations
@@ -44,6 +49,28 @@ SNIPPETS = {
         "def label(client: modus.Modus) -> str:\n"
         "    found = client.context.items.lookup('note', ['finance', 'arr-definition'])\n"
         "    return modus.context_item_label(found) if found else ''\n"
+    ),
+    "run events poll response": (
+        "import modus\n"
+        "def poll(client: modus.Modus, run_id: str) -> str:\n"
+        "    page = client.workflows.runs.events(run_id)\n"
+        "    return page.cursor if not page.done else page.events[-1].type\n"
+    ),
+    "run request model": (
+        "import modus\n"
+        "from modus.types.agent_runs import SkillRunCreateRequest\n"
+        "def run(client: modus.Modus) -> None:\n"
+        "    body = SkillRunCreateRequest(message='hi', session_id='s-1')\n"
+        "    for _ in client.workflows.runs.create_scope(7, body):\n"
+        "        pass\n"
+    ),
+    "custom item model in, typed dict out": (
+        "import modus\n"
+        "from modus.types.context import CreateCustomContextItemDto, CustomContextItemKind\n"
+        "def create(client: modus.Modus) -> list[str]:\n"
+        "    item = CreateCustomContextItemDto(kind=CustomContextItemKind.source, source_id='db')\n"
+        "    created = client.context.custom_items.create(item)\n"
+        "    return created['dataPath'] + [created['uid']]\n"
     ),
 }
 

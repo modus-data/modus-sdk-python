@@ -454,8 +454,12 @@ def test_runs_events_returns_the_json_poll_response():
         return_value=httpx.Response(200, json=_POLL)
     )
 
-    assert _agent_client().workflows.runs.events("run-1") == _POLL
+    poll = _agent_client().workflows.runs.events("run-1")
+
     assert route.called
+    assert (poll.cursor, poll.status, poll.done) == ("1-0", "running", False)
+    assert [(e.id, e.type) for e in poll.events] == [("1-0", "token")]
+    assert poll.events[0].model_extra == {"content": "hi"}
 
 
 @respx.mock
@@ -467,4 +471,27 @@ async def test_async_runs_events_returns_the_json_poll_response():
     )
     client = AsyncModus(api_key="modus_test_key_abc123", base_url=BASE, agent_host=AGENT_BASE)
 
-    assert await client.workflows.runs.events("run-1") == _POLL
+    poll = await client.workflows.runs.events("run-1")
+
+    assert (poll.cursor, poll.done) == ("1-0", False)
+    assert poll.events[0].type == "token"
+
+
+@respx.mock
+def test_run_create_accepts_the_request_model(client):
+    from modus.types.agent_runs import ResumeRunRequest, SkillRunCreateRequest
+
+    route = respx.post(f"{BASE}/agent/v1/scopes/7/runs").mock(
+        return_value=httpx.Response(200, headers=_SSE_HEADERS, text=_RESUMED_BODY)
+    )
+    list(client.workflows.runs.create_scope(7, SkillRunCreateRequest(message="hi", session_id="s-1")))
+    assert json.loads(route.calls.last.request.content) == {"message": "hi", "sessionId": "s-1"}
+
+    resume = respx.post(f"{BASE}/agent/v1/runs/r1/resume").mock(
+        return_value=httpx.Response(200, headers=_SSE_HEADERS, text=_RESUMED_BODY)
+    )
+    list(client.workflows.runs.resume("r1", ResumeRunRequest(session_id="s-1", decision="approve")))
+    assert json.loads(resume.calls.last.request.content) == {
+        "sessionId": "s-1",
+        "decision": "approve",
+    }

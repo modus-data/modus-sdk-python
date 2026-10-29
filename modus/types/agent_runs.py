@@ -18,6 +18,9 @@ from .._generated.models import (
     ModusRunDto,
     ResumeRunDto,
     RunAdmissionResponseDto,
+    RunEventsPollEventDto,
+    RunEventsPollResponseDto,
+    RunEventsPollStatus,
     SkillRunDto,
     WorkflowActionDto,
 )
@@ -38,6 +41,8 @@ InterruptRunRequest = InterruptRunDto
 EditQueuedRunRequest = EditQueuedRunDto
 FollowUpRunRequest = FollowUpRunDto
 RunAdmission = RunAdmissionResponseDto
+RunEventsPoll = RunEventsPollResponseDto
+RunEventsPollEvent = RunEventsPollEventDto
 WorkflowActionRequest = WorkflowActionDto
 
 __all__ = [
@@ -60,6 +65,11 @@ __all__ = [
     "ModusRunCreateRequest",
     "ResumeRunRequest",
     "RunAdmission",
+    "RunEventsPoll",
+    "RunEventsPollEvent",
+    "RunEventsPollEventDto",
+    "RunEventsPollResponseDto",
+    "RunEventsPollStatus",
     "SkillRunCreateRequest",
     "WorkflowActionRequest",
     "AgentRunDto",
