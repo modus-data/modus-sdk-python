@@ -906,12 +906,12 @@ class ErrorEnvelopeDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     code: ApiErrorCode = Field(..., description='Modus-specific machine code.')
     status: ApiErrorStatus = Field(..., description='Canonical status string for the error.')
-    message: str = Field(..., examples=['Skill was not found or you lack permission.'])
+    message: str = Field(..., examples=['Scope was not found or you lack permission.'])
     request_id: str = Field(..., alias='requestId', examples=['req_01HQ7K8ABCDEFGHIJKLMNOPQRS'])
     info: dict[str, Any] | None = Field(
         None,
         description="Optional domain-specific context. Shape varies per endpoint — see the operation's error response examples.",
-        examples=[{'skillId': 'sk_abc123'}],
+        examples=[{'scopeId': 42}],
     )
 
 
