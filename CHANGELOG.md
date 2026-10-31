@@ -101,6 +101,7 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Fixed
 
+- **A chat you stop reading at `done` closes its connection.** On some Python versions (3.12.3, for example) breaking out of `chat.event_stream` left the HTTP stream open until garbage collection; it now closes when the run finishes.
 - **String enums print their value.** `print(scope.status)` and `str(scope.status)` give `active`, as the TypeScript SDK does, not `ResourceLifecycleStatus.active`. Comparison with `"active"` and `.value` are unchanged.
 - **Python-version classifiers.** The package declares Python 3.10 to 3.14, matching `requires-python`, so PyPI lists the supported versions.
 - **README.** The async example awaits the page before paging (`(await client.scopes.list()).auto_paging_iter()`); getting started follows every page; the `move` example moves the uploaded file into a folder; custom context item writes are documented as off until Modus enables them for your organization; it shows how to reach staging or a self-hosted API (`base_url` / `MODUS_BASE_URL`, `agent_host` / `MODUS_AGENT_HOST`); the error example handles a client-side `ValidationError`; tokens are shown as `modus_pat_…`; and the example scripts are said to live in the GitHub repository, not the wheel.

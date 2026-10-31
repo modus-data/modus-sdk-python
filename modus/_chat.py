@@ -256,13 +256,19 @@ class ChatSession:
 
     def _open(self, reset_aware: bool) -> Generator[RunEvent, None, None]:
         state = self._state
+        lines = self._http.stream_post(state.request.path, json=state.body(reset_aware))
         parser = SseParser()
-        for line in self._http.stream_post(state.request.path, json=state.body(reset_aware)):
-            for event in parser.feed(line):
-                ends = state.accept(event)
-                yield event
-                if ends:
-                    return
+        try:
+            for line in lines:
+                for event in parser.feed(line):
+                    ends = state.accept(event)
+                    yield event
+                    if ends:
+                        return
+        finally:
+            # Closing this generator does not close the one it iterates; on some interpreters
+            # (CPython 3.12.3) the HTTP stream would stay open until garbage collection.
+            lines.close()  # type: ignore[attr-defined]
 
 
 class AsyncChatSession:
