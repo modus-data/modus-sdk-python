@@ -81,6 +81,7 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Fixed
 
+- **A chat you stop reading at `done` closes its connection.** On some Python versions (3.12.3, for example) breaking out of `chat.event_stream` left the HTTP stream open until garbage collection; it now closes when the run finishes.
 - **`scopes.evaluations(id).update_config()` sends the API's field names.** It sent `judge_model`, `judge_guidance`, `time_of_day` and `clerk_user_id` in snake_case, which the API rejects with 400 ("property judge_model should not exist"); only `enabled` and `cadence.frequency` worked. Sync and async.
 - **Completed evaluation runs could not be listed or read.** `mgmt.scopes.evaluations(id).list_runs()` and `.get_run(run_id)` raised `ValidationError` for any finished run, because `avg_score`, `finished_at` and the result fields `actual_output`, `passed`, `score`, `reasoning` and `was_passing_before` were typed as dicts. They are now `float`, `datetime`, `str` and `bool`, each optional. The server now sends evaluation timestamps as ISO 8601 (see Changed). An evaluation recipient's `name` is `str | None`.
 - **A path id of `'..'` could target the parent resource, e.g. delete the scope.** `scopes.memories(7).delete('..')` sent `DELETE /scopes/7`. Every path id that is blank, `'.'` or `'..'` now raises `ValueError` before any request; a blank id no longer returns the list page as one item.

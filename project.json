@@ -34,7 +34,8 @@
         "{workspaceRoot}/distribution/clients/sdk-surface.json",
         "{workspaceRoot}/distribution/clients/sdk-surface.schema.json",
         "{workspaceRoot}/distribution/clients/error-responses.json",
-        { "externalDependencies": [] }
+        { "externalDependencies": [] },
+        { "runtime": "python3 --version" }
       ],
       "outputs": [
         "{workspaceRoot}/reports/junit/{projectName}.xml"
@@ -60,7 +61,8 @@
       "inputs": [
         "default",
         "{workspaceRoot}/apps/services/*/openapi/v1.json",
-        "{workspaceRoot}/packages/openapi-portal/src/**/*.ts"
+        "{workspaceRoot}/packages/openapi-portal/src/**/*.ts",
+        { "runtime": "python3 --version" }
       ],
       "outputs": ["{projectRoot}/reports"]
     },
