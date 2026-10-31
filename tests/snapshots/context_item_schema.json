@@ -1,5 +1,65 @@
 {
   "$defs": {
+    "ContextItemAccessDto": {
+      "properties": {
+        "visibility": {
+          "$ref": "#/$defs/ContextItemVisibility"
+        },
+        "groupPermissions": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ContextItemGroupPermissionDto"
+          },
+          "description": "Permissions by group id.",
+          "title": "Grouppermissions",
+          "type": "object"
+        },
+        "sharedWith": {
+          "items": {
+            "$ref": "#/$defs/ContextItemSharedUserDto"
+          },
+          "title": "Sharedwith",
+          "type": "array"
+        },
+        "ownerUserId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Null for an item created before items had owners; the first access change sets it.",
+          "title": "Owneruserid"
+        },
+        "ownerEmail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Owneremail"
+        },
+        "hidesDirectGrants": {
+          "description": "True when some users have access through direct grants this configuration does not show. Saving it removes their access.",
+          "title": "Hidesdirectgrants",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "visibility",
+        "groupPermissions",
+        "sharedWith",
+        "ownerUserId",
+        "ownerEmail",
+        "hidesDirectGrants"
+      ],
+      "title": "ContextItemAccessDto",
+      "type": "object"
+    },
     "ContextItemAncestorDto": {
       "properties": {
         "uid": {
@@ -48,6 +108,79 @@
       ],
       "title": "ContextItemAncestorDto",
       "type": "object"
+    },
+    "ContextItemGroupPermissionDto": {
+      "properties": {
+        "use": {
+          "description": "Group members can view the item.",
+          "title": "Use",
+          "type": "boolean"
+        },
+        "manage": {
+          "description": "Group members can edit, delete and change access to the item.",
+          "title": "Manage",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "use",
+        "manage"
+      ],
+      "title": "ContextItemGroupPermissionDto",
+      "type": "object"
+    },
+    "ContextItemSharePermission": {
+      "enum": [
+        "use",
+        "manage"
+      ],
+      "title": "ContextItemSharePermission",
+      "type": "string"
+    },
+    "ContextItemSharedUserDto": {
+      "properties": {
+        "email": {
+          "description": "Empty for a user whose email is unknown; such an entry is matched by userId.",
+          "title": "Email",
+          "type": "string"
+        },
+        "userId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Userid"
+        },
+        "permission": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ContextItemSharePermission"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "email"
+      ],
+      "title": "ContextItemSharedUserDto",
+      "type": "object"
+    },
+    "ContextItemVisibility": {
+      "enum": [
+        "shared",
+        "private"
+      ],
+      "title": "ContextItemVisibility",
+      "type": "string"
     },
     "UserFeedback": {
       "enum": [
@@ -226,6 +359,31 @@
         }
       ],
       "title": "Lastupdatemetadata"
+    },
+    "access": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ContextItemAccessDto"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Present for notes, saved queries, links and uploaded files."
+    },
+    "canManage": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Present for notes, saved queries, links and uploaded files.",
+      "title": "Canmanage"
     }
   },
   "required": [

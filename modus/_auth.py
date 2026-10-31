@@ -62,10 +62,13 @@ def resolve_base_url(base_url: Optional[str]) -> Optional[str]:
 def resolve_agent_host(agent_host: Optional[str]) -> Optional[str]:
     """
     Resolve the agent host from an explicit constructor argument, or from the
-    ``MODUS_AGENT_HOST`` environment variable when set. Returns ``None`` if
-    neither is set (caller uses the production default).
+    ``MODUS_AGENT_HOST`` environment variable when set. A blank value counts as
+    unset. Returns ``None`` if neither is set.
     """
-    return agent_host or os.environ.get(_AGENT_HOST_ENV_VAR) or None
+    for value in (agent_host, os.environ.get(_AGENT_HOST_ENV_VAR)):
+        if value and value.strip():
+            return value.strip()
+    return None
 
 
 def _is_modus_api_hostname(hostname: str) -> bool:

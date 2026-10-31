@@ -86,3 +86,22 @@ def test_skills_get_accepts_int_zero():
     # will fail with respx.mock not loaded, but validate_id passes first.
     with pytest.raises(Exception):  # connection error or similar
         _client().scopes.get(0)
+
+
+@pytest.mark.parametrize("bad_id", ["", "   ", ".", ".."])
+def test_bad_path_id_is_a_modus_error_and_a_value_error(bad_id: str) -> None:
+    import modus
+
+    with respx.mock(assert_all_called=False) as router:
+        with pytest.raises(modus.ValidationError) as exc:
+            _client().scopes.get(bad_id)
+        assert router.calls.call_count == 0
+    assert isinstance(exc.value, modus.ModusError)
+    assert isinstance(exc.value, ValueError)
+
+
+def test_unsupported_chat_model_is_a_modus_error() -> None:
+    import modus
+
+    with pytest.raises(modus.ModusError):
+        _client().modus.chat("hi", model="not-a-model")

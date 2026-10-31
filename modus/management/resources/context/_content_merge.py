@@ -6,6 +6,7 @@ from typing import Any
 
 from modus.types.context import ContextItem
 
+from ...._exceptions import ValidationError
 from ...types.context import UserFeedback
 from .items import AsyncContextItemsResource, ContextItemsResource
 
@@ -49,12 +50,12 @@ def merge_saved_query_content(
 
 def _require_content_dict(item: ContextItem, *, context_type: str) -> dict[str, Any]:
     if item.context_type != context_type:
-        raise ValueError(
+        raise ValidationError(
             f"Expected context_type {context_type!r}, got {item.context_type!r}."
         )
     content = item.content
     if not isinstance(content, dict):
-        raise ValueError(
+        raise ValidationError(
             f"Context item {item.uid!r} has no dict content; cannot merge {context_type} fields."
         )
     return content

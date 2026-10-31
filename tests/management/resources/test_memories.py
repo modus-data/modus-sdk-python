@@ -87,24 +87,33 @@ def test_memories_search(client) -> None:
 
 
 @respx.mock
-def test_memories_update(client) -> None:
-    route = respx.patch(f"{MEMORIES_BASE}/mem_01").mock(
-        return_value=httpx.Response(200, json={**SAMPLE_MEMORY, "memory": "Updated text."})
-    )
-    memory = client.scopes.memories(SKILL_ID).update(
+def test_memories_update_returns_none_on_204(client) -> None:
+    """The server answers 204 with no body; the update must not raise after it was applied."""
+    route = respx.patch(f"{MEMORIES_BASE}/mem_01").mock(return_value=httpx.Response(204))
+    result = client.scopes.memories(SKILL_ID).update(
         "mem_01",
         MemoryUpdate.text_only("Updated text."),
     )
-    assert isinstance(memory, Memory)
-    assert memory.memory == "Updated text."
+    assert result is None
+    assert route.call_count == 1
     body = json.loads(route.calls[0].request.read())
     assert body == {"memory": "Updated text."}
 
 
 @respx.mock
+async def test_async_memories_update_returns_none_on_204(async_client) -> None:
+    route = respx.patch(f"{MEMORIES_BASE}/mem_01").mock(return_value=httpx.Response(204))
+    result = await async_client.scopes.memories(SKILL_ID).update(
+        "mem_01", MemoryUpdate.text_only("Updated text.")
+    )
+    assert result is None
+    assert route.call_count == 1
+
+
+@respx.mock
 def test_memories_update_with_mask(client) -> None:
     route = respx.patch(f"{MEMORIES_BASE}/mem_01?updateMask=memory").mock(
-        return_value=httpx.Response(200, json=SAMPLE_MEMORY)
+        return_value=httpx.Response(204)
     )
     client.scopes.memories(SKILL_ID).update(
         "mem_01",

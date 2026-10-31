@@ -5,8 +5,20 @@ import json
 import httpx
 import pytest
 import respx
-from modus import Modus
-from modus.types.agent_runs import ActiveConversationRun, AgentRun, AgentRunListItem
+from modus import Modus, ValidationError
+from modus._exceptions import (
+    ConflictError,
+    ModusError,
+    NotFoundError,
+    PermissionDeniedError,
+    RateLimitError,
+)
+from modus.types.agent_runs import (
+    ActiveConversationRun,
+    AgentRun,
+    AgentRunListItem,
+    RunAdmission,
+)
 from modus.types.runs import DoneEvent
 
 BASE = "https://api.modus.com"
@@ -189,6 +201,126 @@ def test_agents_runs_cancel_uses_agent_service():
     assert route.called
 
 
+def _agent_client(max_retries: int = 0) -> Modus:
+    return Modus(
+        api_key="modus_test_key_abc123",
+        base_url=BASE,
+        agent_host=AGENT_BASE,
+        max_retries=max_retries,
+    )
+
+
+@respx.mock
+def test_runs_interrupt_sends_the_follow_up_turn_and_returns_the_new_run():
+    route = respx.post(f"{AGENT_BASE}/agent/v1/runs/run-1/interrupt").mock(
+        return_value=httpx.Response(202, json={"runId": "run-steer", "status": "pending"})
+    )
+
+    admitted = _agent_client().workflows.runs.interrupt(
+        "run-1",
+        {"message": "Only count EMEA.", "sessionId": "thread-1"},
+        last_seen_event_id="1717000000000-0",
+    )
+
+    assert isinstance(admitted, RunAdmission)
+    assert (admitted.run_id, admitted.status) == ("run-steer", "pending")
+    sent = json.loads(route.calls.last.request.content)
+    assert sent["lastSeenEventId"] == "1717000000000-0"
+    assert sent["nextRun"]["message"] == "Only count EMEA."
+    assert sent["nextRun"]["sessionId"] == "thread-1"
+    assert sent["nextRun"]["runId"]
+
+
+@respx.mock
+def test_runs_interrupt_retry_reuses_the_pinned_run_id():
+    route = respx.post(f"{AGENT_BASE}/agent/v1/runs/run-1/interrupt").mock(
+        side_effect=[
+            httpx.Response(500, json={"error": {"code": "INTERNAL_ERROR", "message": "boom"}}),
+            httpx.Response(202, json={"runId": "run-steer", "status": "pending"}),
+        ]
+    )
+
+    _agent_client(max_retries=1).workflows.runs.interrupt(
+        "run-1", {"message": "m", "sessionId": "thread-1"}
+    )
+
+    assert route.call_count == 2
+    first, second = (json.loads(call.request.content) for call in route.calls)
+    assert second["nextRun"]["runId"] == first["nextRun"]["runId"]
+
+
+@respx.mock
+def test_runs_edit_queued_sends_the_replacement_turn_and_returns_the_run():
+    route = respx.post(f"{AGENT_BASE}/agent/v1/runs/run-q/queue-edit").mock(
+        return_value=httpx.Response(200, json={"runId": "run-q", "status": "queued"})
+    )
+
+    edited = _agent_client().workflows.runs.edit_queued(
+        "run-q", {"message": "edited", "sessionId": "thread-1"}
+    )
+
+    assert (edited.run_id, edited.status) == ("run-q", "queued")
+    assert json.loads(route.calls.last.request.content) == {
+        "nextRun": {"message": "edited", "sessionId": "thread-1"}
+    }
+
+
+@respx.mock
+async def test_async_runs_interrupt_pins_the_run_id_and_returns_the_new_run():
+    from modus import AsyncModus
+
+    route = respx.post(f"{AGENT_BASE}/agent/v1/runs/run-1/interrupt").mock(
+        return_value=httpx.Response(202, json={"runId": "run-steer", "status": "pending"})
+    )
+    client = AsyncModus(api_key="modus_test_key_abc123", base_url=BASE, agent_host=AGENT_BASE)
+
+    admitted = await client.workflows.runs.interrupt(
+        "run-1", {"message": "m", "sessionId": "thread-1"}
+    )
+
+    assert admitted.run_id == "run-steer"
+    assert json.loads(route.calls.last.request.content)["nextRun"]["runId"]
+    with pytest.raises(ValueError, match="sessionId"):
+        await client.workflows.runs.edit_queued("run-1", {"message": "m"})
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda runs: runs.interrupt("run-1", {"message": "m", "sessionId": " "}),
+        lambda runs: runs.edit_queued("run-1", {"message": "m"}),
+        lambda runs: list(runs.resume("run-1", {"decision": "approve"})),
+    ],
+    ids=["interrupt", "edit_queued", "resume"],
+)
+@respx.mock
+def test_runs_continuations_refuse_a_missing_session_id_before_any_request(call):
+    # No route is mocked, so a request would raise respx's error instead of ValidationError.
+    with pytest.raises(ValidationError, match="sessionId"):
+        call(_agent_client().workflows.runs)
+
+
+@respx.mock
+def test_runs_resume_sends_the_decision_without_a_message():
+    route = respx.post(f"{AGENT_BASE}/agent/v1/runs/run-1/resume").mock(
+        return_value=httpx.Response(
+            200,
+            text='data: {"type":"done","runId":"run-c","threadId":"thread-1"}\n\n',
+            headers={"content-type": "text/event-stream"},
+        )
+    )
+
+    list(
+        _agent_client().workflows.runs.resume(
+            "run-1", {"decision": "approve", "sessionId": "thread-1"}
+        )
+    )
+
+    sent = json.loads(route.calls.last.request.content)
+    assert sent["sessionId"] == "thread-1"
+    assert "message" not in sent
+
+
 @respx.mock
 def test_agents_workflow_actions_execute_routes_to_agent_service():
     client = Modus(api_key="modus_test_key_abc123", base_url=BASE, agent_host=AGENT_BASE)
@@ -213,3 +345,126 @@ def test_agents_workflow_actions_execute_routes_to_agent_service():
     assert route.called
     assert isinstance(events[0], DoneEvent)
     assert events[0].run_id == "wf-action-1"
+
+
+# agent-service admits a run before the first response byte, so a rejected
+# stream POST is a plain HTTP error with the standard envelope (these are its bytes).
+_ADMISSION_REJECTIONS = [
+    (400, "BAD_REQUEST", "Message, images, or documents required", ModusError),
+    (403, "FORBIDDEN", "Not a member of this organization", PermissionDeniedError),
+    (404, "NOT_FOUND", "Scope 17 not found", NotFoundError),
+    (409, "CONFLICT", "Idempotency key run-1 conflicts with an existing run", ConflictError),
+    (429, "RATE_LIMITED", "Conversation has 20 non-terminal runs", RateLimitError),
+]
+
+
+def _admission_rejection(status: int, code: str, message: str) -> httpx.Response:
+    return httpx.Response(
+        status,
+        json={"error": {"code": code, "status": "X", "message": message, "requestId": "req_1"}},
+    )
+
+
+@pytest.mark.parametrize(("status", "code", "message", "error_class"), _ADMISSION_REJECTIONS)
+@respx.mock
+def test_run_stream_refused_raises_typed_error(client, status, code, message, error_class):
+    respx.post(f"{BASE}/agent/v1/modus/runs").mock(
+        return_value=_admission_rejection(status, code, message)
+    )
+    with pytest.raises(error_class) as raised:
+        list(client.workflows.runs.create_modus({"message": "hi", "sessionId": "s1"}))
+    assert raised.value.status_code == status
+    assert message in str(raised.value)
+
+
+@pytest.mark.parametrize(("status", "code", "message", "error_class"), _ADMISSION_REJECTIONS)
+@respx.mock
+async def test_async_run_stream_refused_raises_typed_error(
+    async_client, status, code, message, error_class
+):
+    respx.post(f"{BASE}/agent/v1/modus/runs").mock(
+        return_value=_admission_rejection(status, code, message)
+    )
+    with pytest.raises(error_class) as raised:
+        async for _ in async_client.workflows.runs.create_modus(
+            {"message": "hi", "sessionId": "s1"}
+        ):
+            pass
+    assert raised.value.status_code == status
+    assert message in str(raised.value)
+
+
+_SSE_HEADERS = {"content-type": "text/event-stream"}
+_RESUMED_BODY = 'id: 7-1\ndata: {"type":"done","runId":"r1","threadId":"t1"}\n\n'
+
+
+@respx.mock
+def test_run_stream_resumes_after_an_event_id(client):
+    route = respx.get(f"{BASE}/agent/v1/runs/r1/stream").mock(
+        return_value=httpx.Response(200, headers=_SSE_HEADERS, text=_RESUMED_BODY)
+    )
+    events = list(client.workflows.runs.stream("r1", last_event_id="7-0"))
+    assert route.calls.last.request.headers["last-event-id"] == "7-0"
+    assert [(e.type, e.id) for e in events] == [("done", "7-1")]
+
+
+@respx.mock
+def test_run_stream_without_an_event_id_sends_no_last_event_id(client):
+    route = respx.get(f"{BASE}/agent/v1/runs/r1/stream").mock(
+        return_value=httpx.Response(200, headers=_SSE_HEADERS, text=_RESUMED_BODY)
+    )
+    list(client.workflows.runs.stream("r1"))
+    assert "last-event-id" not in route.calls.last.request.headers
+
+
+@respx.mock
+async def test_async_run_stream_resumes_after_an_event_id(async_client):
+    route = respx.get(f"{BASE}/agent/v1/runs/r1/stream").mock(
+        return_value=httpx.Response(200, headers=_SSE_HEADERS, text=_RESUMED_BODY)
+    )
+    events = [e async for e in async_client.workflows.runs.stream("r1", last_event_id="7-0")]
+    assert route.calls.last.request.headers["last-event-id"] == "7-0"
+    assert [(e.type, e.id) for e in events] == [("done", "7-1")]
+
+
+@respx.mock
+def test_stale_resume_is_refused_before_any_stream(client):
+    respx.post(f"{BASE}/agent/v1/runs/r1/resume").mock(
+        return_value=_admission_rejection(
+            409, "CONFLICT", "No write approval is pending for this conversation."
+        )
+    )
+    with pytest.raises(ConflictError) as raised:
+        list(client.workflows.runs.resume("r1", {"sessionId": "s1", "decision": "approve"}))
+    assert raised.value.code == "CONFLICT"
+    assert raised.value.request_id == "req_1"
+
+
+_POLL = {
+    "events": [{"id": "1-0", "type": "token", "content": "hi"}],
+    "cursor": "1-0",
+    "status": "running",
+    "done": False,
+}
+
+
+@respx.mock
+def test_runs_events_returns_the_json_poll_response():
+    route = respx.get(f"{AGENT_BASE}/agent/v1/runs/run-1/events").mock(
+        return_value=httpx.Response(200, json=_POLL)
+    )
+
+    assert _agent_client().workflows.runs.events("run-1") == _POLL
+    assert route.called
+
+
+@respx.mock
+async def test_async_runs_events_returns_the_json_poll_response():
+    from modus import AsyncModus
+
+    respx.get(f"{AGENT_BASE}/agent/v1/runs/run-1/events").mock(
+        return_value=httpx.Response(200, json=_POLL)
+    )
+    client = AsyncModus(api_key="modus_test_key_abc123", base_url=BASE, agent_host=AGENT_BASE)
+
+    assert await client.workflows.runs.events("run-1") == _POLL

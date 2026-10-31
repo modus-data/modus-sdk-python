@@ -15,6 +15,7 @@ class OperationSpec(TypedDict):
     query_params: Tuple[str, ...]
     request_schema: Optional[str]
     response_schema: Optional[str]
+    idempotent: bool
 
 
 OPERATIONS: dict[str, OperationSpec] = {
@@ -27,6 +28,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('pageToken', 'pageSize', 'type'),
         "request_schema": None,
         "response_schema": 'ListConnectionsResponseDto',
+        "idempotent": False,
     },
     "ConnectionsController_listSelections": {
         "method": "GET",
@@ -37,6 +39,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('pageToken', 'pageSize'),
         "request_schema": None,
         "response_schema": 'ListConnectionSelectionsResponseDto',
+        "idempotent": False,
     },
     "ContextCreatorsController_createLink": {
         "method": "POST",
@@ -47,6 +50,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'CreateLinkDto',
         "response_schema": 'CreatedContextItemResponseDto',
+        "idempotent": False,
     },
     "ContextCreatorsController_createNote": {
         "method": "POST",
@@ -57,6 +61,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'CreateNoteDto',
         "response_schema": 'CreatedContextItemResponseDto',
+        "idempotent": False,
     },
     "ContextCreatorsController_createSavedQuery": {
         "method": "POST",
@@ -67,6 +72,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'CreateSavedQueryDto',
         "response_schema": 'CreatedContextItemResponseDto',
+        "idempotent": False,
     },
     "ContextFilesController_finalize": {
         "method": "POST",
@@ -77,6 +83,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'FinalizeUploadDto',
         "response_schema": 'FileUploadResourceDto',
+        "idempotent": False,
     },
     "ContextFilesController_finalizeMany": {
         "method": "POST",
@@ -87,6 +94,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'BulkFinalizeDto',
         "response_schema": 'BulkFinalizeResponseDto',
+        "idempotent": False,
     },
     "ContextFilesController_get": {
         "method": "GET",
@@ -97,6 +105,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'FileUploadResourceDto',
+        "idempotent": False,
     },
     "ContextFilesController_list": {
         "method": "GET",
@@ -107,6 +116,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('pageToken', 'pageSize'),
         "request_schema": None,
         "response_schema": 'ListFilesResponseDto',
+        "idempotent": False,
     },
     "ContextFilesController_uploadFromUrl": {
         "method": "POST",
@@ -117,6 +127,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'UploadFromUrlDto',
         "response_schema": 'FileUploadResourceDto',
+        "idempotent": False,
     },
     "ContextFilesController_uploadFromUrls": {
         "method": "POST",
@@ -127,6 +138,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'BulkUploadFromUrlsDto',
         "response_schema": 'BulkUploadFromUrlsResponseDto',
+        "idempotent": False,
     },
     "ContextFilesController_uploadUrl": {
         "method": "POST",
@@ -137,6 +149,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'UploadUrlDto',
         "response_schema": 'UploadUrlResponseDto',
+        "idempotent": False,
     },
     "ContextFilesController_uploadUrls": {
         "method": "POST",
@@ -147,6 +160,18 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'BulkUploadUrlsDto',
         "response_schema": 'BulkUploadUrlsResponseDto',
+        "idempotent": False,
+    },
+    "ContextItemAccessController_updateAccess": {
+        "method": "PATCH",
+        "path": '/api/v1/context/items/{uid}/access',
+        "service": 'modus-api',
+        "server_url": 'https://api.getmodus.com',
+        "path_params": ('uid',),
+        "query_params": (),
+        "request_schema": 'UpdateContextItemAccessDto',
+        "response_schema": 'ContextItemAccessResponseDto',
+        "idempotent": False,
     },
     "ContextItemsController_delete": {
         "method": "DELETE",
@@ -157,6 +182,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'DeleteContextItemResponseDto',
+        "idempotent": False,
     },
     "ContextItemsController_get": {
         "method": "GET",
@@ -167,6 +193,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'ContextItemDto',
+        "idempotent": False,
     },
     "ContextItemsController_list": {
         "method": "GET",
@@ -177,6 +204,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('pageToken', 'pageSize', 'contextTypes', 'verificationStatuses', 'searchQuery', 'topics', 'connectionIds', 'parentUids', 'ancestorUids'),
         "request_schema": None,
         "response_schema": 'ListContextItemsResponseDto',
+        "idempotent": False,
     },
     "ContextItemsController_listValues": {
         "method": "GET",
@@ -184,9 +212,10 @@ OPERATIONS: dict[str, OperationSpec] = {
         "service": 'modus-api',
         "server_url": 'https://api.getmodus.com',
         "path_params": ('uid',),
-        "query_params": ('contextType', 'contentKeyPath', 'pageSize', 'offset', 'pageToken', 'searchQuery', 'dataPathPrefix'),
+        "query_params": ('contextType', 'contentKeyPath', 'pageSize', 'pageToken', 'searchQuery'),
         "request_schema": None,
         "response_schema": 'ListContextItemValuesResponseDto',
+        "idempotent": False,
     },
     "ContextItemsController_lookup": {
         "method": "POST",
@@ -197,6 +226,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'LookupContextItemDto',
         "response_schema": 'LookupContextItemResponseDto',
+        "idempotent": True,
     },
     "ContextItemsController_move": {
         "method": "POST",
@@ -207,6 +237,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'MoveContextItemDto',
         "response_schema": 'MoveContextItemResponseDto',
+        "idempotent": False,
     },
     "ContextItemsController_update": {
         "method": "PATCH",
@@ -217,6 +248,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('updateMask',),
         "request_schema": 'UpdateContextItemDto',
         "response_schema": None,
+        "idempotent": False,
     },
     "CustomContextItemsController_batchCreate": {
         "method": "POST",
@@ -227,6 +259,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'BatchCreateCustomContextItemsDto',
         "response_schema": 'BatchCreateCustomContextItemsResponseDto',
+        "idempotent": False,
     },
     "CustomContextItemsController_create": {
         "method": "POST",
@@ -237,6 +270,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'CreateCustomContextItemDto',
         "response_schema": 'CreatedCustomContextItemResponseDto',
+        "idempotent": False,
     },
     "CustomContextItemsController_createRelations": {
         "method": "POST",
@@ -247,6 +281,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'BatchCreateCustomContextItemRelationsDto',
         "response_schema": 'BatchCreateCustomContextItemRelationsResponseDto',
+        "idempotent": False,
     },
     "CustomContextItemsController_delete": {
         "method": "DELETE",
@@ -257,6 +292,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'DeleteContextItemResponseDto',
+        "idempotent": False,
     },
     "CustomContextItemsController_get": {
         "method": "GET",
@@ -267,6 +303,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'ContextItemDto',
+        "idempotent": False,
     },
     "CustomContextItemsController_list": {
         "method": "GET",
@@ -277,6 +314,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('pageToken', 'pageSize', 'contextTypes', 'verificationStatuses', 'searchQuery', 'topics'),
         "request_schema": None,
         "response_schema": 'ListCustomContextItemsResponseDto',
+        "idempotent": False,
     },
     "CustomContextItemsController_update": {
         "method": "PATCH",
@@ -287,6 +325,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'UpdateCustomContextItemDto',
         "response_schema": None,
+        "idempotent": False,
     },
     "DashboardsController_acceptOwnership": {
         "method": "POST",
@@ -297,6 +336,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'DashboardDto',
+        "idempotent": False,
     },
     "DashboardsController_cancelOwnership": {
         "method": "DELETE",
@@ -307,6 +347,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'DashboardDto',
+        "idempotent": False,
     },
     "DashboardsController_create": {
         "method": "POST",
@@ -317,6 +358,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'CreateDashboardDto',
         "response_schema": 'DashboardDto',
+        "idempotent": False,
     },
     "DashboardsController_createElement": {
         "method": "POST",
@@ -327,6 +369,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'CreateDashboardElementDto',
         "response_schema": 'DashboardElementResponseDto',
+        "idempotent": False,
     },
     "DashboardsController_delete": {
         "method": "DELETE",
@@ -337,6 +380,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": None,
+        "idempotent": False,
     },
     "DashboardsController_get": {
         "method": "GET",
@@ -347,6 +391,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('view',),
         "request_schema": None,
         "response_schema": 'DashboardDto',
+        "idempotent": False,
     },
     "DashboardsController_getElement": {
         "method": "GET",
@@ -357,6 +402,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'DashboardElementResponseDto',
+        "idempotent": False,
     },
     "DashboardsController_getVersion": {
         "method": "GET",
@@ -367,6 +413,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'DashboardDto',
+        "idempotent": False,
     },
     "DashboardsController_list": {
         "method": "GET",
@@ -377,6 +424,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('view',),
         "request_schema": None,
         "response_schema": 'ListDashboardsResponseDto',
+        "idempotent": False,
     },
     "DashboardsController_listDraftSnapshots": {
         "method": "GET",
@@ -387,6 +435,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'ListDashboardDraftSnapshotsResponseDto',
+        "idempotent": False,
     },
     "DashboardsController_listElements": {
         "method": "GET",
@@ -397,6 +446,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'DashboardElementsListResponseDto',
+        "idempotent": False,
     },
     "DashboardsController_listVersions": {
         "method": "GET",
@@ -407,6 +457,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'ListDashboardVersionsResponseDto',
+        "idempotent": False,
     },
     "DashboardsController_publish": {
         "method": "POST",
@@ -417,6 +468,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'PublishDashboardDto',
         "response_schema": 'PublishDashboardResponseDto',
+        "idempotent": False,
     },
     "DashboardsController_restore": {
         "method": "POST",
@@ -427,6 +479,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'DashboardDto',
+        "idempotent": False,
     },
     "DashboardsController_transferOwnership": {
         "method": "POST",
@@ -437,6 +490,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'TransferDashboardOwnershipDto',
         "response_schema": 'DashboardDto',
+        "idempotent": False,
     },
     "DashboardsController_updateAccess": {
         "method": "PATCH",
@@ -447,6 +501,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'UpdateDashboardAccessDto',
         "response_schema": 'DashboardDto',
+        "idempotent": False,
     },
     "DashboardsController_updateDraft": {
         "method": "PATCH",
@@ -457,6 +512,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'UpdateDashboardDraftDto',
         "response_schema": 'DashboardDto',
+        "idempotent": False,
     },
     "DashboardsController_updateElement": {
         "method": "PATCH",
@@ -467,6 +523,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'UpdateDashboardElementDto',
         "response_schema": 'DashboardDto',
+        "idempotent": False,
     },
     "DashboardsController_updateLayout": {
         "method": "PATCH",
@@ -477,6 +534,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'UpdateDashboardLayoutDto',
         "response_schema": 'DashboardDto',
+        "idempotent": False,
     },
     "EvaluationsController_getConfig": {
         "method": "GET",
@@ -487,6 +545,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'EvaluationConfigDto',
+        "idempotent": False,
     },
     "EvaluationsController_getRun": {
         "method": "GET",
@@ -497,6 +556,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'EvaluationRunWithResultsDto',
+        "idempotent": False,
     },
     "EvaluationsController_listRuns": {
         "method": "GET",
@@ -507,6 +567,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('pageSize', 'pageToken'),
         "request_schema": None,
         "response_schema": 'ListEvaluationRunsResponseDto',
+        "idempotent": False,
     },
     "EvaluationsController_triggerRun": {
         "method": "POST",
@@ -517,6 +578,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'TriggerEvaluationRunResponseDto',
+        "idempotent": False,
     },
     "EvaluationsController_updateConfig": {
         "method": "PUT",
@@ -527,6 +589,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'UpdateEvaluationConfigDto',
         "response_schema": 'EvaluationConfigDto',
+        "idempotent": False,
     },
     "IngestedDataController_upload": {
         "method": "POST",
@@ -537,6 +600,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'CreateIngestedDataDto',
         "response_schema": 'CreatedIngestedDataResponseDto',
+        "idempotent": True,
     },
     "MemberGroupsController_list": {
         "method": "GET",
@@ -547,26 +611,18 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'ListMemberGroupsResponseDto',
+        "idempotent": False,
     },
-    "ModusChatController_chat": {
+    "ModusContextComposeController_compose": {
         "method": "POST",
-        "path": '/api/v1/modus/chat',
-        "service": 'modus-api',
-        "server_url": 'https://api.getmodus.com',
+        "path": '/agent/v1/modus/context',
+        "service": 'agent-service',
+        "server_url": 'https://agent.getmodus.com',
         "path_params": (),
         "query_params": (),
-        "request_schema": 'ModusChatRequestDto',
-        "response_schema": 'ModusChatResponseDto',
-    },
-    "ModusChatController_chatContinue": {
-        "method": "POST",
-        "path": '/api/v1/modus/conversations/{threadId}/chat',
-        "service": 'modus-api',
-        "server_url": 'https://api.getmodus.com',
-        "path_params": ('threadId',),
-        "query_params": (),
-        "request_schema": 'ModusChatRequestDto',
-        "response_schema": 'ModusChatResponseDto',
+        "request_schema": 'ModusContextRequestDto',
+        "response_schema": 'ModusContextResponseDto',
+        "idempotent": True,
     },
     "ModusContextController_compose": {
         "method": "POST",
@@ -577,6 +633,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'ModusContextRequestDto',
         "response_schema": 'ModusContextResponseDto',
+        "idempotent": False,
     },
     "ModusConversationsController_get": {
         "method": "GET",
@@ -587,6 +644,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'ConversationDto',
+        "idempotent": False,
     },
     "ModusConversationsController_list": {
         "method": "GET",
@@ -597,6 +655,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('pageToken', 'page', 'pageSize', 'userId', 'toolName', 'source', 'sourceRef', 'timeframe', 'includeTools', 'kind'),
         "request_schema": None,
         "response_schema": 'ListConversationsResponseDto',
+        "idempotent": False,
     },
     "ModusRunsController_create": {
         "method": "POST",
@@ -607,6 +666,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'ModusRunDto',
         "response_schema": None,
+        "idempotent": False,
     },
     "OrgMembersController_list": {
         "method": "GET",
@@ -617,6 +677,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'ListOrgMembersResponseDto',
+        "idempotent": False,
     },
     "ResumeRunsController_create": {
         "method": "POST",
@@ -627,6 +688,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'ResumeRunDto',
         "response_schema": None,
+        "idempotent": False,
     },
     "RunLifecycleController_active": {
         "method": "GET",
@@ -637,6 +699,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('pageToken', 'pageSize'),
         "request_schema": None,
         "response_schema": 'ActiveRunsResponseDto',
+        "idempotent": False,
     },
     "RunLifecycleController_activeBySession": {
         "method": "POST",
@@ -647,6 +710,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'ActiveRunsBySessionDto',
         "response_schema": 'ActiveRunsBySessionResponseDto',
+        "idempotent": True,
     },
     "RunLifecycleController_cancel": {
         "method": "POST",
@@ -657,6 +721,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'CancelRunDto',
         "response_schema": None,
+        "idempotent": True,
     },
     "RunLifecycleController_editQueued": {
         "method": "POST",
@@ -666,7 +731,8 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": ('runId',),
         "query_params": (),
         "request_schema": 'EditQueuedRunDto',
-        "response_schema": None,
+        "response_schema": 'RunAdmissionResponseDto',
+        "idempotent": False,
     },
     "RunLifecycleController_events": {
         "method": "GET",
@@ -677,6 +743,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": None,
+        "idempotent": False,
     },
     "RunLifecycleController_interrupt": {
         "method": "POST",
@@ -686,7 +753,8 @@ OPERATIONS: dict[str, OperationSpec] = {
         "path_params": ('runId',),
         "query_params": (),
         "request_schema": 'InterruptRunDto',
-        "response_schema": None,
+        "response_schema": 'RunAdmissionResponseDto',
+        "idempotent": True,
     },
     "RunLifecycleController_stream": {
         "method": "GET",
@@ -697,26 +765,18 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": None,
+        "idempotent": False,
     },
-    "ScopeChatController_chat": {
+    "ScopeContextComposeController_compose": {
         "method": "POST",
-        "path": '/api/v1/scopes/{id}/chat',
-        "service": 'modus-api',
-        "server_url": 'https://api.getmodus.com',
+        "path": '/agent/v1/scopes/{id}/context',
+        "service": 'agent-service',
+        "server_url": 'https://agent.getmodus.com',
         "path_params": ('id',),
         "query_params": (),
-        "request_schema": 'SkillChatRequestDto',
-        "response_schema": 'SkillChatResponseDto',
-    },
-    "ScopeChatController_chatContinue": {
-        "method": "POST",
-        "path": '/api/v1/scopes/{id}/conversations/{threadId}/chat',
-        "service": 'modus-api',
-        "server_url": 'https://api.getmodus.com',
-        "path_params": ('id', 'threadId'),
-        "query_params": (),
-        "request_schema": 'SkillChatRequestDto',
-        "response_schema": 'SkillChatResponseDto',
+        "request_schema": 'ComposeSkillContextRequestDto',
+        "response_schema": 'ComposeSkillContextResponseDto',
+        "idempotent": True,
     },
     "ScopeContextController_compose": {
         "method": "POST",
@@ -727,6 +787,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'ComposeSkillContextRequestDto',
         "response_schema": 'ComposeSkillContextResponseDto',
+        "idempotent": False,
     },
     "ScopeConversationsController_get": {
         "method": "GET",
@@ -737,6 +798,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('messageLimit', 'beforeMessageIndex'),
         "request_schema": None,
         "response_schema": 'ConversationDto',
+        "idempotent": False,
     },
     "ScopeConversationsController_list": {
         "method": "GET",
@@ -747,6 +809,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('pageToken', 'page', 'pageSize', 'userId', 'toolName', 'source', 'sourceRef', 'timeframe', 'includeTools'),
         "request_schema": None,
         "response_schema": 'ListConversationsResponseDto',
+        "idempotent": False,
     },
     "ScopeInterfacesController_add": {
         "method": "POST",
@@ -757,6 +820,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'AddScopeInterfaceDto',
         "response_schema": 'ScopeInterfaceDto',
+        "idempotent": False,
     },
     "ScopeInterfacesController_delete": {
         "method": "DELETE",
@@ -767,6 +831,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": None,
+        "idempotent": False,
     },
     "ScopeInterfacesController_list": {
         "method": "GET",
@@ -777,6 +842,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'ListScopeInterfacesResponseDto',
+        "idempotent": False,
     },
     "ScopeInterfacesController_update": {
         "method": "PATCH",
@@ -787,6 +853,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('updateMask',),
         "request_schema": 'UpdateScopeInterfaceDto',
         "response_schema": 'ScopeInterfaceDto',
+        "idempotent": False,
     },
     "ScopeMemoriesController_delete": {
         "method": "DELETE",
@@ -797,6 +864,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": None,
+        "idempotent": False,
     },
     "ScopeMemoriesController_list": {
         "method": "GET",
@@ -807,6 +875,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('pageToken', 'pageSize', 'userId', 'limit'),
         "request_schema": None,
         "response_schema": 'ListMemoriesResponseDto',
+        "idempotent": False,
     },
     "ScopeMemoriesController_search": {
         "method": "POST",
@@ -817,6 +886,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'SearchMemoriesRequestDto',
         "response_schema": 'ListMemoriesResponseDto',
+        "idempotent": True,
     },
     "ScopeMemoriesController_update": {
         "method": "PATCH",
@@ -827,6 +897,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('updateMask',),
         "request_schema": 'UpdateMemoryRequestDto',
         "response_schema": None,
+        "idempotent": False,
     },
     "ScopeRunsController_create": {
         "method": "POST",
@@ -837,6 +908,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'SkillRunDto',
         "response_schema": None,
+        "idempotent": False,
     },
     "ScopeSupervisionController_get": {
         "method": "GET",
@@ -847,6 +919,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('view',),
         "request_schema": None,
         "response_schema": 'SupervisionDto',
+        "idempotent": False,
     },
     "ScopeSupervisionController_set": {
         "method": "PUT",
@@ -857,6 +930,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'SetSupervisionRequestDto',
         "response_schema": 'SupervisionDto',
+        "idempotent": False,
     },
     "ScopeSupervisionController_setActive": {
         "method": "PUT",
@@ -867,6 +941,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'SetSupervisionRequestDto',
         "response_schema": 'SupervisionDto',
+        "idempotent": False,
     },
     "ScopesController_acceptOwnershipTransfer": {
         "method": "POST",
@@ -877,6 +952,18 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'ScopeDto',
+        "idempotent": False,
+    },
+    "ScopesController_addEvaluationCase": {
+        "method": "POST",
+        "path": '/api/v1/scopes/{id}/evaluations/cases',
+        "service": 'modus-api',
+        "server_url": 'https://api.getmodus.com',
+        "path_params": ('id',),
+        "query_params": (),
+        "request_schema": 'EvaluationCaseInputDto',
+        "response_schema": 'EvaluationCaseDto',
+        "idempotent": False,
     },
     "ScopesController_cancelOwnershipTransfer": {
         "method": "DELETE",
@@ -887,6 +974,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'ScopeDto',
+        "idempotent": False,
     },
     "ScopesController_create": {
         "method": "POST",
@@ -897,6 +985,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'CreateSkillDto',
         "response_schema": 'ScopeDto',
+        "idempotent": False,
     },
     "ScopesController_delete": {
         "method": "DELETE",
@@ -907,6 +996,18 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": None,
+        "idempotent": False,
+    },
+    "ScopesController_deleteEvaluationCase": {
+        "method": "DELETE",
+        "path": '/api/v1/scopes/{id}/evaluations/cases/{caseId}',
+        "service": 'modus-api',
+        "server_url": 'https://api.getmodus.com',
+        "path_params": ('id', 'caseId'),
+        "query_params": (),
+        "request_schema": None,
+        "response_schema": None,
+        "idempotent": False,
     },
     "ScopesController_deploy": {
         "method": "POST",
@@ -917,6 +1018,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'DeploySkillDto',
         "response_schema": 'DeployResponseDto',
+        "idempotent": False,
     },
     "ScopesController_get": {
         "method": "GET",
@@ -927,6 +1029,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('view',),
         "request_schema": None,
         "response_schema": 'ScopeDto',
+        "idempotent": False,
     },
     "ScopesController_getVariation": {
         "method": "GET",
@@ -937,6 +1040,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'ScopeDto',
+        "idempotent": False,
     },
     "ScopesController_list": {
         "method": "GET",
@@ -947,6 +1051,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('pageToken', 'pageSize', 'view', 'search', 'managerId', 'includeVariation'),
         "request_schema": None,
         "response_schema": 'ListSkillsResponseDto',
+        "idempotent": False,
     },
     "ScopesController_patchMcpConfig": {
         "method": "PATCH",
@@ -957,6 +1062,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'PatchSkillMcpConfigDto',
         "response_schema": 'PatchSkillMcpConfigResponseDto',
+        "idempotent": False,
     },
     "ScopesController_requestOwnershipTransfer": {
         "method": "POST",
@@ -967,6 +1073,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'TransferOwnershipDto',
         "response_schema": 'ScopeDto',
+        "idempotent": False,
     },
     "ScopesController_restore": {
         "method": "POST",
@@ -977,6 +1084,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'ScopeDto',
+        "idempotent": False,
     },
     "ScopesController_update": {
         "method": "PATCH",
@@ -987,6 +1095,18 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('updateMask',),
         "request_schema": 'UpdateSkillDto',
         "response_schema": 'ScopeDto',
+        "idempotent": False,
+    },
+    "ScopesController_updateEvaluationCase": {
+        "method": "PATCH",
+        "path": '/api/v1/scopes/{id}/evaluations/cases/{caseId}',
+        "service": 'modus-api',
+        "server_url": 'https://api.getmodus.com',
+        "path_params": ('id', 'caseId'),
+        "query_params": (),
+        "request_schema": 'UpdateEvaluationCaseDto',
+        "response_schema": 'EvaluationCaseDto',
+        "idempotent": False,
     },
     "SuggestionsController_listApproved": {
         "method": "GET",
@@ -997,6 +1117,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('pageToken', 'pageSize', 'scopeId', 'scopeIds'),
         "request_schema": None,
         "response_schema": 'ListSuggestionQuestionsResponseDto',
+        "idempotent": False,
     },
     "SuggestionsController_recordEvent": {
         "method": "POST",
@@ -1007,6 +1128,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'RecordSuggestionEventDto',
         "response_schema": None,
+        "idempotent": False,
     },
     "ToolsController_list": {
         "method": "GET",
@@ -1017,6 +1139,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('pageToken', 'pageSize'),
         "request_schema": None,
         "response_schema": 'ListToolsResponseDto',
+        "idempotent": False,
     },
     "UsageController_list": {
         "method": "GET",
@@ -1027,6 +1150,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('since', 'until', 'rollup', 'model', 'group_by', 'skill_id', 'agent_id', 'user_id', 'interface', 'user_email'),
         "request_schema": None,
         "response_schema": 'ListUsageResponseDto',
+        "idempotent": False,
     },
     "UsageController_listUsers": {
         "method": "GET",
@@ -1037,6 +1161,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('since', 'until'),
         "request_schema": None,
         "response_schema": 'ListUsageUsersResponseDto',
+        "idempotent": False,
     },
     "WorkflowActionsController_cancel": {
         "method": "POST",
@@ -1047,6 +1172,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'CancelRunDto',
         "response_schema": None,
+        "idempotent": True,
     },
     "WorkflowActionsController_execute": {
         "method": "POST",
@@ -1057,6 +1183,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'WorkflowActionDto',
         "response_schema": None,
+        "idempotent": False,
     },
     "WorkflowInterfacesController_add": {
         "method": "POST",
@@ -1067,6 +1194,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'AddAgentInterfaceDto',
         "response_schema": 'AgentInterfaceDto',
+        "idempotent": False,
     },
     "WorkflowInterfacesController_delete": {
         "method": "DELETE",
@@ -1077,6 +1205,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": None,
+        "idempotent": False,
     },
     "WorkflowInterfacesController_deleteAll": {
         "method": "DELETE",
@@ -1087,6 +1216,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": None,
+        "idempotent": False,
     },
     "WorkflowInterfacesController_list": {
         "method": "GET",
@@ -1097,6 +1227,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'ListAgentInterfacesResponseDto',
+        "idempotent": False,
     },
     "WorkflowInterfacesController_update": {
         "method": "PATCH",
@@ -1107,6 +1238,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('updateMask',),
         "request_schema": 'UpdateAgentInterfaceDto',
         "response_schema": 'AgentInterfaceDto',
+        "idempotent": False,
     },
     "WorkflowRunsController_create": {
         "method": "POST",
@@ -1117,6 +1249,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'AgentRunDto',
         "response_schema": None,
+        "idempotent": False,
     },
     "WorkflowRunsController_get": {
         "method": "GET",
@@ -1127,6 +1260,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('temporalRunId',),
         "request_schema": None,
         "response_schema": 'GetAutomationRunResponseDto',
+        "idempotent": False,
     },
     "WorkflowRunsController_list": {
         "method": "GET",
@@ -1137,6 +1271,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('status', 'timeframe', 'approvalScope', 'search', 'pageSize', 'pageToken'),
         "request_schema": None,
         "response_schema": 'ListAutomationRunsResponseDto',
+        "idempotent": False,
     },
     "WorkflowsController_acceptOwnershipTransfer": {
         "method": "POST",
@@ -1147,6 +1282,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'WorkflowDto',
+        "idempotent": False,
     },
     "WorkflowsController_cancelOwnershipTransfer": {
         "method": "DELETE",
@@ -1157,6 +1293,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'WorkflowDto',
+        "idempotent": False,
     },
     "WorkflowsController_create": {
         "method": "POST",
@@ -1167,6 +1304,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'CreateAgentDto',
         "response_schema": 'WorkflowDto',
+        "idempotent": False,
     },
     "WorkflowsController_delete": {
         "method": "DELETE",
@@ -1177,6 +1315,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": None,
+        "idempotent": False,
     },
     "WorkflowsController_deploy": {
         "method": "POST",
@@ -1187,6 +1326,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'DeployAgentDto',
         "response_schema": 'AgentDeployResponseDto',
+        "idempotent": False,
     },
     "WorkflowsController_get": {
         "method": "GET",
@@ -1197,6 +1337,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('view',),
         "request_schema": None,
         "response_schema": 'WorkflowDto',
+        "idempotent": False,
     },
     "WorkflowsController_list": {
         "method": "GET",
@@ -1207,6 +1348,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('pageToken', 'pageSize', 'view', 'type', 'search', 'includeVariation'),
         "request_schema": None,
         "response_schema": 'ListAgentsResponseDto',
+        "idempotent": False,
     },
     "WorkflowsController_requestOwnershipTransfer": {
         "method": "POST",
@@ -1217,6 +1359,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'TransferOwnershipDto',
         "response_schema": 'WorkflowDto',
+        "idempotent": False,
     },
     "WorkflowsController_restore": {
         "method": "POST",
@@ -1227,6 +1370,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": None,
         "response_schema": 'WorkflowDto',
+        "idempotent": False,
     },
     "WorkflowsController_toggle": {
         "method": "POST",
@@ -1237,6 +1381,7 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": (),
         "request_schema": 'ToggleAgentDto',
         "response_schema": 'WorkflowDto',
+        "idempotent": True,
     },
     "WorkflowsController_update": {
         "method": "PATCH",
@@ -1247,5 +1392,6 @@ OPERATIONS: dict[str, OperationSpec] = {
         "query_params": ('updateMask',),
         "request_schema": 'UpdateAgentDto',
         "response_schema": 'WorkflowDto',
+        "idempotent": False,
     },
 }

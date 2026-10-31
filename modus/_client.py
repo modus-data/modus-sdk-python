@@ -21,7 +21,6 @@ from ._auth import (
     resolve_timeout,
 )
 from ._config import (
-    DEFAULT_AGENT_HOST,
     DEFAULT_BASE_URL,
     DEFAULT_MAX_RETRIES,
     DEFAULT_TIMEOUT,
@@ -86,7 +85,6 @@ class Modus:
             (base_urls or {}).get("agent-service")
             or resolve_agent_host(agent_host)
             or derive_agent_host_from_base_url(resolved_url)
-            or DEFAULT_AGENT_HOST
         )
         resolved_org = resolve_organization_id(organization_id)
         _t = resolve_timeout(timeout)
@@ -108,7 +106,9 @@ class Modus:
         # Dedicated HTTP client for streaming to the agent host.
         _agent_config = ModusConfig(
             api_key=resolved_key,
-            base_url=resolved_agent_host,
+            # A custom base_url leaves the agent host unknown; chat and runs check
+            # config.agent_host and refuse before this client sends anything.
+            base_url=resolved_agent_host or resolved_url,
             timeout=resolved_timeout,
             max_retries=resolved_retries,
             default_headers=default_headers,
@@ -181,7 +181,6 @@ class AsyncModus:
             (base_urls or {}).get("agent-service")
             or resolve_agent_host(agent_host)
             or derive_agent_host_from_base_url(resolved_url)
-            or DEFAULT_AGENT_HOST
         )
         resolved_org = resolve_organization_id(organization_id)
         _t = resolve_timeout(timeout)
@@ -202,7 +201,9 @@ class AsyncModus:
         self._http = AsyncHttpClient(self._config)
         _agent_config = ModusConfig(
             api_key=resolved_key,
-            base_url=resolved_agent_host,
+            # A custom base_url leaves the agent host unknown; chat and runs check
+            # config.agent_host and refuse before this client sends anything.
+            base_url=resolved_agent_host or resolved_url,
             timeout=resolved_timeout,
             max_retries=resolved_retries,
             default_headers=default_headers,

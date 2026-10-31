@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Union
 
 from modus._config import ModusConfig
 from modus._http import AsyncHttpClient, HttpClient
@@ -12,18 +12,27 @@ from modus._pagination import (
     build_aip_page,
     build_async_aip_page,
 )
-from modus._query import update_mask_query
+from modus._query import update_body, update_mask_query
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_page_size
 from modus.types.pagination import AsyncPage, Page
 
 from ...types.context import (
     ContextItem,
+    ContextItemAccessUpdate,
     ContextItemDeletion,
+    ContextItemGroupPermission,
     ContextItemMove,
+    ContextItemSharedUser,
     ContextItemUpdate,
+    ContextItemVisibility,
     UserFeedback,
 )
+from .dashboards import _access_body
+
+VisibilityInput = Union[ContextItemVisibility, str]
+GroupPermissionInput = Union[ContextItemGroupPermission, Mapping[str, bool]]
+SharedUserInput = Union[ContextItemSharedUser, Mapping[str, Any]]
 
 
 def _context_list_params(
@@ -205,13 +214,13 @@ class ContextItemsResource:
         feedback: UserFeedback | None = (
             UserFeedback(user_feedback) if user_feedback is not None else None
         )
-        payload = ContextItemUpdate(
+        payload = update_body(ContextItemUpdate(
             content=content,
             context_type=context_type,
             description=description,
             user_feedback=feedback,
             topics=topics,
-        ).model_dump(by_alias=True, exclude_none=update_mask is None)
+        ), update_mask)
         with_retry(
             lambda: invoke_operation(
                 self._http,
@@ -290,6 +299,59 @@ class ContextItemsResource:
             self._config.max_retries,
         )
         return ContextItemMove.model_validate(raw)
+
+    def update_access(
+        self,
+        uid: str,
+        *,
+        visibility: VisibilityInput,
+        group_permissions: Mapping[str, GroupPermissionInput],
+        shared_with: Sequence[SharedUserInput],
+    ) -> ContextItemAccessUpdate:
+        """Replace who can view and manage a note, saved query, link or uploaded file.
+
+        All three settings are required and replace the current ones. You cannot
+        remove your own manage access. An item created before items had owners
+        becomes yours on the first change.
+
+        Args:
+            uid: UUID of the context item.
+            visibility: ``shared`` (the owner plus the groups in ``group_permissions``)
+                or ``private`` (the owner plus the users in ``shared_with``).
+            group_permissions: Group id to ``ContextItemGroupPermission`` or a dict
+                such as ``{"use": True, "manage": False}``. Used only when shared.
+            shared_with: Users as ``ContextItemSharedUser`` values or dicts such as
+                ``{"email": "ana@example.com", "permission": "use"}``. Used only
+                when private.
+
+        Returns:
+            The item's new access settings and whether you can still manage it.
+
+        Raises:
+            NotFoundError: The item does not exist or you cannot view it.
+            PermissionDeniedError: You can view the item but not manage it.
+            ModusError: The item is another type, a group or user is invalid, or
+                the change would remove your own manage access.
+
+        Example:
+            >>> mgmt.context.items.update_access(
+            ...     "PLACEHOLDER_UID",
+            ...     visibility="private",
+            ...     group_permissions={},
+            ...     shared_with=[{"email": "ana@example.com", "permission": "use"}],
+            ... )
+        """
+        body = _access_body(visibility, group_permissions, shared_with)
+        raw = with_retry(
+            lambda: invoke_operation(
+                self._http,
+                "ContextItemAccessController_updateAccess",
+                path_params={"uid": uid},
+                json_body=body,
+            ),
+            self._config.max_retries,
+        )
+        return ContextItemAccessUpdate.model_validate(raw)
 
 
 class AsyncContextItemsResource:
@@ -382,13 +444,13 @@ class AsyncContextItemsResource:
         feedback: UserFeedback | None = (
             UserFeedback(user_feedback) if user_feedback is not None else None
         )
-        payload = ContextItemUpdate(
+        payload = update_body(ContextItemUpdate(
             content=content,
             context_type=context_type,
             description=description,
             user_feedback=feedback,
             topics=topics,
-        ).model_dump(by_alias=True, exclude_none=update_mask is None)
+        ), update_mask)
         await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,
@@ -440,3 +502,33 @@ class AsyncContextItemsResource:
             self._config.max_retries,
         )
         return ContextItemMove.model_validate(raw)
+
+    async def update_access(
+        self,
+        uid: str,
+        *,
+        visibility: VisibilityInput,
+        group_permissions: Mapping[str, GroupPermissionInput],
+        shared_with: Sequence[SharedUserInput],
+    ) -> ContextItemAccessUpdate:
+        """Replace who can view and manage an item asynchronously. See the sync ``update_access``.
+
+        Example:
+            >>> await mgmt.context.items.update_access(
+            ...     "PLACEHOLDER_UID",
+            ...     visibility="shared",
+            ...     group_permissions={"GROUP_ID": {"use": True, "manage": False}},
+            ...     shared_with=[],
+            ... )
+        """
+        body = _access_body(visibility, group_permissions, shared_with)
+        raw = await async_with_retry(
+            lambda: invoke_operation_async(
+                self._http,
+                "ContextItemAccessController_updateAccess",
+                path_params={"uid": uid},
+                json_body=body,
+            ),
+            self._config.max_retries,
+        )
+        return ContextItemAccessUpdate.model_validate(raw)

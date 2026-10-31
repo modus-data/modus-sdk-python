@@ -1,10 +1,17 @@
 """Tests for mgmt.workflows.create/update/deploy/delete."""
 
+import inspect
 import json
 
 import httpx
+import pytest
 import respx
 from modus.management import AgentSelection, ModusManagement
+from modus.management.resources.workflows.workflows import (
+    AsyncWorkflowsResource,
+    WorkflowsResource,
+)
+from modus.management.types.agent_selection import parse_agent_selection
 from modus.management.types.agents import Agent
 
 BASE = "https://api.modus.com"
@@ -30,11 +37,10 @@ def test_agents_create():
     route = respx.post(f"{BASE}/api/v1/workflows").mock(
         return_value=httpx.Response(201, json=AGENT_RESP)
     )
-    agent = _client().workflows.create(name="My Agent", type="task")
+    agent = _client().workflows.create(name="My Agent", type="workflow")
     assert isinstance(agent, Agent)
     body = json.loads(route.calls[0].request.read())
-    assert body["name"] == "My Agent"
-    assert body["type"] == "task"
+    assert body == {"name": "My Agent", "type": "workflow"}
 
 
 @respx.mock
@@ -56,46 +62,31 @@ def test_agents_create_agent_selection_snake_case():
 
 
 @respx.mock
-def test_agents_create_guardrails_sends_full_access_config():
-    route = respx.post(f"{BASE}/api/v1/workflows").mock(
-        return_value=httpx.Response(201, json=AGENT_RESP)
+def test_agents_update_resends_model_settings_from_get():
+    selection = {
+        "agents": [{"agent_id": 17, "priority_order": 1}],
+        "model": "gpt-4o",
+        "modelSettings": {"reasoningEffort": "high", "contextWindow": 200000},
+    }
+    respx.get(f"{BASE}/api/v1/workflows/1").mock(
+        return_value=httpx.Response(200, json={**AGENT_RESP, "variation": {"agentSelection": selection}})
     )
-    _client().workflows.create(name="My Agent", type="task", guardrails=["no-pii"])
-    body = json.loads(route.calls[0].request.read())
-    access = body["accessConfig"]
-    assert access["guardrails"] == ["no-pii"]
-    assert access["visibility"] == "shared"
-    assert access["groupPermissions"]["__everyone__"] == {"use": True, "manage": True}
-    assert "permissions" not in access
-
-
-_PRIVATE_ACCESS_CONFIG = {
-    "visibility": "private",
-    "groupPermissions": {},
-    "guardrails": [],
-    "sharedWith": [{"email": "alice@example.com"}],
-}
-
-
-@respx.mock
-def test_agents_update_guardrails_merges_existing_access_config():
-    get_route = respx.get(f"{BASE}/api/v1/workflows/1").mock(
-        return_value=httpx.Response(
-            200,
-            json={**AGENT_RESP, "accessConfig": _PRIVATE_ACCESS_CONFIG},
-        )
-    )
-    patch_route = respx.patch(f"{BASE}/api/v1/workflows/1").mock(
+    route = respx.patch(f"{BASE}/api/v1/workflows/1").mock(
         return_value=httpx.Response(200, json=AGENT_RESP)
     )
-    _client().workflows.update(1, guardrails=["no-pii"])
-    assert get_route.call_count == 1
-    assert patch_route.call_count == 1
-    body = json.loads(patch_route.calls[0].request.read())
-    access = body["accessConfig"]
-    assert access["guardrails"] == ["no-pii"]
-    assert access["visibility"] == "private"
-    assert access["sharedWith"] == [{"email": "alice@example.com"}]
+    client = _client()
+    fetched = client.workflows.get(1)
+    assert fetched.variation is not None
+    client.workflows.update(1, agent_selection=parse_agent_selection(fetched.variation.agent_selection))
+    body = json.loads(route.calls[0].request.read())
+    assert body["agentSelection"] == selection
+
+
+@pytest.mark.parametrize("resource", [WorkflowsResource, AsyncWorkflowsResource])
+@pytest.mark.parametrize("method", ["create", "update"])
+def test_workflows_take_no_guardrails(resource, method):
+    """The workflow access DTO has no ``guardrails``: every call that set it was a 400."""
+    assert "guardrails" not in inspect.signature(getattr(resource, method)).parameters
 
 
 @respx.mock

@@ -1,4 +1,4 @@
-"""Shared agent-host run request helpers (chat_stream + runs.create*)."""
+"""Shared agent-host run request helpers (chat + runs.create*)."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ def resolve_agent_run_session_id(session_id: Optional[str] = None) -> str:
 
 
 def with_agent_run_session_id(body: Mapping[str, Any]) -> dict[str, Any]:
-    """Copy body and ensure sessionId is set (parity with chat_stream)."""
+    """Copy body and ensure sessionId is set (parity with chat)."""
     out: dict[str, Any] = dict(body)
     out["sessionId"] = resolve_agent_run_session_id(
         out.get("sessionId") if isinstance(out.get("sessionId"), str) else None

@@ -11,18 +11,165 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Added
 
+- **`access` on file finalize and URL uploads.** `FinalizeUploadDto`, each `BulkFinalizeItemDto`, `UploadFromUrlDto` and each `BulkUploadFromUrlItemDto` take an optional `access` (visibility, group permissions, shared-with) that applies only when the file is first created; omitted, the file is shared with everyone with you as owner. A service-account token cannot set it.
+- **Access on notes, saved queries, links and uploaded files.** `mgmt.context.items.update_access(uid, visibility=..., group_permissions=..., shared_with=...)` replaces who can view and manage one of these items; an item with no owner becomes yours. `ContextItem` reads of these types carry `access` and `can_manage`.
+- **`client.workflows.chat()`.** Send a published workflow a message and stream its node output; `result()` returns the workflow's final output.
+- **`AssistantContentResetEvent.sub_agent`** marks a correction to a sub-agent's output; a reset without it corrects the assistant's own reply.
+- **Approvals on chat.** A run that stops for a write approval returns `result().approval`; `chat.resume(decision="approve" | "deny")` continues the same conversation.
+- **Connection selection preferences on scopes.** A `connection_set` entry on create and update takes
+  `preferences` (`mode` `all` or `manual`, `include` / `exclude` rules of id steps); reads return
+  `preferences` on the connection's first row.
+- **`deepseek-v4.1-flash-1017` model.** The October 17, 2026 snapshot of DeepSeek V4.1 Flash is an
+  accepted chat model id.
+- **Resume a dropped run stream.** Every run event carries `id`, its SSE event id, when the server sends one, and `runs.stream(run_id, last_event_id=...)` (sync and async) resumes after that event instead of replaying the run from the start.
+- **`ErrorEvent.request_id`.** A run that fails after it started ends with an `ErrorEvent` that carries the id to quote to support; a chat stream raises `ModusError` with it as `request_id`.
+- **Async scope evaluations.** `AsyncModusManagement().scopes.evaluations(id)` has the same methods as the sync client: `get_config`, `update_config`, `trigger_run`, `list_runs`, `get_run`, `add_case`, `update_case`, and `delete_case`.
+- **`BadRequestError`** for HTTP 400 (a schema or parse failure), a `ModusError` subclass, so
+  existing `except modus.ModusError` code is unaffected.
+- **`ModusError.info`** carries the error envelope's structured detail, for example
+  `info["missing"]` (the token scopes a 403 lacks) or `info["violations"]` on a 422.
+- **`ModusError.retryable`** says whether the SDK's retry rule allowed re-sending the failed call.
+- **`Retry-After` as an HTTP date, and `retry-after-ms`,** fill `RateLimitError.retry_after`.
+- **An organization owner can give an ownerless scope an owner.** A scope created with a service-account token has no owner. `mgmt.scopes.request_ownership_transfer(id, new_owner_user_id=...)` by an organization owner now assigns one: naming yourself takes effect at once, naming another member waits for them to accept. `mgmt.scopes.cancel_ownership_transfer(id)` lets the organization owner withdraw that request.
+
+### Changed
+
+- **Breaking (pre-1.0): the `access` body on note, saved-query and link creates is dashboard-shaped.** The generated `CreateNoteDto`, `CreateSavedQueryDto` and `CreateLinkDto` models now take `access` as `UpdateContextItemAccessDto` (`visibility`, `group_permissions`, `shared_with`, the body `mgmt.context.items.update_access` takes) instead of `AccessPolicyDto` (`scope`, `group_ids`, `user_ids`); the old shape is rejected with 400. Omitting `access` shares the item with everyone in the organization, with you as owner. `create_note`, `create_saved_query` and `create_link` send no `access` and are unchanged.
+- **Context compose no longer fails at 30 seconds.** `scopes.get_context()` and `modus.get_context()` (sync and async) now call `POST /agent/v1/scopes/{id}/context` and `POST /agent/v1/modus/context` on the agent host, the host `chat()` uses. The old routes sat behind a 30-second gateway limit, so a slower compose came back as a bare 503 and was retried up to twice more while the first one was still running. Same arguments and result; a compose may now run for up to 90 seconds, and one still running then raises with `UPSTREAM_TIMEOUT` (504). Keep the read timeout above 90 seconds (the default is 300). The agent host is derived the same way as for chat: `agent_host` (or `MODUS_AGENT_HOST`), else from `base_url`; with a custom `base_url` and neither set, compose raises `ModusError` before sending anything, as chat does. If your network allows only the API host, allow the agent host too.
+- **A resume with nothing to answer raises `ConflictError`.** `runs.resume` on a conversation with no write approval or connection request pending now fails with HTTP 409 (`code` `CONFLICT`) before any event, and the conversation stays usable. It used to yield one error event and leave every later turn on that conversation failing.
+- **Breaking (pre-1.0): `workflows.runs.events(run_id)` returns the poll response.** The endpoint is the JSON long-poll transport, but the method expected a `text/event-stream` and always raised "expected text/event-stream, got application/json". It now returns the response dict (`events`, `cursor`, `status`, `done`), like the TypeScript SDK; the async method is awaited, not iterated. Use `runs.stream(run_id)` for streamed events.
+- **A refused run raises before any event.** When the agent host refuses a run (an empty turn, a scope you cannot see, a conflicting `Idempotency-Key`, a full conversation queue), `runs.create*` and `runs.resume` streams now raise the exception for the HTTP status (`NotFoundError`, `PermissionDeniedError`, `ConflictError`, `RateLimitError`, or `ModusError` with `status_code` 400) instead of yielding one `ErrorEvent`. No SDK code changed: the host now answers with the real status. An `ErrorEvent` still ends a run that fails after it started.
+- **Breaking (pre-1.0): evaluation run timestamps are `datetime`.** `EvaluationRun.started_at` was a `str` and is now a timezone-aware `datetime`. `finished_at` is `datetime | None`. Replace string parsing with the value itself. Use this release with a Modus API that sends ISO 8601 evaluation timestamps; an older server's JavaScript date string fails validation.
+- **Run request models carry the API-token message limit.** `message` on the run request models (`SkillRunDto`, `ModusRunDto`, `AgentRunDto`, `FollowUpRunDto`) has `max_length=32000`, the limit the server holds API tokens to, so a longer message fails validation before any request. `config.model` lists the models an API token may send.
+- **Breaking (pre-1.0): scope `connectionSet` rows have one shape.** `scopes.create` and `scopes.update` accept each entry only as `{ connection_id, path, preferences?, context_enabled? }`, where `path` is an array of strings, `preferences` an object and `context_enabled` a boolean. An empty path selects the whole connection. Any other field, a non-string path segment or an empty or null `connection_id` is rejected with 400; a null `connectionSet` clears the list. `variation.connection_set` entries are now `ConnectionSetItemDto` models (`.connection_id`, `.path`, `.preferences`, `.context_enabled`); `row["connection_id"]` no longer works.
+- **Breaking (pre-1.0): workflow `guardrails` removed.** `workflows.create` and `workflows.update` (sync and async) no longer take `guardrails=`. The workflow access configuration has no guardrails, so every call that set it failed with 400 and changed nothing. Scope `guardrails` are unchanged.
+- **Breaking (pre-1.0): `scopes.memories(id).update()` returns `None`.** The server answers 204 with no body; the method raised a `ValidationError` after the update had been applied.
+- **Breaking (pre-1.0): `manager_id` is an `int`.** `scopes.update(manager_id=...)` takes the numeric id of the manager scope. It was typed `str`, which the server rejects with 400. To detach, pass `update_mask="managerId"`.
+- **Breaking (pre-1.0): evaluation runs `page_size` is checked.** `mgmt.scopes.evaluations(id).list_runs()` rejects a `page_size` outside 1..100 with 400, like every other list (it was clamped above 100).
+- **Breaking (pre-1.0): a POST that fails after being sent now raises instead of being
+  re-sent.** Retries depend on the method: GET, PUT, PATCH and DELETE retry 408, 429, 500, 502,
+  503, 504, dropped connections and timeouts. A POST retries only on 429 or a connection that
+  never opened (`ConnectError`, `ConnectTimeout`, `PoolTimeout`), except the POSTs that only
+  read or set a state (context compose, item lookup, memory search, active-run lookup, run cancel, run interrupt, workflow-action cancel, workflow toggle, ingested-data upload), which retry like a GET. Before, a `scopes.create` that hit
+  a gateway 504 or a read timeout was sent again and could create a second scope; now it raises
+  and you decide whether to re-create.
+- **A `Retry-After` over 60 s raises `RateLimitError` at once** (with `retry_after` set)
+  instead of sleeping that long. Up to 60 s is still waited out.
+- **Reading a workflow needs use or manage permission, not manage alone.** `mgmt.workflows.get(id)` returns a workflow you can run or change; `can_use` and `can_manage` say which. A workflow you cannot access is a 404 `NotFoundError` instead of a 403. `mgmt.workflows.interfaces(id).list()` still needs manage permission (403), and is a 404 when you cannot access the workflow.
+- **Deploying a scheduled workflow with no owner is a 409.** `mgmt.workflows.deploy(id)` no longer reports an ownerless scheduled workflow as enabled when no schedule could be created.
+- **A non-UUID interface id is a 400.** `mgmt.workflows.interfaces(id).update()` and `.delete()` with an id that is not a UUID return 400 instead of a retried 500.
+- **Dashboard and element titles must contain a non-whitespace character.** A blank title on `mgmt.context.dashboards.create`, `.update_draft`, and `.elements(id).create` / `.update` returns 400.
+- **Delete docs match the server.** Deleting a workflow or scope that is already deleted returns 404; deleting a memory that no longer exists returns 404 (it returned 422). Neither is a no-op.
+- **Custom context item writes are documented as opt-in.** `custom_items` writes
+  raise `PermissionDeniedError` ("Custom context item writes are not enabled")
+  until Modus enables them for the organization.
+- **Breaking (pre-1.0): `runs.interrupt` and `runs.edit_queued` take the turn to send.** `runs.interrupt(run_id, next_run, *, last_seen_event_id=None)` and `runs.edit_queued(run_id, next_run)` send `next_run` (`message` and `sessionId`, the run's conversation id) as `nextRun` and return the admitted run as `RunAdmission` (`run_id`, `status`), sync and async. For `interrupt`, that is the new run that carries the follow-up turn; stream it with `runs.stream(run_id)`. The old optional `body` defaulted to `{}`, which the server always rejected, and the methods returned `None`. `interrupt` sets `nextRun.runId` when you omit it, so a retried request returns the same run instead of starting a second turn. On a run that has already finished, `interrupt` starts a follow-up turn.
+- **`runs.resume` requires `sessionId` and sends no message.** A missing or blank `sessionId` raises `ValidationError` before any request, as it does for `interrupt` and `edit_queued`; it was replaced by a random id, so the server answered "no longer pending". The documented example sends only `decision` and `sessionId`; a non-empty `message` is rejected by the server.
+- **Breaking (pre-1.0): `chat()` streams from the agent host.** `client.scopes.chat()`, `client.modus.chat()` and `client.workflows.chat()` return a `ChatSession`. Iterate `text_stream` / `event_stream` for the reply as it arrives, or call `result()` for `ChatResult` (`content`, `thread_id`, `run_id`). On `AsyncModus`, `await client.scopes.chat(...)` returns the result as before; `chat()` itself is no longer a coroutine, so wrap it with `asyncio.ensure_future(...)` (not `create_task`) to run it as a task. The request is sent when you first iterate, call `result()` or `await` the session, not when `chat()` is called. Runs are no longer cut off after 30 seconds, and `content` is the server's final answer: interim narration and sub-agent output are left out. A session sends one request; iterating it again replays what arrived. A session that reaches `done` releases its connection; use the session as a context manager, or call `close()`, if you stop reading before then. Iterating `text_stream` after the run applies the server's mid-run corrections (`assistant_content_reset`), so the text matches what `content` was built from. **Migrate:** `client.scopes.chat(...).content` becomes `client.scopes.chat(...).result().content` (likewise `thread_id`, `run_id`, `approval`, and on `client.modus` / `client.workflows`); the old spelling raises an `AttributeError` that names the new one. Async code that awaits `chat()` keeps working unchanged.
+- **Ids from responses work in paths.** A numeric id parsed as `42.0` is sent as `42`, so passing `scope.id` from a list straight back to the API no longer returns 400.
+- **Workflow streams show their output.** Node tokens are unwrapped, `workflow_done` carries the workflow's final output, and a workflow that fails or is cancelled raises instead of ending the stream silently.
+- **Breaking (pre-1.0): a custom `base_url` needs `agent_host` to chat.** When the agent host cannot be derived from `base_url` (anything other than `api.<env>.getmodus.com`), chat and runs raise instead of sending your key to the production agent host. Pass `agent_host` or set `MODUS_AGENT_HOST`; a blank value counts as unset.
+
+### Removed
+
+- **Breaking (pre-1.0): `chat_stream()`, `ChatStream`, `AsyncChatStream` and `get_final_result()`.** Use `chat()`, which streams; call `result()` instead of `get_final_result()`.
+- **Breaking (pre-1.0): `version="draft"` on scope and workflow chat, and the `SkillChatRequestDto` / `SkillChatResponseDto` exports.** API tokens run published scopes only; `ChatResult` is the chat result type.
+
+### Deprecated
+
+- **`api-skill-<scopeId>-…` thread ids.** Continuing a conversation with the id an earlier `scopes.chat()` returned still works: the server reads it as the `agent_<scopeId>_…` thread it named. Store the `agent_<scopeId>_…` id the response now returns; the old form is accepted only by the chat continuation call and goes away with it.
+
+### Fixed
+
+- **`scopes.evaluations(id).update_config()` sends the API's field names.** It sent `judge_model`, `judge_guidance`, `time_of_day` and `clerk_user_id` in snake_case, which the API rejects with 400 ("property judge_model should not exist"); only `enabled` and `cadence.frequency` worked. Sync and async.
+- **Completed evaluation runs could not be listed or read.** `mgmt.scopes.evaluations(id).list_runs()` and `.get_run(run_id)` raised `ValidationError` for any finished run, because `avg_score`, `finished_at` and the result fields `actual_output`, `passed`, `score`, `reasoning` and `was_passing_before` were typed as dicts. They are now `float`, `datetime`, `str` and `bool`, each optional. The server now sends evaluation timestamps as ISO 8601 (see Changed). An evaluation recipient's `name` is `str | None`.
+- **A path id of `'..'` could target the parent resource, e.g. delete the scope.** `scopes.memories(7).delete('..')` sent `DELETE /scopes/7`. Every path id that is blank, `'.'` or `'..'` now raises `ValueError` before any request; a blank id no longer returns the list page as one item.
+- **Paging no longer skips items.** `scopes.list()`, `workflows.list()`, `connections.list()` and their auto-paging iterators return every item: a page boundary no longer drops items created in the same millisecond, and `connections.list()` no longer drops a connection or ends early when other members' connections are hidden from you.
+- **Numeric ids above 2147483647 return 404.** Such a scope or workflow id now raises `NotFoundError` instead of a 500 that was retried three times.
+- **Evaluation runs page in a stable order.** Runs that started at the same time are no longer repeated or skipped across pages.
+- **A run started while you page evaluation runs is not repeated.** The `list_runs` page token is now an opaque position in the list, not a row offset, so a run that starts between two pages no longer shows up again on the next page (and a deleted one no longer makes the next page skip a run). A numeric page token from before this release is rejected with 400 (`BadRequestError`); restart from the first page.
+- **`update_config` returns what it stored.** The first `scopes.evaluations(id).update_config(UpdateEvaluationConfig(judge_model=...))` on a scope returned `judge_model=None` (and the defaults for every other field), although the value was saved; a later partial update could also turn `enabled` back off. The server now reads the configuration it just wrote.
+- **`scopes.chat()` returns the conversation's thread id.** `thread_id` is now `agent_<scopeId>_…`, the id `scopes.conversations(id).list()` shows, so `get(thread_id)` accepts it. It was `api-skill-<scopeId>-…`, which those calls answered with 404.
+- **`context.create_link()` on a page that cannot be read raises `UnprocessableError` (422), not a 500.** An unreachable or empty page names the URL in the message.
+- **`update_mask` sends only what you set.** `scopes.update`, `workflows.update`, `context.items.update`, and `workflows.interfaces(id).update` sent `null` for every unset field whenever `update_mask` was given, and the server rejected the call with 400. The body now holds the fields you set, plus `null` for each field the mask names and you left unset, which the server clears.
+- **`Toolset.empty()` clears a scope's tools.** `scopes.update(toolset=Toolset.empty())` sends `{}`; it was dropped, so the tools stayed.
+- **`suggestions.list(scope_ids=[])` raises `modus.ValidationError`** before any request. It sent `scopeIds=`, which the server rejects with 400.
+- **Clearing a masked field no longer fails with 500.** `scopes.update` with `update_mask` naming `description` or `expectedOutput` (or `workflows.update` naming `description`) and the field left unset raised `InternalServerError` after three tries. A cleared field now takes its empty value: text `''`; a list `[]`; a map `{}`; a context item's `userFeedback` `neutral`; and a memory's `metadata` `{}`. A field with no empty value raises `BadRequestError` saying it cannot be cleared. These are `name`, `accessConfig`, a workflow's `type` and `workflowStructure`, a context item's `content` and `contextType`, a memory's `memory`, and an interface's `name` and `config`.
+- **Updating or deleting a memory that does not exist raises `NotFoundError`.** `scopes.memories(id).update()` and `.delete()` returned `None` as if they had succeeded when memory is off for the organization.
+- **Docs: ids are numeric.** The getting-started example took a slug (`scopes.get("revenue-analysis")`), which the server rejects with 400; it now takes an id from `list()`. Docstrings no longer say "id or slug". `type="task"` is documented as a deprecated alias on create; `workflows.update` accepts only `"workflow"`.
+- **Client-side argument errors are `ModusError`s.** An invalid id, path segment or other
+  argument the SDK rejects before sending raises `modus.ValidationError`, which subclasses both
+  `ModusError` and `ValueError`, so `except modus.ModusError` now catches it and existing
+  `except ValueError` code keeps working.
+- **Error messages are the API's message.** `ModusError.message` was the whole error envelope
+  as a dict repr (`"{'code': 'NOT_FOUND', ...}"`); it is now the envelope's `message`.
+  `code` and `request_id` were always `None`; they now come from the envelope (`request_id`
+  falls back to the `x-request-id` header).
+- **Every httpx transport error is an `APIConnectionError`.** `ReadError`, `WriteError`,
+  `CloseError` (a reset keep-alive connection) and other `httpx.TransportError`s escaped as raw
+  httpx exceptions and were never retried; they are now wrapped and retried for safe methods.
+- **A 2xx response that is not JSON** raises a `ModusError` naming the status, content type and
+  the first 200 characters, instead of a raw `JSONDecodeError`. An empty 200 on a GET returns
+  `None` instead of raising.
+- **`UnprocessableError` documentation:** 422 is a business-rule failure; schema failures are
+  400 (`BadRequestError`).
+- **Breaking (pre-1.0): `context.items.list_values` pages one item's array.** The
+  server used to ignore the uid and return one row per item of the context type,
+  with each item's whole `content`. It now reads only the item named by `uid`
+  (`NotFoundError` when it is missing, unreadable, or of another context type) and
+  pages the elements of the array at `content_key_path`. `ContextValueRow` has
+  `index` (the element's 0-based position) and `value` (the element itself).
+- **Conversation messages carry text.** `conversations.get` returns `content` as a
+  string for every message, so a message stored as content blocks no longer fails
+  validation; tool calls stay in `tool_calls`.
+- **Oversized request bodies say so.** A request body over an operation's size
+  limit fails with HTTP 413 and error code `PAYLOAD_TOO_LARGE` instead of
+  `BAD_REQUEST`. Dashboards, a custom context item and a note now accept up to
+  1 MiB, and `custom_items.batch_create` up to 8 MiB.
+
+### Deprecated
+
+- **`connection_set[].path`.** Send `preferences` instead; `path` is derived from it on reads.
+- **`connection_set[].context_enabled`.** A scope always reads context from its connections; omit the field.
+  `false` is accepted only when the connection is already stored with `false`.
+
+## [0.9.0] — 2026-10-24
+
+### Added
+
 - **List selectable units.** `client.connections.list_selections(connection_id)` and
   `iter_selections(connection_id)` page the units a scope can select on a connection
   (`GET /connections/{id}/selections`). `client.connections.list()` items may include
   `selection_model`.
+- **Evaluation case methods.** `mgmt.scopes.evaluations(id).add_case()`, `.update_case(case_id)`, and `.delete_case(case_id)` add, change, or remove one evaluation case. Omit `id` on add and the client assigns one, so a retry sends the same id. A retry whose id is already stored returns a conflict; an identical body is not treated as success. An empty `task` is allowed. An update with neither field is rejected.
 
 ### Changed
 
+- **MCP config is checked on write.** Scope create, scope update, and `PATCH /scopes/{id}/mcp-config` return the effective core tools and tool exposure. A changed value must use true or false for each core tool, and version 1 with mode subset or discovery for tool exposure. A newly added exposure key must be one the scope can expose. A key already stored can be sent again or removed.
+- **Breaking (pre-1.0): typed evaluation cases.** `PATCH /scopes/{id}` replaces `evaluations` with objects of `id` (optional), `task`, and `expectedOutput`. `task` and `expectedOutput` are required, and any other key, such as `createdAt` or `updatedAt`, is rejected with 400. Omit `id` on a new case and one is assigned. A repeated `id` is rejected. An empty `task` is allowed.
 - **Breaking (pre-1.0): scope `interfaces` have one shape.** `scopes.create` and `scopes.update` (`POST /api/v1/scopes` and `PATCH /api/v1/scopes/{id}`) accept only MCP interface rows. `type` must be `mcp`. Each row has an optional id and name and a config of core tools and exposed integrations. A row without an id or name is assigned one. Responses return only id, type, name, and config; extra stored keys such as `enabled` are no longer returned.
+- **Breaking (pre-1.0): workflow responses declare their shapes.** `Workflow.variation.trigger`, `workflow_structure`, and `agent_selection` are `WorkflowTriggerResponseDto`, `WorkflowStructureResponseDto`, and `AgentSelectionResponseDto` instead of dicts. Replace dict indexing with attribute access: `agent_selection["model"]` becomes `agent_selection.model`, and `trigger["schedule"]` becomes `trigger.schedule`. A non-schedule trigger has `schedule: null`, and a schedule leaves unused cadence fields null. A workflow interface `config` describes Slack and Teams (`accessMode`, `allowedEmails`, `availableChannelIds`) and an empty object for MCP.
 - **Scope `connectionSet` rows must be a selectable unit.** `scopes.create` and `scopes.update` reject a new row whose path is neither the whole connection nor one selectable unit of it, with 422 `root.not_a_root`. A row already stored can stay, and removing it still succeeds.
 - **Workflow interface config.** Slack and Teams `config` on a workflow interface is `accessMode` (`all`, `allow-list`, or `allow-org`), `allowedEmails`, and `availableChannelIds`. An MCP interface accepts no config keys. An unknown key or invalid value in a changed config returns 422 with violations; `config: null` returns 400. Unchanged stored values are accepted.
 - **`search_query` documents word search.** `mgmt.context.custom_items.list(search_query=...)` (`GET /context/custom-items`) describes
   word search: it returns rows that contain every word of the query, case-insensitive.
+- **Known toolset values are validated.** A new or edited scope `toolset` value must match that tool's shape.
+  Most tools take an array of strings. `file_publish` takes `{ actions: string[], rules?: { nameMode: "any" | "restricted", allowedNames: string[] } }`.
+  Coding tools take an array of `{ connectionUid, repoOwner, repoName, branch }`.
+  `sql_runner` entries are `VERB:connectionId:`, optionally followed by `database:schema`, where `VERB` is `SELECT`, `INSERT`, `UPDATE`, `DELETE`, or `CREATE`.
+  A value that does not match is `422`
+  with rule `toolset.bad_value`; an unknown key stays `toolset.unknown_key`. Sending the same stored value again succeeds,
+  including a historical value the new check would reject, and removing that value succeeds. The handwritten `Toolset` helpers are unchanged.
+
+### Fixed
+
+- **Workflow GET triggers and permission reasons.** `parse_trigger` accepts the trigger on a workflow response and still sends snake_case keys (`trigger_type`, `time_of_day`) on update. `Workflow.manage_denial` is again the string `not_owner`, `needs_group_manage`, or `null`.
+- **Model settings survive a workflow update.** `AgentSelection` carries `model_settings`, and `parse_agent_selection` keeps it, so a selection read from a workflow and passed to `workflows.update(agent_selection=...)` no longer clears the stored `modelSettings`.
+
+### Removed
+
+- **`ToolsetDto` and `ToolsetToolDto`.** Scope create and update `toolset` is a map of tool key to its configuration. The generated `{ tools: [{ id, enabled, config }] }` models are gone. Unknown keys are rejected. The handwritten `Toolset` helpers are unchanged.
+- **Breaking (pre-1.0): evaluation case timestamps.** Scope evaluation cases no longer include `createdAt` or `updatedAt`.
 
 ## [0.8.0] — 2026-10-18
 

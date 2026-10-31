@@ -1,306 +1,13 @@
-"""Tests: streaming chat methods must POST to agent-host runs paths.
-
-Buffered chat (client.scopes.chat, client.modus.chat) stays on modus-api unchanged.
-Streaming (client.scopes.chat_stream, client.modus.chat_stream,
-           client.workflows.chat_stream) POSTs to:
-
-  skills  → {agent_host}/agent/v1/scopes/{id}/runs
-  modus   → {agent_host}/agent/v1/modus/runs
-  agents  → {agent_host}/agent/v1/workflows/{id}/runs
-
-Body format:
-  { "message": "...", "sessionId": "<thread or uuid>", "config": { "model": "..." } }
-  (version omitted unless explicitly passed)
-"""
+"""Agent host resolution: chat and runs go to the agent host, never to production by default."""
 
 from __future__ import annotations
 
-from unittest.mock import patch
-from uuid import UUID
-
+import httpx
 import pytest
-from modus import Modus
-from modus._config import DEFAULT_AGENT_HOST
+import respx
+from modus import AsyncModus, Modus, ModusError
 
-API_BASE = "https://api.getmodus.com"
-AGENT_HOST = "https://agent.example.com"
-MODEL = "claude-sonnet-5"
-
-
-@pytest.fixture
-def client_with_agent_host() -> Modus:
-    return Modus(api_key="modus_test_key_abc123", base_url=API_BASE, agent_host=AGENT_HOST)
-
-
-@pytest.fixture
-def client_default_hosts() -> Modus:
-    return Modus(api_key="modus_test_key_abc123", base_url=API_BASE)
-
-
-# ---------------------------------------------------------------------------
-# Skills stream → agent host
-# ---------------------------------------------------------------------------
-
-
-def test_skills_chat_stream_posts_to_agent_host(client_with_agent_host):
-    """skills.chat_stream() must POST to agent-host /agent/v1/scopes/{id}/runs."""
-    captured = {}
-
-    def fake_stream_post(path: str, *, json=None):
-        captured["path"] = path
-        captured["json"] = json
-        yield 'data: {"type":"token","content":"Hi"}'
-        yield 'data: {"type":"done","runId":"r1","threadId":"t1"}'
-
-    with patch.object(client_with_agent_host._agent_http, "stream_post", fake_stream_post):
-        with client_with_agent_host.scopes.chat_stream(42, "Hello", model=MODEL) as stream:
-            list(stream.text_stream)
-
-    assert captured["path"] == "/agent/v1/scopes/42/runs"
-    assert captured["json"]["message"] == "Hello"
-    assert captured["json"]["config"] == {"model": MODEL}
-    assert "sessionId" in captured["json"]
-    UUID(captured["json"]["sessionId"])  # always a UUID when thread_id omitted
-
-
-def test_skills_chat_stream_includes_session_id_when_thread_id_given(client_with_agent_host):
-    """skills.chat_stream(thread_id=...) must include sessionId in body."""
-    captured = {}
-
-    def fake_stream_post(path: str, *, json=None):
-        captured["json"] = json
-        yield 'data: {"type":"done","runId":"r1","threadId":"thread-abc"}'
-
-    with patch.object(client_with_agent_host._agent_http, "stream_post", fake_stream_post):
-        with client_with_agent_host.scopes.chat_stream(
-            42, "Hi", model=MODEL, thread_id="thread-abc"
-        ) as stream:
-            list(stream.text_stream)
-
-    assert captured["json"]["sessionId"] == "thread-abc"
-    assert captured["json"]["message"] == "Hi"
-
-
-def test_skills_chat_stream_blank_thread_id_mints_session_id(client_with_agent_host):
-    """Blank thread_id still sends a minted sessionId."""
-    captured = {}
-
-    def fake_stream_post(path: str, *, json=None):
-        captured["json"] = json
-        yield 'data: {"type":"done","runId":"r1","threadId":"t-new"}'
-
-    with patch.object(client_with_agent_host._agent_http, "stream_post", fake_stream_post):
-        with client_with_agent_host.scopes.chat_stream(
-            42, "Hi", model=MODEL, thread_id="  "
-        ) as stream:
-            list(stream.text_stream)
-
-    UUID(captured["json"]["sessionId"])
-
-
-def test_skills_chat_stream_with_version(client_with_agent_host):
-    """skills.chat_stream(version='draft') must include version in body."""
-    captured = {}
-
-    def fake_stream_post(path: str, *, json=None):
-        captured["json"] = json
-        yield 'data: {"type":"done","runId":"r1","threadId":"t1"}'
-
-    with patch.object(client_with_agent_host._agent_http, "stream_post", fake_stream_post):
-        with client_with_agent_host.scopes.chat_stream(
-            42, "Hi", model=MODEL, version="draft"
-        ) as stream:
-            list(stream.text_stream)
-
-    assert captured["json"]["version"] == "draft"
-
-
-def test_skills_chat_stream_url_encodes_slug(client_with_agent_host):
-    """Skill slug with special chars is URL-encoded in the path."""
-    captured = {}
-
-    def fake_stream_post(path: str, *, json=None):
-        captured["path"] = path
-        yield 'data: {"type":"done","runId":"r1","threadId":"t1"}'
-
-    with patch.object(client_with_agent_host._agent_http, "stream_post", fake_stream_post):
-        with client_with_agent_host.scopes.chat_stream(
-            "my skill/v2", "Hi", model=MODEL
-        ) as stream:
-            list(stream.text_stream)
-
-    assert captured["path"] == "/agent/v1/scopes/my%20skill%2Fv2/runs"
-
-
-def test_skills_chat_stream_includes_organization_id_when_configured():
-    client = Modus(
-        api_key="modus_test_key_abc123",
-        base_url=API_BASE,
-        agent_host=AGENT_HOST,
-        organization_id="org_test",
-    )
-    captured = {}
-
-    def fake_stream_post(path: str, *, json=None):
-        captured["json"] = json
-        yield 'data: {"type":"done","runId":"r1","threadId":"t1"}'
-
-    with patch.object(client._agent_http, "stream_post", fake_stream_post):
-        with client.scopes.chat_stream(42, "Hi", model=MODEL) as stream:
-            list(stream.text_stream)
-
-    assert captured["json"]["organizationId"] == "org_test"
-
-
-# ---------------------------------------------------------------------------
-# Buffered skills chat → still hits modus-api (unchanged)
-# ---------------------------------------------------------------------------
-
-
-def test_skills_chat_buffered_still_uses_api_host(client_with_agent_host):
-    """Buffered chat must NOT use agent host — still hits modus-api path."""
-    import json
-
-    import httpx
-    import respx
-
-    with respx.mock:
-        route = respx.post(f"{API_BASE}/api/v1/scopes/42/chat").mock(
-            return_value=httpx.Response(
-                200,
-                json={"content": "ok", "threadId": "t1", "runId": "r1"},
-            )
-        )
-        result = client_with_agent_host.scopes.chat(42, "Hello", model=MODEL)
-        assert route.called
-        body = json.loads(route.calls.last.request.content)
-        assert body == {"message": "Hello", "model": MODEL}
-        assert result.content == "ok"
-
-
-# ---------------------------------------------------------------------------
-# Modus stream → agent host
-# ---------------------------------------------------------------------------
-
-
-def test_modus_chat_stream_posts_to_agent_host(client_with_agent_host):
-    """modus.chat_stream() must POST to agent-host /agent/v1/modus/runs."""
-    captured = {}
-
-    def fake_stream_post(path: str, *, json=None):
-        captured["path"] = path
-        captured["json"] = json
-        yield 'data: {"type":"token","content":"Answer"}'
-        yield 'data: {"type":"done","runId":"r2","threadId":"t2"}'
-
-    with patch.object(client_with_agent_host._agent_http, "stream_post", fake_stream_post):
-        with client_with_agent_host.modus.chat_stream("Tell me", model=MODEL) as stream:
-            list(stream.text_stream)
-
-    assert captured["path"] == "/agent/v1/modus/runs"
-    assert captured["json"]["message"] == "Tell me"
-    assert captured["json"]["config"] == {"model": MODEL}
-    UUID(captured["json"]["sessionId"])
-
-
-def test_modus_chat_stream_includes_session_id(client_with_agent_host):
-    """modus.chat_stream(thread_id=...) must include sessionId."""
-    captured = {}
-
-    def fake_stream_post(path: str, *, json=None):
-        captured["json"] = json
-        yield 'data: {"type":"done","runId":"r1","threadId":"thread-m1"}'
-
-    with patch.object(client_with_agent_host._agent_http, "stream_post", fake_stream_post):
-        with client_with_agent_host.modus.chat_stream(
-            "Hi", model=MODEL, thread_id="thread-m1"
-        ) as stream:
-            list(stream.text_stream)
-
-    assert captured["json"]["sessionId"] == "thread-m1"
-
-
-def test_modus_chat_buffered_still_uses_api_host(client_with_agent_host):
-    """Buffered modus chat must stay on modus-api path."""
-    import httpx
-    import respx
-
-    with respx.mock:
-        route = respx.post(f"{API_BASE}/api/v1/modus/chat").mock(
-            return_value=httpx.Response(
-                200,
-                json={"content": "from modus", "threadId": "t1", "runId": "r1"},
-            )
-        )
-        result = client_with_agent_host.modus.chat("Hello", model=MODEL)
-        assert route.called
-        assert result.content == "from modus"
-
-
-# ---------------------------------------------------------------------------
-# Agents stream → agent host
-# ---------------------------------------------------------------------------
-
-
-def test_agents_chat_stream_posts_to_agent_host(client_with_agent_host):
-    """agents.chat_stream() must POST to agent-host /agent/v1/workflows/{id}/runs."""
-    captured = {}
-
-    def fake_stream_post(path: str, *, json=None):
-        captured["path"] = path
-        captured["json"] = json
-        yield 'data: {"type":"done","runId":"r3","threadId":"t3"}'
-
-    with patch.object(client_with_agent_host._agent_http, "stream_post", fake_stream_post):
-        with client_with_agent_host.workflows.chat_stream(
-            99, "Kick off", model=MODEL
-        ) as stream:
-            list(stream.text_stream)
-
-    assert captured["path"] == "/agent/v1/workflows/99/runs"
-    assert captured["json"]["message"] == "Kick off"
-    assert captured["json"]["config"] == {"model": MODEL}
-
-
-def test_agents_chat_stream_with_thread_id(client_with_agent_host):
-    """agents.chat_stream(thread_id=...) includes sessionId."""
-    captured = {}
-
-    def fake_stream_post(path: str, *, json=None):
-        captured["json"] = json
-        yield 'data: {"type":"done","runId":"r1","threadId":"t-agent"}'
-
-    with patch.object(client_with_agent_host._agent_http, "stream_post", fake_stream_post):
-        with client_with_agent_host.workflows.chat_stream(
-            99, "Hi", model=MODEL, thread_id="t-agent"
-        ) as stream:
-            list(stream.text_stream)
-
-    assert captured["json"]["sessionId"] == "t-agent"
-
-
-# ---------------------------------------------------------------------------
-# Default agent host
-# ---------------------------------------------------------------------------
-
-
-def test_skills_chat_stream_defaults_to_production_agent_host(client_default_hosts):
-    """When agent_host is not set, client uses DEFAULT_AGENT_HOST."""
-    assert client_default_hosts._config.agent_host == DEFAULT_AGENT_HOST
-    assert client_default_hosts._agent_http.config.base_url == DEFAULT_AGENT_HOST
-
-    captured = {}
-
-    def fake_stream_post(path: str, *, json=None):
-        captured["path"] = path
-        captured["json"] = json
-        yield 'data: {"type":"done","runId":"r1","threadId":"t1"}'
-
-    with patch.object(client_default_hosts._agent_http, "stream_post", fake_stream_post):
-        with client_default_hosts.scopes.chat_stream(42, "Hi", model=MODEL) as stream:
-            list(stream.text_stream)
-
-    assert captured["path"] == "/agent/v1/scopes/42/runs"
+PROD_AGENT_HOST = "https://agent.getmodus.com"
 
 
 # ---------------------------------------------------------------------------
@@ -324,10 +31,9 @@ def test_config_agent_host_none_by_default():
 
 
 def test_client_defaults_agent_host():
-    """Modus() without agent_host uses DEFAULT_AGENT_HOST."""
+    """Modus() with the default base URL derives the production agent host."""
     client = Modus(api_key="modus_test_key_abc123")
-    assert client._config.agent_host == DEFAULT_AGENT_HOST
-    assert client._agent_http.config.base_url == DEFAULT_AGENT_HOST
+    assert client._config.agent_host == PROD_AGENT_HOST
 
 
 def test_base_urls_agent_service_drives_streaming_host():
@@ -337,7 +43,6 @@ def test_base_urls_agent_service_drives_streaming_host():
         base_urls={"agent-service": "http://localhost:3130/"},
     )
     assert client._config.agent_host == "http://localhost:3130"
-    assert client._agent_http.config.base_url == "http://localhost:3130"
 
 
 def test_agent_host_from_env(monkeypatch):
@@ -355,20 +60,72 @@ def test_agent_host_derived_from_staging_base_url(monkeypatch):
         base_url="https://api.staging.getmodus.com",
     )
     assert client._config.agent_host == "https://agent.staging.getmodus.com"
-    assert client._agent_http.config.base_url == "https://agent.staging.getmodus.com"
 
 
 def test_agent_host_not_derived_from_custom_api_host(monkeypatch):
-    """Custom api.* origins must not auto-derive an agent host."""
+    """Custom api.* origins get no agent host rather than production's."""
     monkeypatch.delenv("MODUS_AGENT_HOST", raising=False)
     client = Modus(
         api_key="modus_test_key_abc123",
         base_url="https://api.attacker.example",
     )
-    assert client._config.agent_host == DEFAULT_AGENT_HOST
+    assert client._config.agent_host is None
+    with pytest.raises(ModusError, match="agent_host"):
+        client.modus.chat("x", model="claude-sonnet-5")
 
 
 def test_explicit_agent_host_overrides_env(monkeypatch):
     monkeypatch.setenv("MODUS_AGENT_HOST", "https://agent.staging.getmodus.com")
     client = Modus(api_key="modus_test_key_abc123", agent_host="https://agent.custom.com")
     assert client._config.agent_host == "https://agent.custom.com"
+
+
+# ---------------------------------------------------------------------------
+# Chat against a non-Modus base_url (localhost, Modus Core, a custom domain)
+# ---------------------------------------------------------------------------
+
+LOCAL_API = "http://localhost:3040"
+LOCAL_AGENT = "http://localhost:3130"
+_DONE = 'data: {"type": "done", "runId": "r1", "threadId": "t1", "content": "ok"}\n\n'
+
+
+@pytest.mark.parametrize("via_env", [False, True])
+@respx.mock
+def test_chat_uses_the_configured_agent_host_for_a_custom_base_url(monkeypatch, via_env):
+    monkeypatch.delenv("MODUS_AGENT_HOST", raising=False)
+    if via_env:
+        monkeypatch.setenv("MODUS_AGENT_HOST", LOCAL_AGENT)
+    route = respx.post(f"{LOCAL_AGENT}/agent/v1/modus/runs").mock(
+        return_value=httpx.Response(200, text=_DONE, headers={"Content-Type": "text/event-stream"})
+    )
+    client = Modus(
+        api_key="modus_test_key_abc123",
+        base_url=LOCAL_API,
+        **({} if via_env else {"agent_host": LOCAL_AGENT}),
+    )
+
+    assert client.modus.chat("x", model="claude-sonnet-5").result().content == "ok"
+    assert route.called
+
+
+@pytest.mark.parametrize("env_value", [None, "", "  "])
+@respx.mock
+def test_chat_without_an_agent_host_refuses_before_any_request(monkeypatch, env_value):
+    monkeypatch.delenv("MODUS_AGENT_HOST", raising=False)
+    if env_value is not None:
+        monkeypatch.setenv("MODUS_AGENT_HOST", env_value)
+    client = Modus(api_key="modus_test_key_abc123", base_url=LOCAL_API)
+
+    with pytest.raises(ModusError, match="agent_host"):
+        client.scopes.chat(1, "x", model="claude-sonnet-5").result()
+    assert respx.calls.call_count == 0
+
+
+@respx.mock
+async def test_async_chat_without_an_agent_host_refuses_before_any_request(monkeypatch):
+    monkeypatch.delenv("MODUS_AGENT_HOST", raising=False)
+    client = AsyncModus(api_key="modus_test_key_abc123", base_url=LOCAL_API)
+
+    with pytest.raises(ModusError, match="agent_host"):
+        await client.scopes.chat(1, "x", model="claude-sonnet-5")
+    assert respx.calls.call_count == 0

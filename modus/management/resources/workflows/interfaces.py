@@ -14,7 +14,7 @@ from modus._generated.resources.management.workflows.interfaces import (
     _WorkflowsInterfacesResourceBase,
 )
 from modus._openapi_invoke import invoke_operation, invoke_operation_async
-from modus._query import update_mask_query
+from modus._query import update_body, update_mask_query
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_id
 
@@ -52,7 +52,7 @@ class WorkflowInterfacesResource(_WorkflowsInterfacesResourceBase):
             self._http, "WorkflowInterfacesController_update",
             path_params={"id": self._workflow_id, "interfaceId": interface_id},
             query=update_mask_query(update_mask),
-            json_body=interface.model_dump(by_alias=True, exclude_none=update_mask is None),
+            json_body=update_body(interface, update_mask),
         ), self._config.max_retries)
         return AgentInterfaceDto.model_validate(raw)
 
@@ -87,6 +87,6 @@ class AsyncWorkflowInterfacesResource(_AsyncWorkflowsInterfacesResourceBase):
             self._http, "WorkflowInterfacesController_update",
             path_params={"id": self._workflow_id, "interfaceId": interface_id},
             query=update_mask_query(update_mask),
-            json_body=interface.model_dump(by_alias=True, exclude_none=update_mask is None),
+            json_body=update_body(interface, update_mask),
         ), self._config.max_retries)
         return AgentInterfaceDto.model_validate(raw)

@@ -260,7 +260,13 @@ class ContextItemsResource:
         page_token: Optional[str] = None,
     ) -> Page[ContextValueRow]:
         """
-        List paginated values for a specific field within a context item.
+        Page through the elements of an array field inside one context item.
+
+        Each row has ``index`` (the element's 0-based position in the array) and
+        ``value`` (the element itself). A field that is not an array reads as one
+        element; a missing field as none. Raises ``NotFoundError`` when the item
+        does not exist, you cannot read it, or its context type is not
+        ``context_type``.
 
         Args:
             uid:               The context item's UUID.
@@ -269,10 +275,10 @@ class ContextItemsResource:
             content_key_path:  Dot-separated JSON path to the array of values inside
                                ``content``. Example: ``"enumValues"`` or ``"sample.values"``.
             page_size:         Values per page (default 25, max 200).
-            page_token:        Opaque token from a previous page's ``next_page_token``.
+            page_token:        Opaque token from a previous page of the same item.
 
         Returns:
-            Page of value entries (shape varies by context type).
+            Page of ``ContextValueRow`` (``index``, ``value``).
 
         Example:
             >>> # Replace PLACEHOLDER_UID with a real uid whose content has enumValues.
@@ -283,7 +289,7 @@ class ContextItemsResource:
             ...     page_size=25,
             ... )
             >>> for row in page:
-            ...     print(row)
+            ...     print(row.index, row.value)
         """
         validate_page_size(page_size, max_page_size=DEFAULT_MAX_PAGE_SIZE)
         return self._list_values_page(uid, context_type, content_key_path, page_size, page_token)
@@ -297,7 +303,7 @@ class ContextItemsResource:
         page_token: Optional[str] = None,
     ) -> Page[ContextValueRow]:
         """
-        List paginated values for a field, reusing a context item you already have.
+        Page through an array field of a context item you already have.
 
         Same as ``list_values`` but takes a ``ContextItem`` (from ``list`` or
         ``get``) so you do not have to repeat its ``uid`` and ``context_type``.
@@ -307,7 +313,7 @@ class ContextItemsResource:
             content_key_path:  Dot-separated JSON path to the array of values inside
                                ``content``. Example: ``"enumValues"`` or ``"sample.values"``.
             page_size:         Values per page (default 25, max 200).
-            page_token:        Opaque token from a previous page's ``next_page_token``.
+            page_token:        Opaque token from a previous page of the same item.
 
         Example:
             >>> # Replace PLACEHOLDER_UID with a real uid that has enumValues in content.
@@ -482,7 +488,13 @@ class AsyncContextItemsResource:
         page_token: Optional[str] = None,
     ) -> AsyncPage[ContextValueRow]:
         """
-        List paginated values for a specific field within a context item.
+        Page through the elements of an array field inside one context item.
+
+        Each row has ``index`` (the element's 0-based position in the array) and
+        ``value`` (the element itself). A field that is not an array reads as one
+        element; a missing field as none. Raises ``NotFoundError`` when the item
+        does not exist, you cannot read it, or its context type is not
+        ``context_type``.
 
         Args:
             uid:               The context item's UUID.
@@ -491,10 +503,10 @@ class AsyncContextItemsResource:
             content_key_path:  Dot-separated JSON path to the array of values inside
                                ``content``. Example: ``"enumValues"`` or ``"sample.values"``.
             page_size:         Values per page (default 25, max 200).
-            page_token:        Opaque token from a previous page's ``next_page_token``.
+            page_token:        Opaque token from a previous page of the same item.
 
         Returns:
-            AsyncPage of value entries (shape varies by context type).
+            AsyncPage of ``ContextValueRow`` (``index``, ``value``).
         """
         validate_page_size(page_size, max_page_size=DEFAULT_MAX_PAGE_SIZE)
         return await self._list_values_page(
@@ -510,7 +522,7 @@ class AsyncContextItemsResource:
         page_token: Optional[str] = None,
     ) -> AsyncPage[ContextValueRow]:
         """
-        List paginated values for a field, reusing a context item you already have.
+        Page through an array field of a context item you already have.
 
         Same as ``list_values`` but takes a ``ContextItem`` (from ``list`` or
         ``get``) so you do not have to repeat its ``uid`` and ``context_type``.

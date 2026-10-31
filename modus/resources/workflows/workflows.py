@@ -3,20 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Optional, Union
+from typing import Optional, Union
 
 from modus._generated.resources.consumption.workflows import (
     _AsyncWorkflowsResourceBase,
     _WorkflowsResourceBase,
 )
 
-from ..._chat import (
-    AsyncChatStream,
-    ChatStream,
-    RunVersion,
-    workflow_stream_session,
-    workflow_stream_session_async,
-)
+from ..._chat import AsyncChatSession, ChatSession, start_chat, start_chat_async
 from ..._config import ModusConfig
 from ..._generated.models import WorkflowDto
 from ..._http import AsyncHttpClient, HttpClient
@@ -44,16 +38,12 @@ class WorkflowsOperations:
     list: str
     get: str
     runs: RunOperations
-    stream_session: Callable[..., ChatStream]
-    stream_session_async: Callable[..., AsyncChatStream]
 
 
 WORKFLOW_OPERATIONS = WorkflowsOperations(
     list="WorkflowsController_list",
     get="WorkflowsController_get",
     runs=WORKFLOW_RUN_OPERATIONS,
-    stream_session=workflow_stream_session,
-    stream_session_async=workflow_stream_session_async,
 )
 
 
@@ -66,7 +56,7 @@ class WorkflowsResource(_WorkflowsResourceBase):
     Read and run access to Modus workflows.
 
     - ``list`` / ``get`` — browse workflows (``view="active"`` or ``"draft"``)
-    - ``chat_stream`` — stream a chat turn against one workflow
+    - ``chat`` — stream a chat turn against one workflow
     - ``runs`` — start runs, follow history, cancel / resume
 
     To create, update, or deploy workflows use ``modus.management.ModusManagement``.
@@ -98,20 +88,21 @@ class WorkflowsResource(_WorkflowsResourceBase):
         view: Optional[VariationView] = None,
     ) -> Agent:
         """
-        Retrieve a workflow by ID or slug.
+        Retrieve a workflow by its numeric id.
 
         Args:
-            workflow_id: Workflow numeric id or slug string.
+            workflow_id: Numeric workflow id.
             view: Variation view — ``"active"`` (deployed) or ``"draft"``.
 
         Returns:
             Workflow record (``id``, ``name``, ``status``, …).
 
         Raises:
-            NotFoundError: if no workflow with this ID/slug exists.
+            NotFoundError: if no workflow with this id exists.
 
         Example:
-            >>> wf = client.workflows.get("weekly-digest")
+            >>> first = client.workflows.list().items[0]
+            >>> wf = client.workflows.get(first.id)
             >>> print(wf.name, wf.status)
         """
         validate_id(workflow_id, name="workflow_id")
@@ -127,49 +118,44 @@ class WorkflowsResource(_WorkflowsResourceBase):
         )
         return _parse_workflow(data)
 
-    def chat_stream(
+    def chat(
         self,
         workflow_id: Union[int, str],
         message: str,
         *,
         model: str,
         thread_id: Optional[str] = None,
-        version: Optional[RunVersion] = None,
-    ) -> ChatStream:
+    ) -> ChatSession:
         """
-        Stream a workflow reply token by token (SSE).
+        Chat with a published workflow. Node output streams live from the agent
+        host: iterate ``text_stream`` for tokens, or call ``result()`` for the
+        workflow's final output.
 
         Prefer ``client.workflows.runs.create`` when you need run lifecycle
-        events (cancel / resume). Use this helper for a chat-shaped stream.
+        events (cancel / resume).
 
         Args:
-            workflow_id: Workflow ID or slug.
+            workflow_id: Numeric workflow id.
             message:   The message to send.
-            model:     Model to run this message with (required). One of the
-                       supported model IDs, e.g. ``"claude-sonnet-5"`` or ``"gpt-5.5"``.
+            model:     Model id, e.g. ``"claude-sonnet-5.5"``.
             thread_id: Continue an existing conversation; omit to start a new one.
-            version:   Run a specific variation — ``"published"`` or ``"draft"``.
 
         Returns:
-            ``ChatStream``. After iteration,
-            ``stream.get_final_result()`` exposes ``content`` and ``thread_id``.
+            ``ChatSession``; ``result()`` gives ``content``, ``thread_id`` and ``run_id``.
+
+        Raises:
+            ModusError: No agent host is known for a custom ``base_url``.
 
         Example:
-            >>> with client.workflows.chat_stream(
+            >>> result = client.workflows.chat(
             ...     workflow_id,
             ...     "Run the weekly digest summary.",
-            ...     model="claude-sonnet-5",
-            ... ) as stream:
-            ...     for token in stream.text_stream:
-            ...         print(token, end="", flush=True)
+            ...     model="claude-sonnet-5.5",
+            ... ).result()
+            >>> print(result.content)
         """
-        return self._ops.stream_session(
-            self._agent_http,
-            workflow_id,
-            message,
-            model=model,
-            thread_id=thread_id,
-            version=version,
+        return start_chat(
+            self._agent_http, self._config, "workflows", workflow_id, message, model=model, thread_id=thread_id
         )
 
 
@@ -205,13 +191,13 @@ class AsyncWorkflowsResource(_AsyncWorkflowsResourceBase):
         view: Optional[VariationView] = None,
     ) -> Agent:
         """
-        Retrieve a workflow by ID or slug.
+        Retrieve a workflow by its numeric id.
 
         Args:
             view: Variation view — ``"active"`` (deployed) or ``"draft"``.
 
         Raises:
-            NotFoundError: if no workflow with this ID/slug exists.
+            NotFoundError: if no workflow with this id exists.
         """
         validate_id(workflow_id, name="workflow_id")
         query = {} if view is None else {"view": view}
@@ -226,34 +212,15 @@ class AsyncWorkflowsResource(_AsyncWorkflowsResourceBase):
         )
         return _parse_workflow(data)
 
-    def chat_stream(
+    def chat(
         self,
         workflow_id: Union[int, str],
         message: str,
         *,
         model: str,
         thread_id: Optional[str] = None,
-        version: Optional[RunVersion] = None,
-    ) -> AsyncChatStream:
-        """
-        Send a message to a workflow and stream the reply token by token.
-
-        Args:
-            workflow_id: Workflow ID or slug.
-            message:   The message to send.
-            model:     Model to run this message with (required). One of the
-                       supported model IDs, e.g. ``"claude-sonnet-5"`` or ``"gpt-5.5"``.
-            thread_id: Continue an existing conversation; omit to start a new one.
-            version:   Run a specific variation — ``"published"`` or ``"draft"``.
-
-        Returns:
-            AsyncChatStream you can iterate for text chunks; the final result carries the ``thread_id``.
-        """
-        return self._ops.stream_session_async(
-            self._agent_http,
-            workflow_id,
-            message,
-            model=model,
-            thread_id=thread_id,
-            version=version,
+    ) -> AsyncChatSession:
+        """Chat with a workflow; ``await`` the session for the final output. See the sync ``chat``."""
+        return start_chat_async(
+            self._agent_http, self._config, "workflows", workflow_id, message, model=model, thread_id=thread_id
         )

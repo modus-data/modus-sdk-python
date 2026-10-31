@@ -14,6 +14,7 @@ from modus._http import AsyncHttpClient, HttpClient
 from modus._openapi_invoke import invoke_operation, invoke_operation_async
 from modus._retry import async_with_retry, with_retry
 
+from ...._exceptions import ValidationError
 from ...types.context import ContextItem, CreatedContextItem, UserFeedback
 from ._content_merge import (
     async_resolve_existing_content,
@@ -310,7 +311,7 @@ class ContextResource:
             >>> item.uid
         """
         if title is None and url is None and description is None and user_feedback is None and topics is None:
-            raise ValueError("Provide at least one field to update.")
+            raise ValidationError("Provide at least one field to update.")
         if title is None and url is None:
             return self.items.update(
                 uid,
@@ -468,7 +469,7 @@ class AsyncContextResource:
     ) -> ContextItem:
         """Update link metadata on an existing item."""
         if title is None and url is None and description is None and user_feedback is None and topics is None:
-            raise ValueError("Provide at least one field to update.")
+            raise ValidationError("Provide at least one field to update.")
         if title is None and url is None:
             return await self.items.update(
                 uid,

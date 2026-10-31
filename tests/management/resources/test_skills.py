@@ -81,7 +81,10 @@ def test_skills_get_populates_variation_fields(client, skill_detail_row):
         "sql_runner": ["SELECT:conn-snowflake-001:analytics:public"],
         "memory": {"enabled": True},
     }
-    assert skill.variation.connection_set[0]["connectionId"] == "conn-snowflake-001"
+    row = skill.variation.connection_set[0]
+    assert row.connection_id
+    assert row.connection_id == "conn-snowflake-001"
+    assert row.path == []
 
 
 @respx.mock

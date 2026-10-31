@@ -6,6 +6,8 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
+from modus._generated.models import AgentSelectionDto, ModelSettingsDto
+
 
 class AgentSelectionEntry(BaseModel):
     """One skill invoked as part of a task agent run."""
@@ -34,6 +36,7 @@ class AgentSelection(BaseModel):
 
     agents: List[AgentSelectionEntry]
     model: Optional[str] = None
+    model_settings: Optional[ModelSettingsDto] = None
 
     @classmethod
     def single(cls, agent_id: int, *, model: Optional[str] = None) -> AgentSelection:
@@ -68,11 +71,23 @@ def dump_agent_selection(value: Optional[AgentSelectionInput]) -> Optional[Dict[
             f"(for example AgentSelection.single(agent_id)), not {type(value).__name__}."
         )
     # The agents API validates agent_selection with snake_case keys
-    # (agent_id, priority_order, ...), unlike the camelCase top-level body.
-    return value.model_dump(by_alias=False, exclude_none=True)
+    # (agent_id, priority_order, ...), unlike the camelCase top-level body,
+    # except modelSettings, which it stores under its camelCase keys.
+    body = value.model_dump(by_alias=False, exclude_none=True, exclude={"model_settings"})
+    if value.model_settings is not None:
+        body["modelSettings"] = value.model_settings.model_dump(mode="json", by_alias=True, exclude_none=True)
+    return body
 
 
 def parse_agent_selection(raw: object) -> Optional[AgentSelection]:
     if raw is None:
         return None
-    return AgentSelection.model_validate(raw)
+    if isinstance(raw, AgentSelection):
+        return raw
+    # GET types the selection as AgentSelectionResponseDto. Field names stay
+    # snake_case (`agent_id`); camelCase aliases are rejected on the next write.
+    if isinstance(raw, BaseModel) and not isinstance(raw, AgentSelectionDto):
+        raw = raw.model_dump(by_alias=False, exclude_none=True)
+    dto = AgentSelectionDto.model_validate(raw)
+    # Field names, not camelCase aliases: the agents API stores agent_id.
+    return AgentSelection.model_validate(dto.model_dump(by_alias=False, exclude_none=True))

@@ -4,7 +4,13 @@ from dataclasses import replace
 import httpx
 import pytest
 import respx
-from modus._generated.models import SetSupervisionRequestDto
+from modus._generated.models import (
+    EvaluationCadenceDto,
+    EvaluationChannelsDto,
+    EvaluationNotificationsDto,
+    EvaluationRecipientDto,
+    SetSupervisionRequestDto,
+)
 from modus.management.types.evaluations import UpdateEvaluationConfig
 from pydantic import ValidationError
 
@@ -68,16 +74,38 @@ async def test_supervision_accepts_existing_keyword_and_sends_aliases(is_async: 
             ]
 
 
-async def test_evaluation_update_keeps_existing_snake_case_dump() -> None:
-    async with _client("management", False) as client:
+@pytest.mark.parametrize("is_async", [False, True])
+async def test_evaluation_update_sends_camel_case_wire_names(is_async: bool) -> None:
+    """Every multi-word field, nested ones included, goes out under its wire name.
+
+    The server rejects unknown properties, so a snake_case ``judge_model`` was a 400.
+    """
+    update = UpdateEvaluationConfig(
+        enabled=False,
+        judge_model="gpt-oss-20b",
+        judge_guidance="Be precise",
+        cadence=EvaluationCadenceDto(frequency="daily", time_of_day="09:00"),
+        notifications=EvaluationNotificationsDto(
+            recipients=[EvaluationRecipientDto(clerk_user_id="user_1", email="a@example.com")],
+            channels=EvaluationChannelsDto(email=True),
+        ),
+    )
+    async with _client("management", is_async) as client:
         with respx.mock(base_url=BASE) as router:
             route = router.put("/api/v1/scopes/42/evaluations/config").mock(
                 return_value=httpx.Response(200, json=_SAMPLES["EvaluationConfig"]),
             )
-            client.scopes.evaluations(42).update_config(
-                UpdateEvaluationConfig(judge_guidance="Be precise")
-            )
-            assert json.loads(route.calls[0].request.content) == {"judge_guidance": "Be precise"}
+            await _await_if(client.scopes.evaluations(42).update_config(update), is_async)
+            assert json.loads(route.calls[0].request.content) == {
+                "enabled": False,
+                "judgeModel": "gpt-oss-20b",
+                "judgeGuidance": "Be precise",
+                "cadence": {"frequency": "daily", "timeOfDay": "09:00"},
+                "notifications": {
+                    "recipients": [{"clerkUserId": "user_1", "email": "a@example.com"}],
+                    "channels": {"email": True},
+                },
+            }
 
 
 @pytest.mark.parametrize("is_async", [False, True])

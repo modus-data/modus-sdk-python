@@ -100,8 +100,8 @@ def test_merge_instance_method():
     }
 
 
-def test_dump_toolset_omits_empty():
-    assert dump_toolset(Toolset.empty()) is None
+def test_dump_toolset_keeps_empty_so_it_clears_tools():
+    assert dump_toolset(Toolset.empty()) == {}
     assert dump_toolset(None) is None
 
 

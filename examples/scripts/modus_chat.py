@@ -31,7 +31,7 @@ def main() -> None:
 
     client = modus.Modus()
 
-    result = client.modus.chat(FIRST_MESSAGE, model=MODEL)
+    result = client.modus.chat(FIRST_MESSAGE, model=MODEL).result()
     print(f"Question: {FIRST_MESSAGE}")
     print(f"Answer: {result.content}")
     print(f"  thread_id={result.thread_id}  run_id={result.run_id}")
@@ -40,14 +40,14 @@ def main() -> None:
         FOLLOW_UP,
         model=MODEL,
         thread_id=result.thread_id,
-    )
+    ).result()
     print(f"\nFollow-up: {FOLLOW_UP}")
     print(f"Answer: {follow_up.content}")
     print(f"  thread_id={follow_up.thread_id}")
 
     print(f"\nStreaming ({STREAM_MESSAGE}):")
-    with client.modus.chat_stream(STREAM_MESSAGE, model=MODEL) as stream:
-        for chunk in stream.text_stream:
+    with client.modus.chat(STREAM_MESSAGE, model=MODEL) as chat:
+        for chunk in chat.text_stream:
             print(chunk, end="")
     print()
 

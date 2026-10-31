@@ -8,6 +8,7 @@ import respx
 from modus.management import ModusManagement
 from modus.management.types.context import (
     ContextItem,
+    ContextItemAccessUpdate,
     ContextItemDeletion,
     ContextItemMove,
     CreatedContextItem,
@@ -197,6 +198,64 @@ async def test_context_items_move_async(async_client):
     assert result.moved_items == 1
     body = json.loads(route.calls[0].request.read())
     assert body == {"destinationFolderUid": None}
+
+
+_ACCESS_RESPONSE = {
+    "uid": "7a3f9d2c-1111-4000-a000-000000000abc",
+    "access": {
+        "visibility": "private",
+        "groupPermissions": {},
+        "sharedWith": [{"email": "ana@example.com", "permission": "use"}],
+        "ownerUserId": "user_1",
+        "ownerEmail": None,
+        "hidesDirectGrants": False,
+    },
+    "canManage": True,
+}
+
+
+@respx.mock
+def test_context_items_update_access(client):
+    uid = "7a3f9d2c-1111-4000-a000-000000000abc"
+    route = respx.patch(f"{BASE}/api/v1/context/items/{uid}/access").mock(
+        return_value=httpx.Response(200, json=_ACCESS_RESPONSE)
+    )
+    result = client.context.items.update_access(
+        uid,
+        visibility="private",
+        group_permissions={},
+        shared_with=[{"email": "ana@example.com", "permission": "use"}],
+    )
+    assert isinstance(result, ContextItemAccessUpdate)
+    assert result.can_manage is True
+    assert result.access.owner_user_id == "user_1"
+    body = json.loads(route.calls[0].request.read())
+    assert body == {
+        "visibility": "private",
+        "groupPermissions": {},
+        "sharedWith": [{"email": "ana@example.com", "permission": "use"}],
+    }
+
+
+@respx.mock
+async def test_context_items_update_access_async(async_client):
+    uid = "7a3f9d2c-1111-4000-a000-000000000abc"
+    route = respx.patch(f"{BASE}/api/v1/context/items/{uid}/access").mock(
+        return_value=httpx.Response(200, json=_ACCESS_RESPONSE)
+    )
+    result = await async_client.context.items.update_access(
+        uid,
+        visibility="shared",
+        group_permissions={"group-1": {"use": True, "manage": False}},
+        shared_with=[],
+    )
+    assert isinstance(result, ContextItemAccessUpdate)
+    body = json.loads(route.calls[0].request.read())
+    assert body == {
+        "visibility": "shared",
+        "groupPermissions": {"group-1": {"use": True, "manage": False}},
+        "sharedWith": [],
+    }
 
 
 @respx.mock

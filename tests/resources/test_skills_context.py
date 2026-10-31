@@ -9,7 +9,7 @@ BASE = "https://api.modus.com"
 
 @respx.mock
 def test_skills_get_context(client):
-    respx.post(f"{BASE}/api/v1/scopes/42/context").mock(
+    respx.post(f"{BASE}/agent/v1/scopes/42/context").mock(
         return_value=httpx.Response(
             200,
             json={
@@ -34,7 +34,7 @@ def test_skills_get_context(client):
 
 @respx.mock
 def test_skills_get_context_omits_limit_when_none(client):
-    route = respx.post(f"{BASE}/api/v1/scopes/42/context").mock(
+    route = respx.post(f"{BASE}/agent/v1/scopes/42/context").mock(
         return_value=httpx.Response(
             200,
             json={
@@ -57,7 +57,7 @@ def test_skills_get_context_omits_limit_when_none(client):
 @respx.mock
 def test_skills_get_context_preserves_bounded_preview(client):
     preview = "Summary: first 4,096 characters… [truncated]"
-    respx.post(f"{BASE}/api/v1/scopes/42/context").mock(
+    respx.post(f"{BASE}/agent/v1/scopes/42/context").mock(
         return_value=httpx.Response(
             200,
             json={

@@ -70,7 +70,7 @@ def main() -> None:
     scope = _pick_scope(scopes)
     print(f"Scope: {scope.name} (id={scope.id})")
 
-    result = client.scopes.chat(scope.id, FIRST_MESSAGE, model=MODEL)
+    result = client.scopes.chat(scope.id, FIRST_MESSAGE, model=MODEL).result()
     print(f"\nQuestion: {FIRST_MESSAGE}")
     print(f"Answer: {result.content}")
     print(f"  thread_id={result.thread_id}")
@@ -80,7 +80,7 @@ def main() -> None:
         FOLLOW_UP,
         model=MODEL,
         thread_id=result.thread_id,
-    )
+    ).result()
     print(f"\nFollow-up: {FOLLOW_UP}")
     print(f"Answer: {follow_up.content}")
     print(f"  thread_id={follow_up.thread_id}")

@@ -8,6 +8,8 @@ from pydantic.alias_generators import to_camel
 
 from modus._generated.models import TriggerDto
 
+from ..._exceptions import ValidationError
+
 ScheduleFrequency = Literal["hourly", "daily", "weekly", "monthly", "custom"]
 TriggerType = Literal["schedule", "webhook", "api", "slack", "manual"]
 Weekday = Literal[
@@ -164,12 +166,17 @@ def parse_trigger(raw: object) -> Optional[AgentTriggerValue]:
     """Parse trigger JSON from a variation or API response."""
     if raw is None:
         return None
+    # GET types the trigger as WorkflowTriggerResponseDto, a sibling of the
+    # request DTO. Field names stay snake_case (`trigger_type`); camelCase
+    # aliases are rejected on the next write.
+    if isinstance(raw, BaseModel) and not isinstance(raw, TriggerDto):
+        raw = raw.model_dump(by_alias=False, exclude_none=True)
     dto = TriggerDto.model_validate(raw)
     raw_type = dto.trigger_type
     trigger_type = raw_type.value if hasattr(raw_type, "value") else raw_type
     if trigger_type == "schedule":
         if dto.schedule is None:
-            raise ValueError("schedule is required when trigger_type is 'schedule'")
+            raise ValidationError("schedule is required when trigger_type is 'schedule'")
         return ScheduleTrigger.model_construct(
             trigger_type="schedule",
             schedule=TriggerSchedule.model_construct(
@@ -184,7 +191,7 @@ def parse_trigger(raw: object) -> Optional[AgentTriggerValue]:
         return ApiTrigger()
     if trigger_type == "slack":
         return SlackTrigger()
-    raise ValueError(f"unsupported trigger_type: {trigger_type!r}")
+    raise ValidationError(f"unsupported trigger_type: {trigger_type!r}")
 
 
 class AgentTrigger:

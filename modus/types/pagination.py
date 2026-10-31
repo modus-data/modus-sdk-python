@@ -38,6 +38,8 @@ from __future__ import annotations
 
 from typing import AsyncIterator, Awaitable, Callable, Generic, Iterator, List, Optional, TypeVar
 
+from .._exceptions import ValidationError
+
 T = TypeVar("T")
 
 
@@ -61,7 +63,7 @@ class Page(Generic[T]):
     def get_next_page(self) -> "Page[T]":
         """Fetch and return the next page. Raises ValueError if no next page."""
         if self.next_page_token is None:
-            raise ValueError(
+            raise ValidationError(
                 "No next page available. Check has_next_page() before calling get_next_page()."
             )
         return self._fetch_page(self.next_page_token)
@@ -110,7 +112,7 @@ class AsyncPage(Generic[T]):
     async def get_next_page(self) -> "AsyncPage[T]":
         """Fetch and return the next page. Raises ValueError if no next page."""
         if self.next_page_token is None:
-            raise ValueError(
+            raise ValidationError(
                 "No next page available. Check has_next_page() before calling get_next_page()."
             )
         return await self._fetch_page(self.next_page_token)

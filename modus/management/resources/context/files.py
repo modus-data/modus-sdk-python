@@ -11,7 +11,7 @@ from typing import Callable, Dict, Iterator, List, Literal, Optional, Sequence, 
 import httpx
 
 from modus._config import ModusConfig
-from modus._exceptions import ModusError
+from modus._exceptions import ModusError, ValidationError
 from modus._generated.resources.management.context.files import (
     _AsyncContextFilesResourceBase,
     _ContextFilesResourceBase,
@@ -63,14 +63,14 @@ _SlotAssignment = Tuple[Path, Optional[str], UploadUrlSlot]
 
 def _validate_wait_until(wait_until: str) -> None:
     if wait_until not in _WAIT_UNTIL_VALUES:
-        raise ValueError(f"wait_until must be one of {_WAIT_UNTIL_VALUES!r}, got {wait_until!r}")
+        raise ValidationError(f"wait_until must be one of {_WAIT_UNTIL_VALUES!r}, got {wait_until!r}")
 
 
 def _validate_bulk_size(count: int, *, name: str) -> None:
     if count == 0:
-        raise ValueError(f"{name} must not be empty")
+        raise ValidationError(f"{name} must not be empty")
     if count > MAX_BULK_UPLOAD_FILES:
-        raise ValueError(f"{name} must have at most {MAX_BULK_UPLOAD_FILES} entries, got {count}")
+        raise ValidationError(f"{name} must have at most {MAX_BULK_UPLOAD_FILES} entries, got {count}")
 
 
 def _put_headers(slot: UploadUrlSlot) -> Dict[str, str]:
@@ -487,7 +487,7 @@ class ContextFilesResource(_ContextFilesResourceBase):
         _validate_wait_until(wait_until)
         file_path = Path(path)
         if not file_path.is_file():
-            raise ValueError(f"Not a file: {file_path}")
+            raise ValidationError(f"Not a file: {file_path}")
         slot = self.create_upload_url(
             file_name=file_path.name,
             content_type=DEFER_CONTENT_TYPE_TO_SERVER,
@@ -570,10 +570,10 @@ class ContextFilesResource(_ContextFilesResourceBase):
         """
         _validate_wait_until(wait_until)
         if concurrency < 1:
-            raise ValueError(f"concurrency must be >= 1, got {concurrency!r}")
+            raise ValidationError(f"concurrency must be >= 1, got {concurrency!r}")
         dir_path = Path(path)
         if not dir_path.is_dir():
-            raise ValueError(f"Not a directory: {dir_path}")
+            raise ValidationError(f"Not a directory: {dir_path}")
 
         return self._upload_paths(
             [
@@ -596,7 +596,7 @@ class ContextFilesResource(_ContextFilesResourceBase):
         """Shared body of ``upload_files`` and ``upload_dir``."""
         _validate_wait_until(wait_until)
         if concurrency < 1:
-            raise ValueError(f"concurrency must be >= 1, got {concurrency!r}")
+            raise ValidationError(f"concurrency must be >= 1, got {concurrency!r}")
         uploaded: List[FileUpload] = []
         failed: List[UploadDirFailure] = []
         total = len(files)
@@ -856,7 +856,7 @@ class AsyncContextFilesResource(_AsyncContextFilesResourceBase):
         _validate_wait_until(wait_until)
         file_path = Path(path)
         if not file_path.is_file():
-            raise ValueError(f"Not a file: {file_path}")
+            raise ValidationError(f"Not a file: {file_path}")
         slot = await self.create_upload_url(
             file_name=file_path.name,
             content_type=DEFER_CONTENT_TYPE_TO_SERVER,
@@ -909,10 +909,10 @@ class AsyncContextFilesResource(_AsyncContextFilesResourceBase):
         """
         _validate_wait_until(wait_until)
         if concurrency < 1:
-            raise ValueError(f"concurrency must be >= 1, got {concurrency!r}")
+            raise ValidationError(f"concurrency must be >= 1, got {concurrency!r}")
         dir_path = Path(path)
         if not dir_path.is_dir():
-            raise ValueError(f"Not a directory: {dir_path}")
+            raise ValidationError(f"Not a directory: {dir_path}")
 
         return await self._upload_paths(
             [
@@ -935,7 +935,7 @@ class AsyncContextFilesResource(_AsyncContextFilesResourceBase):
         """Shared body of ``upload_files`` and ``upload_dir``."""
         _validate_wait_until(wait_until)
         if concurrency < 1:
-            raise ValueError(f"concurrency must be >= 1, got {concurrency!r}")
+            raise ValidationError(f"concurrency must be >= 1, got {concurrency!r}")
         uploaded: List[FileUpload] = []
         failed: List[UploadDirFailure] = []
         total = len(files)

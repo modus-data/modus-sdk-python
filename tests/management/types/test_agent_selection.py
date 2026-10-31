@@ -64,6 +64,66 @@ def test_parse_agent_selection_accepts_camel_case_inbound() -> None:
     assert selection.agents[0].role == "analyst"
 
 
+def test_parse_agent_selection_from_get_response_serializes_request() -> None:
+    from modus._generated.models import AgentVariationDto
+
+    variation = AgentVariationDto.model_validate(
+        {
+            "agentSelection": {"agents": [{"agent_id": 10, "priority_order": 1}]},
+            "workflowStructure": {"nodes": [], "edges": []},
+            "trigger": None,
+        }
+    )
+    assert variation.agent_selection is not None
+    assert len(variation.agent_selection.agents) == 1
+    selection = parse_agent_selection(variation.agent_selection)
+    assert selection is not None
+    dumped = dump_agent_selection(selection)
+    assert dumped is not None
+    assert dumped["agents"]
+    assert dumped == {"agents": [{"agent_id": 10, "priority_order": 1}]}
+    assert "agentId" not in dumped["agents"][0]
+
+
+def test_parse_agent_selection_keeps_model_settings_for_update() -> None:
+    """A GET selection sent back on update keeps its modelSettings, which the API would otherwise clear."""
+    from modus._generated.models import AgentVariationDto
+
+    variation = AgentVariationDto.model_validate(
+        {
+            "agentSelection": {
+                "agents": [{"agent_id": 10, "priority_order": 1}],
+                "model": "gpt-4o",
+                "modelSettings": {"reasoningEffort": "low", "contextWindow": 128000},
+            },
+            "workflowStructure": None,
+            "trigger": None,
+        }
+    )
+    assert variation.agent_selection is not None
+    assert variation.agent_selection.model_settings is not None
+    selection = parse_agent_selection(variation.agent_selection)
+    assert selection is not None
+    assert selection.model == "gpt-4o"
+    assert selection.agents[0].agent_id == 10
+    dumped = dump_agent_selection(selection)
+    assert dumped == {
+        "agents": [{"agent_id": 10, "priority_order": 1}],
+        "model": "gpt-4o",
+        "modelSettings": {"reasoningEffort": "low", "contextWindow": 128000},
+    }
+
+
+def test_parse_agent_selection_accepts_existing_model() -> None:
+    original = AgentSelection.single(10)
+    parsed = parse_agent_selection(original)
+    assert parsed is original
+    again = parse_agent_selection(parsed)
+    assert again is original
+    dumped = dump_agent_selection(again)
+    assert dumped == {"agents": [{"agent_id": 10, "priority_order": 1}]}
+
+
 def test_parse_dump_round_trip() -> None:
     raw = {
         "agents": [{"agentId": 42, "priorityOrder": 1}],

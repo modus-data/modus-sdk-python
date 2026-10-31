@@ -12,7 +12,7 @@ from ..._openapi_invoke import (
     invoke_operation_stream_async,
 )
 from ..._retry import async_with_retry, with_retry
-from ..._streaming import parse_sse_stream
+from ..._streaming import parse_sse_stream, parse_sse_stream_async
 from ..._validation import validate_id
 from ...types.runs import RunEvent
 
@@ -30,9 +30,8 @@ def _parse_events(lines: Iterator[str]) -> Iterator[RunEvent]:
 
 
 async def _parse_events_async(lines: AsyncIterator[str]) -> AsyncIterator[RunEvent]:
-    async for line in lines:
-        for event in parse_sse_stream(iter([line])):
-            yield event
+    async for event in parse_sse_stream_async(lines):
+        yield event
 
 
 class AgentWorkflowActionsResource:

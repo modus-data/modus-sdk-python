@@ -22,7 +22,7 @@
       "executor": "nx:run-commands",
       "dependsOn": ["install"],
       "options": {
-        "command": "bash -c 'mkdir -p reports && bash ../../../../scripts/sdk-python/ensure-uv.sh run pytest tests/ -v -m \"not integration\" --junit-xml=reports/pytest-junit.xml --tb=short'",
+        "command": "bash -c 'bash ../../../../scripts/sdk-python/ensure-uv.sh run pytest tests/ -v -m \"not integration\" --junit-xml=../../../../reports/junit/{projectName}.xml --tb=short'",
         "cwd": "{projectRoot}"
       },
       "cache": true,
@@ -32,9 +32,13 @@
         "{workspaceRoot}/packages/openapi-portal/src/**/*.ts",
         "{workspaceRoot}/distribution/clients/python/scripts/**",
         "{workspaceRoot}/distribution/clients/sdk-surface.json",
-        "{workspaceRoot}/distribution/clients/sdk-surface.schema.json"
+        "{workspaceRoot}/distribution/clients/sdk-surface.schema.json",
+        "{workspaceRoot}/distribution/clients/error-responses.json",
+        { "externalDependencies": [] }
       ],
-      "outputs": ["{projectRoot}/reports"]
+      "outputs": [
+        "{workspaceRoot}/reports/junit/{projectName}.xml"
+      ]
     },
     "test-staging-smoke": {
       "executor": "nx:run-commands",

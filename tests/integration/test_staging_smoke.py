@@ -112,7 +112,16 @@ def test_staging_journey() -> None:
                 f"{label}: found {composed.original_count} items but rendered no context"
             )
 
-        assert elapsed_s < 25, f"{label}: took {elapsed_s:.1f}s; the edge caps at 30s"
+        # Compose runs on the agent host, which has no 30 s edge limit; the
+        # server stops a compose at 90 s with a 504, so a 200 is always under it.
+        assert elapsed_s < 95, f"{label}: took {elapsed_s:.1f}s; the server deadline is 90s"
+
+    # Every compose must reach the agent host's route, never the API host's
+    # deprecated one behind the 30 s gateway limit.
+    compose_urls: list[str] = []
+    client._http._client.event_hooks["request"].append(
+        lambda request: compose_urls.append(str(request.url)) if "/context" in request.url.path else None
+    )
 
     started = time.monotonic()
     composed = client.modus.get_context("sdk staging smoke — list relevant tables", limit=3)
@@ -124,6 +133,10 @@ def test_staging_journey() -> None:
             scope_id, "sdk staging smoke — brief context", limit=3
         )
         assert_composition("scope get_context", scope_composed, time.monotonic() - started)
+
+    agent_host = client._config.agent_host
+    assert compose_urls, "no compose request recorded"
+    assert all(url.startswith(f"{agent_host}/agent/v1/") for url in compose_urls), compose_urls
 
     # Management reads
     mgmt_scopes = mgmt.scopes.list(page_size=5)
@@ -194,24 +207,25 @@ def test_staging_context_files_upload(tmp_path) -> None:
 
 @pytest.mark.skipif(not _has_live, reason="MODUS_API_KEY not set")
 def test_staging_chat_and_stream() -> None:
-    """Buffered chat + streaming against staging agent host (hard gate)."""
+    """chat() result and live stream against the staging agent host (hard gate)."""
     model = os.getenv("MODUS_SMOKE_MODEL") or "claude-sonnet-5"
     agent_host = os.getenv("MODUS_AGENT_HOST") or "https://agent.staging.getmodus.com"
     client = Modus(base_url=_base_url(), agent_host=agent_host, timeout=180.0)
 
-    buffered = client.modus.chat(
+    awaited = client.modus.chat(
         "sdk staging smoke — reply with one short word",
         model=model,
-    )
-    assert buffered.content
-    assert buffered.thread_id
+    ).result()
+    assert awaited.content
+    assert awaited.thread_id
 
-    with client.modus.chat_stream(
+    with client.modus.chat(
         "sdk staging smoke — stream one short word",
         model=model,
+        thread_id=awaited.thread_id,
     ) as stream:
         tokens = list(stream.text_stream)
-        final = stream.get_final_result()
+        final = stream.result()
 
     assert tokens
     assert final.content

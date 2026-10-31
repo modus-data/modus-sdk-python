@@ -102,7 +102,8 @@ class _ScopesResourceBase:
             view: Which variation snapshot to read. Defaults to ``active``.
 
         Example:
-            >>> scope = client.scopes.get("revenue-analysis")
+            >>> first = client.scopes.list().items[0]
+            >>> scope = client.scopes.get(first.id)
             >>> print(scope.name, scope.status)
         """
         validate_id(scope_id, name="scope_id")

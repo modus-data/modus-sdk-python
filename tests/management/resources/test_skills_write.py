@@ -1,6 +1,7 @@
 """Tests for mgmt.scopes.create/update/deploy/delete."""
 
 import json
+from types import MappingProxyType
 
 import httpx
 import pytest
@@ -143,7 +144,7 @@ def test_skills_create_with_toolset_factory():
 
 
 @respx.mock
-def test_skills_create_empty_toolset_is_omitted():
+def test_skills_create_empty_toolset_is_sent_as_no_tools():
     from modus.management import Toolset
 
     route = respx.post(f"{BASE}/api/v1/scopes").mock(
@@ -151,7 +152,36 @@ def test_skills_create_empty_toolset_is_omitted():
     )
     _client().scopes.create(name="X", toolset=Toolset.empty())
     body = json.loads(route.calls[0].request.read())
-    assert "toolset" not in body
+    assert body["toolset"] == {}
+
+
+@respx.mock
+def test_skills_update_empty_toolset_clears_tools():
+    from modus.management import Toolset
+
+    route = respx.patch(f"{BASE}/api/v1/scopes/1").mock(
+        return_value=httpx.Response(200, json=SKILL_RESP)
+    )
+    _client().scopes.update(1, toolset=Toolset.empty())
+    assert json.loads(route.calls[0].request.read()) == {"toolset": {}}
+
+
+@respx.mock
+def test_skills_update_manager_id_is_an_int():
+    route = respx.patch(f"{BASE}/api/v1/scopes/1").mock(
+        return_value=httpx.Response(200, json=SKILL_RESP)
+    )
+    _client().scopes.update(1, manager_id=7)
+    assert json.loads(route.calls[0].request.read()) == {"managerId": 7}
+
+
+@respx.mock
+def test_skills_update_mask_detaches_manager():
+    route = respx.patch(url__regex=rf"{BASE}/api/v1/scopes/1\?.*").mock(
+        return_value=httpx.Response(200, json=SKILL_RESP)
+    )
+    _client().scopes.update(1, update_mask="managerId")
+    assert json.loads(route.calls[0].request.read()) == {"managerId": None}
 
 
 @respx.mock
@@ -175,6 +205,57 @@ def test_skills_create_with_instructions():
     body = json.loads(route.calls[0].request.read())
     assert body["instructions"] == ["Do this."]
     assert body["model"] == "gpt-4o"
+
+
+@respx.mock
+def test_skills_update_resends_connection_set_from_get(client, skill_detail_row):
+    respx.get(f"{BASE}/api/v1/scopes/10").mock(
+        return_value=httpx.Response(200, json=skill_detail_row)
+    )
+    route = respx.patch(f"{BASE}/api/v1/scopes/10").mock(
+        return_value=httpx.Response(200, json=skill_detail_row)
+    )
+    scope = client.scopes.get(10)
+    assert scope.variation is not None
+    rows = scope.variation.connection_set
+    assert rows
+    client.scopes.update(10, connection_set=rows)
+    body = json.loads(route.calls[0].request.read())
+    assert body["connectionSet"] == [{"connection_id": "conn-snowflake-001", "path": []}]
+
+
+@respx.mock
+def test_skills_update_accepts_a_read_only_mapping_row():
+    route = respx.patch(f"{BASE}/api/v1/scopes/10").mock(
+        return_value=httpx.Response(200, json={**SKILL_RESP, "id": 10})
+    )
+    row = {"connection_id": "conn-snowflake-001", "path": []}
+    _client().scopes.update(10, connection_set=[MappingProxyType(row)])
+    body = json.loads(route.calls[0].request.read())
+    assert body["connectionSet"] == [row]
+
+
+@respx.mock
+def test_skills_update_resends_preferences_and_context_enabled_from_get(client, skill_detail_row):
+    row = {
+        "connection_id": "conn-snowflake-001",
+        "path": ["SALES_DB", "PUBLIC"],
+        "preferences": {"mode": "manual", "include": [], "exclude": []},
+        "context_enabled": False,
+    }
+    skill_detail_row["variation"]["connectionSet"] = [row]
+    respx.get(f"{BASE}/api/v1/scopes/10").mock(
+        return_value=httpx.Response(200, json=skill_detail_row)
+    )
+    route = respx.patch(f"{BASE}/api/v1/scopes/10").mock(
+        return_value=httpx.Response(200, json=skill_detail_row)
+    )
+    scope = client.scopes.get(10)
+    assert scope.variation is not None
+    assert scope.variation.connection_set[0].context_enabled is False
+    client.scopes.update(10, connection_set=scope.variation.connection_set)
+    body = json.loads(route.calls[0].request.read())
+    assert body["connectionSet"] == [row]
 
 
 @respx.mock

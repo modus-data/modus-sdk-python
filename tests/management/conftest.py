@@ -58,7 +58,7 @@ def skill_detail_row(skill_list_row) -> dict:
                 "sql_runner": ["SELECT:conn-snowflake-001:analytics:public"],
                 "memory": {"enabled": True},
             },
-            "connectionSet": [{"connectionId": "conn-snowflake-001"}],
+            "connectionSet": [{"connection_id": "conn-snowflake-001", "path": []}],
             "contextSelections": [],
             "interfaces": [],
             "evaluations": [],
@@ -98,7 +98,13 @@ def agent_detail_row(agent_list_row) -> dict:
         **agent_list_row,
         "variation": {
             "agentSelection": {
-                "agents": [{"skillId": 10, "instructions": "Run the weekly revenue SQL and email results."}],
+                "agents": [
+                    {
+                        "agent_id": 10,
+                        "priority_order": 1,
+                        "instructions": "Run the weekly revenue SQL and email results.",
+                    }
+                ],
                 "model": "gpt-4o-mini",
             },
         },

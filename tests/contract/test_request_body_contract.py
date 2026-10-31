@@ -26,11 +26,9 @@ from modus._generated.models import (
     CreateCustomContextItemDto,
     EditQueuedRunDto,
     InterruptRunDto,
-    ModusChatRequestDto,
     ModusContextRequestDto,
     ModusRunDto,
     ResumeRunDto,
-    SkillChatRequestDto,
     SkillRunDto,
     UpdateCustomContextItemDto,
     UpdateEvaluationConfigDto,
@@ -63,7 +61,8 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "IngestedDataController_upload": {"integration_type", "request", "response"},
     "ContextItemsController_update": _model_wire_fields(ContextItemUpdate),
     "ContextItemsController_move": {"destinationFolderUid"},
-    "ModusChatController_chat": _model_wire_fields(ModusChatRequestDto),
+    "ContextItemAccessController_updateAccess": {"visibility", "groupPermissions", "sharedWith"},
+    "ModusContextComposeController_compose": _model_wire_fields(ModusContextRequestDto),
     "ModusContextController_compose": _model_wire_fields(ModusContextRequestDto),
     "SuggestionsController_recordEvent": {
         "eventType",
@@ -121,7 +120,9 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     # --- Scopes (/api/v1/scopes; request schemas share the generated *Skill* DTOs) ---
     "ScopesController_create": _model_wire_fields(_ScopeCreateBody),
     "ScopesController_update": _model_wire_fields(_ScopeUpdateBody),
-    "ScopeChatController_chat": _model_wire_fields(SkillChatRequestDto),
+    "ScopesController_addEvaluationCase": {"id", "task", "expectedOutput"},
+    "ScopesController_updateEvaluationCase": {"task", "expectedOutput"},
+    "ScopeContextComposeController_compose": _model_wire_fields(ComposeSkillContextRequestDto),
     "ScopeContextController_compose": _model_wire_fields(ComposeSkillContextRequestDto),
     "ScopeMemoriesController_search": _model_wire_fields(MemorySearchRequest),
     "ScopeMemoriesController_update": _model_wire_fields(MemoryUpdate),
@@ -217,21 +218,11 @@ def test_every_mapped_write_endpoint_has_a_body_contract(openapi: dict) -> None:
                     return bool(op.get("requestBody"))
         return False
 
-    # Chat-continue / stream variants reuse the same body as their base operation.
-    reuses_base_body = {
-        "ModusChatController_chatStream",
-        "ModusChatController_chatContinue",
-        "ModusChatController_chatContinueStream",
-        "ScopeChatController_chatContinue",
-        "ScopeChatController_chatStream",
-        "ScopeChatController_chatContinueStream",
-    }
     missing = {
         oid
         for oid in operations
         if _has_request_body(oid)
         and oid not in SDK_REQUEST_BODY_FIELDS
-        and oid not in reuses_base_body
     }
     assert not missing, (
         "Mapped write endpoints without a body contract in SDK_REQUEST_BODY_FIELDS: "

@@ -52,7 +52,9 @@ client = modus.Modus()
 for scope in client.scopes.list():
     print(scope.name, scope.status)
 
-scope = client.scopes.get("revenue-analysis")
+# Ids are numeric: take one from list()
+first = client.scopes.list().items[0]
+scope = client.scopes.get(first.id)
 print(scope.name, scope.description)
 
 for item in client.context.items.list():
@@ -87,18 +89,12 @@ Use `client.modus.chat()` for native Modus — not `scopes.chat(0)` or any other
 ```python
 MODEL = "claude-sonnet-5"
 
-result = client.modus.chat("What were our top revenue drivers last quarter?", model=MODEL)
+result = client.modus.chat("What were our top revenue drivers last quarter?", model=MODEL).result()
 print(result.content, result.thread_id)
 
-follow_up = client.modus.chat(
-    "Break that down by region.",
-    model=MODEL,
-    thread_id=result.thread_id,
-)
-print(follow_up.content)
-
-with client.modus.chat_stream("Summarize this week", model=MODEL) as stream:
-    for chunk in stream.text_stream:
+# Every chat streams live from the agent host; iterate it to print tokens as they arrive.
+with client.modus.chat("Break that down by region.", model=MODEL, thread_id=result.thread_id) as chat:
+    for chunk in chat.text_stream:
         print(chunk, end="")
 
 ctx = client.modus.get_context("What tables describe customer churn?", limit=10)
@@ -113,13 +109,25 @@ for row in client.modus.conversations.list(kind="modus", page_size=10):
 ```python
 MODEL = "claude-sonnet-5"
 
-result = client.scopes.chat(scope_id, "Hello", model=MODEL)
+result = client.scopes.chat(scope_id, "Hello", model=MODEL).result()
 print(result.content, result.thread_id)
 
-with client.scopes.chat_stream(scope_id, "Hi", model=MODEL) as stream:
-    for chunk in stream.text_stream:
+with client.scopes.chat(scope_id, "Hi", model=MODEL, thread_id=result.thread_id) as chat:
+    for chunk in chat.text_stream:
         print(chunk, end="")
 ```
+
+### Approvals
+
+A run that needs approval for a write stops with `result.approval` set. Continue it with `resume`:
+
+```python
+chat = client.modus.chat("Fix the typo in the accounts table", model=MODEL)
+if chat.result().approval:
+    print(chat.resume(decision="approve").result().content)
+```
+
+Async: `await client.modus.chat(...)` returns the result; `async with` / `async for` stream it.
 
 ### Context
 
@@ -165,9 +173,37 @@ The token must include the `context:write` permission.
 workflow = client.workflows.get(workflow_id)
 for run in client.workflows.runs.list(workflow_id, page_size=20):
     print(run.id, run.status)
+
+# Chat with a published workflow; result() returns its final output.
+digest = client.workflows.chat(workflow_id, "Run this week's digest", model="claude-sonnet-5").result()
+print(digest.content)
 ```
 
-Workflow chat is not on the public PAT surface. Use `client.modus.chat()` for org-wide conversation or `client.scopes.chat()` for a published scope.
+`client.workflows.runs.stream(run_id)` follows a run's events. Each event carries an `id` when the server sends one. If the connection drops, call `stream` again with `last_event_id` set to the last `id` you handled: the stream resumes after it instead of replaying the run from the start. Without an `id` it can only replay from the start. The stream ends after a `done`, `error` or `cancelled` event; only `done` is a completed run.
+
+```python
+from modus import APIConnectionError
+
+
+def follow_run(run_id, handle):
+    last_id = None
+    while True:
+        events = iter(client.workflows.runs.stream(run_id, last_event_id=last_id))
+        while True:
+            try:
+                event = next(events)
+            except StopIteration:
+                break  # ended without a final event: resume
+            except APIConnectionError:
+                break  # dropped: resume after last_id
+            handle(event)  # a handler error propagates; it is not a disconnect
+            last_id = event.id or last_id
+            if event.type == "done":
+                return
+            # A stream_timeout event is followed by an error event.
+            if event.type in ("error", "cancelled"):
+                raise RuntimeError(f"Run {run_id} ended with {event.type}")
+```
 
 ## Managing your org
 
@@ -204,6 +240,15 @@ moved = mgmt.context.items.move(
     destination_folder_uid=None,
 )
 print(moved.moved_items)
+
+# Who can view and manage a note, saved query, link or uploaded file; all three settings replace the current ones.
+access = mgmt.context.items.update_access(
+    note.uid,
+    visibility="private",
+    group_permissions={},
+    shared_with=[{"email": "ana@example.com", "permission": "use"}],
+)
+print(access.can_manage)
 
 upserted = mgmt.context.custom_items.create_relations([
     {
@@ -252,13 +297,41 @@ try:
     scope = client.scopes.get(999)
 except modus.NotFoundError:
     print("Scope not found")
+except modus.BadRequestError as e:
+    print(f"Invalid request: {e.message}")
 except modus.AuthenticationError:
     print("Check your MODUS_API_KEY")
+except modus.PermissionDeniedError as e:
+    print("Token is missing scopes:", (e.info or {}).get("missing"))
 except modus.RateLimitError as e:
     print(f"Rate limited. Retry after {e.retry_after}s")
 except modus.ModusError as e:
-    print(f"API error {e.status_code}: {e.message}")
+    print(f"API error {e.status_code} {e.code}: {e.message} (request {e.request_id})")
 ```
+
+Every error carries `code` (for example `NOT_FOUND`), `request_id` (quote it to support)
+and, when the server sends one, `info` with structured detail. A request that fails schema
+validation raises `BadRequestError` (400); one that is well-formed but breaks a business
+rule raises `UnprocessableError` (422), with the rule in `info`.
+
+## Retries
+
+A failed request is re-sent up to `max_retries` times (default 2, with exponential
+backoff), but only when sending it twice cannot do the work twice:
+
+- **429**, for every method. A `Retry-After` (or `retry-after-ms`) of up to 60 s is waited
+  out; a longer one raises `RateLimitError` at once with `retry_after` set.
+- **A connection that never opened** (refused, DNS failure, connect or pool timeout), for
+  every method.
+- **408, 500, 502, 503, 504, a dropped connection or a timeout**, for GET, PUT, PATCH and
+  DELETE, and for the POSTs that only read or set a state (context compose, item lookup,
+  memory search, active-run lookup, run cancel, run interrupt, workflow-action cancel, workflow toggle,
+  ingested-data upload).
+
+Any other POST (a create, an add, an evaluation run) may already have run on the server,
+so it raises instead of being re-sent: check whether the resource exists before creating
+it again. `e.retryable` tells you whether the SDK considered the failure safe to re-send.
+Pass `max_retries=0` to turn retries off.
 
 ## Examples
 
@@ -269,7 +342,6 @@ Runnable scripts ship with the package:
 - `examples/scripts/chat.py` — buffered scope chat with thread follow-up
 - `examples/scripts/manage_skill.py` — create and deploy a scope (`ModusManagement`, `--write` optional)
 
-Optional Streamlit demo: `examples/apps/modus_skill_chat/` (streaming vs buffered scope chat side by side).
 
 ## Docs
 

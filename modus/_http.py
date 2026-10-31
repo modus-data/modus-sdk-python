@@ -3,8 +3,8 @@ HTTP transport layer.
 
 HttpClient and AsyncHttpClient are thin wrappers around httpx that handle:
   - Auth header injection (via ModusConfig)
-  - Response parsing (JSON or None for 204)
-  - HTTP status code → typed exception mapping
+  - Response parsing (JSON, or None for 204 / an empty body)
+  - HTTP status code → typed exception mapping, marking each error ``retryable``
   - Raw SSE line streaming (for skill execution)
 
 Retry logic lives in _retry.py and is applied at the resource layer,
@@ -14,9 +14,13 @@ not here. This keeps each layer's responsibility clear.
 from __future__ import annotations
 
 import json
+import math
 import platform
+import re
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from importlib.metadata import PackageNotFoundError, version
-from typing import Any, AsyncIterator, Dict, Iterator, Optional
+from typing import Any, AsyncIterator, Dict, Iterator, Mapping, NamedTuple, Optional
 
 import httpx
 
@@ -25,6 +29,7 @@ from ._config import ModusConfig
 from ._exceptions import (
     APIConnectionError,
     AuthenticationError,
+    BadRequestError,
     ConflictError,
     InternalServerError,
     ModusError,
@@ -33,6 +38,7 @@ from ._exceptions import (
     RateLimitError,
     UnprocessableError,
 )
+from ._retry import is_retry_safe
 
 try:
     _SDK_VERSION = version("modus")
@@ -45,14 +51,7 @@ _USER_AGENT = (
 )
 
 
-_NETWORK_ERRORS = (
-    httpx.ConnectError,
-    httpx.ConnectTimeout,
-    httpx.ReadTimeout,
-    httpx.WriteTimeout,
-    httpx.PoolTimeout,
-    httpx.RemoteProtocolError,
-)
+_NETWORK_ERRORS = (httpx.TransportError,)
 
 
 def _request_url(path: str, base_url: Optional[str]) -> str:
@@ -61,11 +60,14 @@ def _request_url(path: str, base_url: Optional[str]) -> str:
     return f"{base_url.rstrip('/')}/{path.lstrip('/')}"
 
 
-def _wrap_network_error(exc: Exception, base_url: str) -> APIConnectionError:
+def _wrap_network_error(
+    exc: Exception, base_url: str, method: str = "GET", idempotent: bool = False
+) -> APIConnectionError:
     """Convert any network-level httpx error into a typed APIConnectionError."""
     return APIConnectionError(
         f"Network error communicating with Modus API at {base_url!r}: {exc}. "
-        "Check connectivity and that base_url is correct."
+        "Check connectivity and that base_url is correct.",
+        retryable=is_retry_safe(method, idempotent, exc=exc),
     )
 
 
@@ -90,38 +92,89 @@ async def _read_response_bytes_async(response: httpx.Response) -> bytes:
         return await response.aread()
 
 
-def _message_from_body(raw: str, status_code: int) -> str:
-    if not raw:
-        return f"HTTP {status_code}"
+class _ErrorFields(NamedTuple):
+    message: str
+    code: Optional[str] = None
+    request_id: Optional[str] = None
+    info: Optional[Dict[str, Any]] = None
+    parsed: Any = None
+
+
+def _non_empty_str(value: Any) -> Optional[str]:
+    return value if isinstance(value, str) and value else None
+
+
+def _parse_error_body(raw: str, status_code: int) -> _ErrorFields:
+    """
+    Read an error body once: Modus's envelope ``{"error": {code, message, requestId, info}}``,
+    an API Gateway body ``{"message": "..."}``, or anything else as raw text.
+    """
     try:
-        body = json.loads(raw)
-        if isinstance(body, dict):
-            msg = body.get("message") or body.get("error")
-            if isinstance(msg, list):
-                return "; ".join(str(m) for m in msg)
-            if msg:
-                return str(msg)
+        parsed = json.loads(raw)
     except json.JSONDecodeError:
-        pass
-    return raw
+        return _ErrorFields(raw or f"HTTP {status_code}")
+    if not isinstance(parsed, dict):
+        return _ErrorFields(raw, parsed=parsed)
+    envelope = parsed.get("error")
+    if isinstance(envelope, dict):
+        info = envelope.get("info")
+        return _ErrorFields(
+            _non_empty_str(envelope.get("message")) or raw,
+            code=_non_empty_str(envelope.get("code")),
+            request_id=_non_empty_str(envelope.get("requestId")),
+            info=info if isinstance(info, dict) else None,
+            parsed=parsed,
+        )
+    message = parsed["message"] if parsed.get("message") is not None else parsed.get("error")
+    if isinstance(message, list):
+        return _ErrorFields("; ".join(str(m) for m in message), parsed=parsed)
+    return _ErrorFields(_non_empty_str(message) or raw, parsed=parsed)
 
 
-def _extract_message(response: httpx.Response) -> str:
-    """Pull a human-readable message out of a NestJS error response body."""
-    raw_bytes = _read_response_bytes(response)
-    raw = raw_bytes.decode(response.encoding or "utf-8", errors="replace")
-    return _message_from_body(raw, response.status_code)
+def _parse_retry_after(headers: httpx.Headers) -> Optional[int]:
+    """
+    Seconds to wait, from ``retry-after-ms`` or ``Retry-After`` (delta-seconds or an
+    HTTP date), rounded up to whole seconds.
+    """
+    ms = (headers.get("retry-after-ms") or "").strip()
+    if re.fullmatch(r"[0-9]+(\.[0-9]+)?", ms):
+        return math.ceil(float(ms) / 1000)
+    value = (headers.get("retry-after") or "").strip()
+    if not value:
+        return None
+    if re.fullmatch(r"[0-9]+", value):
+        return int(value)
+    try:
+        when = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    return max(0, math.ceil((when - datetime.now(timezone.utc)).total_seconds()))
 
 
-def _raise_for_status_with_body(response: httpx.Response, body: Optional[str]) -> None:
+def _raise_for_status_with_body(
+    response: httpx.Response,
+    body: Optional[str],
+    method: str = "GET",
+    idempotent: bool = False,
+) -> None:
     """Map an HTTP error response to the appropriate ModusError subclass."""
-    message = _message_from_body(body or "", response.status_code)
     status = response.status_code
-    request_id = response.headers.get("x-request-id") or response.headers.get("X-Request-ID")
-    headers = dict(response.headers)
+    fields = _parse_error_body(body or "", status)
+    retry_after = _parse_retry_after(response.headers) if status == 429 else None
+    kwargs: Dict[str, Any] = dict(
+        request_id=fields.request_id or response.headers.get("x-request-id"),
+        response_headers=dict(response.headers),
+        body=body,
+        code=fields.code,
+        info=fields.info,
+        retryable=is_retry_safe(method, idempotent, status=status, retry_after=retry_after),
+    )
+    message = fields.message
 
-    kwargs: dict = dict(request_id=request_id, response_headers=headers, body=body)
-
+    if status == 400:
+        raise BadRequestError(message, **kwargs)
     if status == 401:
         raise AuthenticationError(message, **kwargs)
     if status == 403:
@@ -131,18 +184,8 @@ def _raise_for_status_with_body(response: httpx.Response, body: Optional[str]) -
     if status == 409:
         raise ConflictError(message, **kwargs)
     if status == 422:
-        errors = None
-        if body:
-            try:
-                errors = json.loads(body)
-            except json.JSONDecodeError:
-                errors = None
-        raise UnprocessableError(message, errors=errors, **kwargs)
+        raise UnprocessableError(message, errors=fields.parsed, **kwargs)
     if status == 429:
-        retry_after: Optional[int] = None
-        header = response.headers.get("retry-after", "")
-        if header.isdigit():
-            retry_after = int(header)
         raise RateLimitError(message, retry_after=retry_after, **kwargs)
     if status >= 500:
         raise InternalServerError(message, status_code=status, **kwargs)
@@ -158,20 +201,40 @@ def _decode_body(body_bytes: bytes, response: httpx.Response) -> Optional[str]:
     )
 
 
-def _raise_for_status(response: httpx.Response) -> None:
+def _raise_for_status(
+    response: httpx.Response, method: str = "GET", idempotent: bool = False
+) -> None:
     """Map an HTTP error response to the appropriate ModusError subclass."""
     if response.is_success:
         return
     body = _decode_body(_read_response_bytes(response), response)
-    _raise_for_status_with_body(response, body)
+    _raise_for_status_with_body(response, body, method, idempotent)
 
 
-async def _raise_for_status_async(response: httpx.Response) -> None:
+async def _raise_for_status_async(response: httpx.Response, method: str) -> None:
     """Map an HTTP error response to ModusError (async streaming path)."""
     if response.is_success:
         return
     body = _decode_body(await _read_response_bytes_async(response), response)
-    _raise_for_status_with_body(response, body)
+    _raise_for_status_with_body(response, body, method)
+
+
+def _json_or_none(response: httpx.Response) -> Any:
+    """Parse a 2xx body: None for 204 or an empty body; one that is not JSON is a non-retryable ModusError."""
+    if response.status_code == 204 or not response.content:
+        return None
+    try:
+        return response.json()
+    except ValueError:
+        content_type = response.headers.get("content-type", "")
+        raise ModusError(
+            f"Invalid JSON in HTTP {response.status_code} response "
+            f"(content-type {json.dumps(content_type)}): {response.text[:200]}",
+            status_code=response.status_code,
+            request_id=response.headers.get("x-request-id"),
+            response_headers=dict(response.headers),
+            body=response.text,
+        ) from None
 
 
 def _ensure_sse_content_type(response: httpx.Response, body_preview: str = "") -> None:
@@ -236,6 +299,27 @@ class HttpClient:
     def config(self) -> ModusConfig:
         return self._config
 
+    def _send(
+        self,
+        method: str,
+        path: str,
+        *,
+        base_url: Optional[str],
+        idempotent: bool = False,
+        params: Optional[Dict[str, Any]] = None,
+        json: Optional[Dict[str, Any]] = None,
+    ) -> Any:
+        try:
+            response = self._client.request(
+                method, _request_url(path, base_url), params=params, json=json
+            )
+        except _NETWORK_ERRORS as exc:
+            raise _wrap_network_error(
+                exc, base_url or self._config.base_url, method, idempotent
+            ) from exc
+        _raise_for_status(response, method, idempotent)
+        return _json_or_none(response)
+
     def get(
         self,
         path: str,
@@ -243,13 +327,7 @@ class HttpClient:
         params: Optional[Dict[str, Any]] = None,
         base_url: Optional[str] = None,
     ) -> Any:
-        effective_base_url = base_url or self._config.base_url
-        try:
-            response = self._client.get(_request_url(path, base_url), params=params)
-        except _NETWORK_ERRORS as exc:
-            raise _wrap_network_error(exc, effective_base_url) from exc
-        _raise_for_status(response)
-        return response.json()
+        return self._send("GET", path, params=params, base_url=base_url)
 
     def post(
         self,
@@ -257,16 +335,10 @@ class HttpClient:
         *,
         json: Optional[Dict[str, Any]] = None,
         base_url: Optional[str] = None,
+        idempotent: bool = False,
     ) -> Any:
-        effective_base_url = base_url or self._config.base_url
-        try:
-            response = self._client.post(_request_url(path, base_url), json=json)
-        except _NETWORK_ERRORS as exc:
-            raise _wrap_network_error(exc, effective_base_url) from exc
-        _raise_for_status(response)
-        if response.status_code == 204 or not response.content:
-            return None
-        return response.json()
+        """``idempotent``: the POST only reads or sets a state, so it is safe to re-send."""
+        return self._send("POST", path, json=json, base_url=base_url, idempotent=idempotent)
 
     def patch(
         self,
@@ -276,15 +348,7 @@ class HttpClient:
         params: Optional[Dict[str, Any]] = None,
         base_url: Optional[str] = None,
     ) -> Any:
-        effective_base_url = base_url or self._config.base_url
-        try:
-            response = self._client.patch(_request_url(path, base_url), json=json, params=params)
-        except _NETWORK_ERRORS as exc:
-            raise _wrap_network_error(exc, effective_base_url) from exc
-        _raise_for_status(response)
-        if response.status_code == 204 or not response.content:
-            return None
-        return response.json()
+        return self._send("PATCH", path, json=json, params=params, base_url=base_url)
 
     def put(
         self,
@@ -294,26 +358,10 @@ class HttpClient:
         params: Optional[Dict[str, Any]] = None,
         base_url: Optional[str] = None,
     ) -> Any:
-        effective_base_url = base_url or self._config.base_url
-        try:
-            response = self._client.put(_request_url(path, base_url), json=json, params=params)
-        except _NETWORK_ERRORS as exc:
-            raise _wrap_network_error(exc, effective_base_url) from exc
-        _raise_for_status(response)
-        if response.status_code == 204 or not response.content:
-            return None
-        return response.json()
+        return self._send("PUT", path, json=json, params=params, base_url=base_url)
 
     def delete(self, path: str, *, base_url: Optional[str] = None) -> Optional[Any]:
-        effective_base_url = base_url or self._config.base_url
-        try:
-            response = self._client.delete(_request_url(path, base_url))
-        except _NETWORK_ERRORS as exc:
-            raise _wrap_network_error(exc, effective_base_url) from exc
-        _raise_for_status(response)
-        if response.status_code == 204 or not response.content:
-            return None
-        return response.json()
+        return self._send("DELETE", path, base_url=base_url)
 
     def stream_post(
         self,
@@ -336,6 +384,7 @@ class HttpClient:
         *,
         json: Optional[Dict[str, Any]] = None,
         base_url: Optional[str] = None,
+        headers: Optional[Mapping[str, str]] = None,
     ) -> Iterator[str]:
         """Make a streaming request and yield raw SSE lines."""
         effective_base_url = base_url or self._config.base_url
@@ -346,9 +395,9 @@ class HttpClient:
                 method,
                 _request_url(path, base_url),
                 json=json,
-                headers={"Accept": "text/event-stream"},
+                headers={**(headers or {}), "Accept": "text/event-stream"},
             ) as response:
-                _raise_for_status(response)
+                _raise_for_status(response, method)
                 ct = (response.headers.get("content-type") or "").lower()
                 if "text/event-stream" not in ct:
                     preview = _sse_body_preview_from_lines(response.iter_lines())
@@ -357,7 +406,7 @@ class HttpClient:
                     if line.strip():
                         yield line
         except _NETWORK_ERRORS as exc:
-            raise _wrap_network_error(exc, effective_base_url) from exc
+            raise _wrap_network_error(exc, effective_base_url, method) from exc
 
     def close(self) -> None:
         self._client.close()
@@ -392,6 +441,27 @@ class AsyncHttpClient:
     def config(self) -> ModusConfig:
         return self._config
 
+    async def _send(
+        self,
+        method: str,
+        path: str,
+        *,
+        base_url: Optional[str],
+        idempotent: bool = False,
+        params: Optional[Dict[str, Any]] = None,
+        json: Optional[Dict[str, Any]] = None,
+    ) -> Any:
+        try:
+            response = await self._client.request(
+                method, _request_url(path, base_url), params=params, json=json
+            )
+        except _NETWORK_ERRORS as exc:
+            raise _wrap_network_error(
+                exc, base_url or self._config.base_url, method, idempotent
+            ) from exc
+        _raise_for_status(response, method, idempotent)
+        return _json_or_none(response)
+
     async def get(
         self,
         path: str,
@@ -399,13 +469,7 @@ class AsyncHttpClient:
         params: Optional[Dict[str, Any]] = None,
         base_url: Optional[str] = None,
     ) -> Any:
-        effective_base_url = base_url or self._config.base_url
-        try:
-            response = await self._client.get(_request_url(path, base_url), params=params)
-        except _NETWORK_ERRORS as exc:
-            raise _wrap_network_error(exc, effective_base_url) from exc
-        _raise_for_status(response)
-        return response.json()
+        return await self._send("GET", path, params=params, base_url=base_url)
 
     async def post(
         self,
@@ -413,16 +477,12 @@ class AsyncHttpClient:
         *,
         json: Optional[Dict[str, Any]] = None,
         base_url: Optional[str] = None,
+        idempotent: bool = False,
     ) -> Any:
-        effective_base_url = base_url or self._config.base_url
-        try:
-            response = await self._client.post(_request_url(path, base_url), json=json)
-        except _NETWORK_ERRORS as exc:
-            raise _wrap_network_error(exc, effective_base_url) from exc
-        _raise_for_status(response)
-        if response.status_code == 204 or not response.content:
-            return None
-        return response.json()
+        """``idempotent``: the POST only reads or sets a state, so it is safe to re-send."""
+        return await self._send(
+            "POST", path, json=json, base_url=base_url, idempotent=idempotent
+        )
 
     async def patch(
         self,
@@ -432,15 +492,7 @@ class AsyncHttpClient:
         params: Optional[Dict[str, Any]] = None,
         base_url: Optional[str] = None,
     ) -> Any:
-        effective_base_url = base_url or self._config.base_url
-        try:
-            response = await self._client.patch(_request_url(path, base_url), json=json, params=params)
-        except _NETWORK_ERRORS as exc:
-            raise _wrap_network_error(exc, effective_base_url) from exc
-        _raise_for_status(response)
-        if response.status_code == 204 or not response.content:
-            return None
-        return response.json()
+        return await self._send("PATCH", path, json=json, params=params, base_url=base_url)
 
     async def put(
         self,
@@ -450,26 +502,10 @@ class AsyncHttpClient:
         params: Optional[Dict[str, Any]] = None,
         base_url: Optional[str] = None,
     ) -> Any:
-        effective_base_url = base_url or self._config.base_url
-        try:
-            response = await self._client.put(_request_url(path, base_url), json=json, params=params)
-        except _NETWORK_ERRORS as exc:
-            raise _wrap_network_error(exc, effective_base_url) from exc
-        _raise_for_status(response)
-        if response.status_code == 204 or not response.content:
-            return None
-        return response.json()
+        return await self._send("PUT", path, json=json, params=params, base_url=base_url)
 
     async def delete(self, path: str, *, base_url: Optional[str] = None) -> Optional[Any]:
-        effective_base_url = base_url or self._config.base_url
-        try:
-            response = await self._client.delete(_request_url(path, base_url))
-        except _NETWORK_ERRORS as exc:
-            raise _wrap_network_error(exc, effective_base_url) from exc
-        _raise_for_status(response)
-        if response.status_code == 204 or not response.content:
-            return None
-        return response.json()
+        return await self._send("DELETE", path, base_url=base_url)
 
     async def stream_post(
         self,
@@ -489,6 +525,7 @@ class AsyncHttpClient:
         *,
         json: Optional[Dict[str, Any]] = None,
         base_url: Optional[str] = None,
+        headers: Optional[Mapping[str, str]] = None,
     ) -> AsyncIterator[str]:
         """Streaming request — yields raw SSE lines."""
         effective_base_url = base_url or self._config.base_url
@@ -497,9 +534,9 @@ class AsyncHttpClient:
                 method,
                 _request_url(path, base_url),
                 json=json,
-                headers={"Accept": "text/event-stream"},
+                headers={**(headers or {}), "Accept": "text/event-stream"},
             ) as response:
-                await _raise_for_status_async(response)
+                await _raise_for_status_async(response, method)
                 ct = (response.headers.get("content-type") or "").lower()
                 if "text/event-stream" not in ct:
                     chunks: list[str] = []
@@ -518,7 +555,7 @@ class AsyncHttpClient:
                     if line.strip():
                         yield line
         except _NETWORK_ERRORS as exc:
-            raise _wrap_network_error(exc, effective_base_url) from exc
+            raise _wrap_network_error(exc, effective_base_url, method) from exc
 
     async def aclose(self) -> None:
         await self._client.aclose()

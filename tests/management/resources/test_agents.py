@@ -52,8 +52,8 @@ def test_agents_get_populates_variation(client, agent_detail_row):
     assert agent.variation is not None
     selection = agent.variation.agent_selection
     assert selection is not None
-    assert selection["agents"][0]["instructions"] == "Run the weekly revenue SQL and email results."
-    assert selection["model"] == "gpt-4o-mini"
+    assert selection.agents[0].instructions == "Run the weekly revenue SQL and email results."
+    assert selection.model == "gpt-4o-mini"
 
 
 @respx.mock
