@@ -1381,6 +1381,51 @@ class McpCoreToolsConfigDto(BaseModel):
     )
 
 
+class McpExposureCatalogChildDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    key: str = Field(
+        ...,
+        description='Exposure key for this tool.',
+        examples=['toolset_action:web_search::tavily_search'],
+    )
+    action_key: str | None = Field(
+        None,
+        alias='actionKey',
+        description='Action or tool name this key selects.',
+        examples=['tavily_search'],
+    )
+    label: str = Field(..., description='Name shown for this tool.', examples=['Web Search'])
+
+
+class McpExposureCatalogRequestDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    toolset: dict[str, Any] | None = Field(
+        None,
+        description='Toolset to preview. Omit to keep the current draft. An object replaces it for this call only.',
+    )
+    connection_set: list[dict[str, Any]] | None = Field(
+        None,
+        alias='connectionSet',
+        description='Connections to preview. Omit to keep the current draft. A list replaces it for this call only.',
+    )
+    mcp_tool_exposure: dict[str, Any] | None = Field(
+        None,
+        alias='mcpToolExposure',
+        description='Tool exposure to resolve. Omit to keep the current draft. An object replaces it for this call only.',
+    )
+
+
+class McpExposureFamily(str, Enum):
+    __str__ = str.__str__
+    integration_actions = 'integration_actions'
+    data_connection = 'data_connection'
+    custom_mcp = 'custom_mcp'
+    mcp_server = 'mcp_server'
+    connection_actions = 'connection_actions'
+    analytics = 'analytics'
+    tool = 'tool'
+
+
 class McpToolExposureMode(str, Enum):
     __str__ = str.__str__
     subset = 'subset'
@@ -3450,6 +3495,67 @@ class LookupContextItemResponseDto(BaseModel):
     item: LookupContextItemRowDto | None = Field(
         ...,
         description="The matched row, or null when no row in the caller's tenant matches the supplied `(contextType, dataPath)`.",
+    )
+
+
+class McpExposureCatalogEntryDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    family: McpExposureFamily = Field(
+        ..., description='Kind of tool this row exposes.', examples=['tool']
+    )
+    parent_key: str = Field(
+        ...,
+        alias='parentKey',
+        description='Exposure key for the whole row.',
+        examples=['toolset:web_search'],
+    )
+    toolset_key: str = Field(
+        ...,
+        alias='toolsetKey',
+        description='Toolset entry this row comes from.',
+        examples=['web_search'],
+    )
+    connection_id: str | None = Field(
+        None,
+        alias='connectionId',
+        description='Connection this row belongs to, when the row is one connection.',
+        examples=['c1111111-2222-4333-8444-555555555555'],
+    )
+    label: str = Field(..., description='Name shown for this row.', examples=['Web Search'])
+    children: list[McpExposureCatalogChildDto] = Field(
+        ...,
+        description='Tools under this row. Selecting the parent key exposes all of them, including ones added later.',
+    )
+
+
+class McpExposureCatalogResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    entries: list[McpExposureCatalogEntryDto] = Field(
+        ..., description='Tools this scope can expose. Rows you cannot access are left out.'
+    )
+    selected_keys: list[str] = Field(
+        ...,
+        alias='selectedKeys',
+        description='Exposure keys from the resolved selection that are in the visible catalog. Discovery selects every visible key.',
+        examples=[['toolset:web_search']],
+    )
+    unknown_keys: list[str] = Field(
+        ...,
+        alias='unknownKeys',
+        description='Stored or sent keys that are not in the catalog. They are reported, not dropped.',
+        examples=[['toolset:retired']],
+    )
+    discovery_allowed: bool = Field(
+        ...,
+        alias='discoveryAllowed',
+        description='True when you can manage this scope. Manage is what allows exposing every current and future tool. This call is refused otherwise.',
+        examples=[True],
+    )
+    hidden_selected_count: int = Field(
+        ...,
+        alias='hiddenSelectedCount',
+        description='How many stored keys point at rows you cannot access. Those keys are not listed.',
+        examples=[0],
     )
 
 

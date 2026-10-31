@@ -51,7 +51,14 @@ from .ingested_data import (
     SqlIngestedDataRequest,
 )
 from .pagination import AsyncPage, Page
-from .scopes import Scope, ScopeStatus, ScopeVariation
+from .scopes import (
+    McpExposureCatalogEntryDto,
+    McpExposureCatalogRequestDto,
+    McpExposureCatalogResponseDto,
+    Scope,
+    ScopeStatus,
+    ScopeVariation,
+)
 from .skills import Skill, SkillStatus
 from .suggestions import SuggestionEventSource, SuggestionEventType, SuggestionQuestion
 from .workflows import Workflow, WorkflowStatus, WorkflowType, WorkflowVariation
@@ -102,6 +109,9 @@ __all__ = [
     "ModusRunCreateRequest",
     "Page",
     "ResumeRunRequest",
+    "McpExposureCatalogEntryDto",
+    "McpExposureCatalogRequestDto",
+    "McpExposureCatalogResponseDto",
     "Scope",
     "ScopeStatus",
     "ScopeVariation",

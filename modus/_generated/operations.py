@@ -1053,6 +1053,17 @@ OPERATIONS: dict[str, OperationSpec] = {
         "response_schema": 'ListSkillsResponseDto',
         "idempotent": False,
     },
+    "ScopesController_mcpExposureCatalog": {
+        "method": "POST",
+        "path": '/api/v1/scopes/{id}/mcp-exposure-catalog',
+        "service": 'modus-api',
+        "server_url": 'https://api.getmodus.com',
+        "path_params": ('id',),
+        "query_params": (),
+        "request_schema": 'McpExposureCatalogRequestDto',
+        "response_schema": 'McpExposureCatalogResponseDto',
+        "idempotent": True,
+    },
     "ScopesController_patchMcpConfig": {
         "method": "PATCH",
         "path": '/api/v1/scopes/{id}/mcp-config',
