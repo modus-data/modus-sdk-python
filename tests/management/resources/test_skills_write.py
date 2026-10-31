@@ -6,7 +6,7 @@ from types import MappingProxyType
 import httpx
 import pytest
 import respx
-from modus.management import ModusManagement
+from modus.management import AsyncModusManagement, ModusManagement, Toolset
 from modus.management.types.skills import Skill
 from modus.types.json_blob import JsonObject
 from modus.types.scopes import Scope
@@ -130,15 +130,26 @@ def test_skills_create_with_toolset_factory():
     _client().scopes.create(
         name="X",
         toolset=Toolset.combine(
-            Toolset.slack(actions=["SendMessage"]),
-            Toolset.sql_runner(["SELECT:conn-1:analytics:public"]),
+            Toolset.slack(
+                connection_id="11111111-1111-4111-8111-111111111111",
+                actions=["SendMessage"],
+            ),
+            Toolset.sql("postgresql", connection_id="22222222-2222-4222-8222-222222222222"),
             Toolset.memory(),
         ),
     )
     body = json.loads(route.calls[0].request.read())
     assert body["toolset"] == {
-        "slack": {"actions": ["SendMessage"]},
-        "sql_runner": ["SELECT:conn-1:analytics:public"],
+        "slack": {
+            "byConnection": {
+                "11111111-1111-4111-8111-111111111111": {"actions": ["SendMessage"]}
+            }
+        },
+        "postgresql": {
+            "byConnection": {
+                "22222222-2222-4222-8222-222222222222": {"actions": ["query"]}
+            }
+        },
         "memory": {"enabled": True},
     }
 
@@ -192,7 +203,7 @@ def test_skills_create_raw_toolset_dict_rejected():
     with pytest.raises(TypeError, match="Toolset"):
         _client().scopes.create(
             name="X",
-            toolset={"sql_runner": ["SELECT:conn-1:analytics:public"]},
+            toolset={"memory": {"enabled": True}},
         )
 
 
@@ -221,7 +232,7 @@ def test_skills_update_resends_connection_set_from_get(client, skill_detail_row)
     assert rows
     client.scopes.update(10, connection_set=rows)
     body = json.loads(route.calls[0].request.read())
-    assert body["connectionSet"] == [{"connection_id": "conn-snowflake-001", "path": []}]
+    assert body["connectionSet"] == [{"connection_id": "22222222-2222-4222-8222-222222222222", "path": []}]
 
 
 @respx.mock
@@ -229,7 +240,7 @@ def test_skills_update_accepts_a_read_only_mapping_row():
     route = respx.patch(f"{BASE}/api/v1/scopes/10").mock(
         return_value=httpx.Response(200, json={**SKILL_RESP, "id": 10})
     )
-    row = {"connection_id": "conn-snowflake-001", "path": []}
+    row = {"connection_id": "22222222-2222-4222-8222-222222222222", "path": []}
     _client().scopes.update(10, connection_set=[MappingProxyType(row)])
     body = json.loads(route.calls[0].request.read())
     assert body["connectionSet"] == [row]
@@ -238,7 +249,7 @@ def test_skills_update_accepts_a_read_only_mapping_row():
 @respx.mock
 def test_skills_update_resends_preferences_and_context_enabled_from_get(client, skill_detail_row):
     row = {
-        "connection_id": "conn-snowflake-001",
+        "connection_id": "22222222-2222-4222-8222-222222222222",
         "path": ["SALES_DB", "PUBLIC"],
         "preferences": {"mode": "manual", "include": [], "exclude": []},
         "context_enabled": False,
@@ -310,3 +321,27 @@ def test_skills_update_url_encodes_slug():
     )
     _client().scopes.update("my skill", name="X")
     assert route.called
+
+
+@pytest.mark.parametrize("method", ["create", "update"])
+@respx.mock
+async def test_async_scopes_send_connection_toolset(method):
+    connection_id = "11111111-1111-4111-8111-111111111111"
+    rules = {"allowedChannelIds": ["C123"]}
+    toolset = Toolset.slack(connection_id=connection_id, actions=["SendMessage"], rules=rules)
+    if method == "create":
+        route = respx.post(f"{BASE}/api/v1/scopes").mock(
+            return_value=httpx.Response(201, json=SKILL_RESP)
+        )
+    else:
+        route = respx.patch(f"{BASE}/api/v1/scopes/1").mock(
+            return_value=httpx.Response(200, json=SKILL_RESP)
+        )
+    async with AsyncModusManagement(api_key="modus_test_key", base_url=BASE) as client:
+        if method == "create":
+            await client.scopes.create(name="X", toolset=toolset)
+        else:
+            await client.scopes.update(1, toolset=toolset)
+    assert json.loads(route.calls[0].request.read())["toolset"] == {
+        "slack": {"byConnection": {connection_id: {"actions": ["SendMessage"], "rules": rules}}}
+    }

@@ -37,8 +37,23 @@ release, including pre-1.0 (`0.x`) releases.
 - **`Retry-After` as an HTTP date, and `retry-after-ms`,** fill `RateLimitError.retry_after`.
 - **An organization owner can give an ownerless scope an owner.** A scope created with a service-account token has no owner. `mgmt.scopes.request_ownership_transfer(id, new_owner_user_id=...)` by an organization owner now assigns one: naming yourself takes effect at once, naming another member waits for them to accept. `mgmt.scopes.cancel_ownership_transfer(id)` lets the organization owner withdraw that request.
 
+### Removed
+
+- **Breaking MAJOR (CU-z93r0b8wwz): `Toolset.sql_runner` and SQL selectors.** Use
+  `Toolset.sql("postgresql", connection_id="<Modus connection UUID>")` (or your SQL platform)
+  to grant `query`; scope selections still control data access. Flat integration entries,
+  action-string arrays, `sql_runner`, `looker_bi`, `langfuse_observability`, and `*_analytics`
+  keys are no longer accepted by the API. No compatibility aliases are provided.
+
 ### Changed
 
+- **Breaking MAJOR (CU-z93r0b8wwz): explicit integration connections.** `Toolset.integration`
+  and every integration shortcut require `connection_id=` and produce
+  `{platform: {byConnection: {connection_id: {actions, rules?}}}}`. Choose the Modus connection
+  UUID yourself; the API no longer selects the newest workspace connection. Actions are operation
+  names without connection/path suffixes, and rules apply only to that connection.
+  `INTEGRATIONS` now includes every catalog platform key, including `looker`, `langfuse`,
+  `amplitude`, `mixpanel` and `fireflies`, without aliases or suffixes.
 - **Breaking (pre-1.0): the `access` body on note, saved-query and link creates is dashboard-shaped.** The generated `CreateNoteDto`, `CreateSavedQueryDto` and `CreateLinkDto` models now take `access` as `UpdateContextItemAccessDto` (`visibility`, `group_permissions`, `shared_with`, the body `mgmt.context.items.update_access` takes) instead of `AccessPolicyDto` (`scope`, `group_ids`, `user_ids`); the old shape is rejected with 400. Omitting `access` shares the item with everyone in the organization, with you as owner. `create_note`, `create_saved_query` and `create_link` send no `access` and are unchanged.
 - **Context compose no longer fails at 30 seconds.** `scopes.get_context()` and `modus.get_context()` (sync and async) now call `POST /agent/v1/scopes/{id}/context` and `POST /agent/v1/modus/context` on the agent host, the host `chat()` uses. The old routes sat behind a 30-second gateway limit, so a slower compose came back as a bare 503 and was retried up to twice more while the first one was still running. Same arguments and result; a compose may now run for up to 90 seconds, and one still running then raises with `UPSTREAM_TIMEOUT` (504). Keep the read timeout above 90 seconds (the default is 300). The agent host is derived the same way as for chat: `agent_host` (or `MODUS_AGENT_HOST`), else from `base_url`; with a custom `base_url` and neither set, compose raises `ModusError` before sending anything, as chat does. If your network allows only the API host, allow the agent host too.
 - **A resume with nothing to answer raises `ConflictError`.** `runs.resume` on a conversation with no write approval or connection request pending now fails with HTTP 409 (`code` `CONFLICT`) before any event, and the conversation stays usable. It used to yield one error event and leave every later turn on that conversation failing.

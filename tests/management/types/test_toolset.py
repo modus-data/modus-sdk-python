@@ -2,54 +2,111 @@
 
 import pytest
 from modus.management import Toolset
-from modus.management.types.toolset import dump_toolset, parse_toolset
+from modus.management.types.toolset import INTEGRATIONS, dump_toolset, parse_toolset
+
+CONNECTION_ID = "11111111-1111-4111-8111-111111111111"
+SQL_CONNECTION_ID = "22222222-2222-4222-8222-222222222222"
 
 
-def test_integration_factory_emits_actions_shape():
-    ts = Toolset.slack(actions=["SendMessage", "ListChannels"])
-    assert ts.tools() == {"slack": {"actions": ["SendMessage", "ListChannels"]}}
+def test_integration_factory_emits_connection_slot():
+    ts = Toolset.integration(
+        "slack", connection_id=CONNECTION_ID, actions=["SendMessage", "ListChannels"]
+    )
+    assert ts.tools() == {
+        "slack": {
+            "byConnection": {CONNECTION_ID: {"actions": ["SendMessage", "ListChannels"]}}
+        }
+    }
 
 
 def test_integration_factory_with_rules():
     ts = Toolset.slack(
+        connection_id=CONNECTION_ID,
         actions=["SendMessage"],
-        rules={"allowedChannelIds": ["C123"]},
+        rules={"allowedChannelIds": ["C123"], "allowedChannelNames": {"C123": "General"}},
     )
     assert ts.tools() == {
-        "slack": {"actions": ["SendMessage"], "rules": {"allowedChannelIds": ["C123"]}}
+        "slack": {
+            "byConnection": {
+                CONNECTION_ID: {
+                    "actions": ["SendMessage"],
+                    "rules": {
+                        "allowedChannelIds": ["C123"],
+                        "allowedChannelNames": {"C123": "General"},
+                    },
+                }
+            }
+        }
     }
 
 
-def test_integration_rejects_unknown_surface():
+@pytest.mark.parametrize("name", INTEGRATIONS)
+def test_integration_accepts_catalog_platforms(name):
+    assert Toolset.integration(
+        name, connection_id=CONNECTION_ID, actions=["read"]
+    ).tools() == {name: {"byConnection": {CONNECTION_ID: {"actions": ["read"]}}}}
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["slack", "clickup", "github", "jira", "confluence", "zendesk", "notion",
+     "salesforce", "teams", "google_drive", "power_bi"],
+)
+def test_shortcuts_require_and_preserve_connection_id(name):
+    factory = getattr(Toolset, name)
+    with pytest.raises(TypeError, match="connection_id"):
+        factory(actions=["read"])
+    assert factory(connection_id=CONNECTION_ID, actions=["read"]).tools() == {
+        name: {"byConnection": {CONNECTION_ID: {"actions": ["read"]}}}
+    }
+
+
+def test_integration_requires_connection_id():
+    with pytest.raises(TypeError, match="connection_id"):
+        Toolset.integration("slack", actions=["SendMessage"])
+
+
+@pytest.mark.parametrize(
+    "name", ["not-a-tool", "sql_runner", "looker_bi", "langfuse_observability", "amplitude_analytics"]
+)
+def test_integration_rejects_unknown_surface(name):
     with pytest.raises(ValueError, match="Unknown integration"):
-        Toolset.integration("not-a-tool", actions=["x"])
+        Toolset.integration(name, connection_id=CONNECTION_ID, actions=["x"])
 
 
 def test_integration_rejects_empty_actions():
     with pytest.raises(ValueError, match="at least one value"):
-        Toolset.clickup(actions=[])
+        Toolset.clickup(connection_id=CONNECTION_ID, actions=[])
 
 
-def test_sql_runner_factory():
-    ts = Toolset.sql_runner(["SELECT:conn-1:analytics:public"])
-    assert ts.tools() == {"sql_runner": ["SELECT:conn-1:analytics:public"]}
+@pytest.mark.parametrize(
+    "platform",
+    ["bigquery", "clickhouse", "databricks", "postgresql", "presto", "redshift",
+     "snowflake", "starburst", "trino"],
+)
+def test_sql_factory(platform):
+    assert Toolset.sql(platform, connection_id=SQL_CONNECTION_ID).tools() == {
+        platform: {"byConnection": {SQL_CONNECTION_ID: {"actions": ["query"]}}}
+    }
 
 
-def test_sql_runner_rejects_empty():
-    with pytest.raises(ValueError, match="at least one value"):
-        Toolset.sql_runner([])
+def test_sql_requires_connection_id():
+    with pytest.raises(TypeError, match="connection_id"):
+        Toolset.sql("postgresql")
+
+
+def test_sql_runner_removed():
+    assert not hasattr(Toolset, "sql_runner")
 
 
 @pytest.mark.parametrize(
     "factory",
     [
-        lambda: Toolset.slack(actions="SendMessage"),
-        lambda: Toolset.sql_runner("SELECT:conn-1:analytics:public"),
+        lambda: Toolset.slack(connection_id=CONNECTION_ID, actions="SendMessage"),
         lambda: Toolset.custom_mcps("conn-a"),
     ],
 )
 def test_iterable_factories_reject_scalar_string(factory):
-    # A bare string would otherwise be iterated character-by-character.
     with pytest.raises(ValueError, match="not a single string"):
         factory()
 
@@ -73,29 +130,29 @@ def test_custom_mcps_rejects_empty():
 
 def test_combine_merges_surfaces():
     ts = Toolset.combine(
-        Toolset.slack(actions=["SendMessage"]),
-        Toolset.sql_runner(["SELECT:conn-1:analytics:public"]),
+        Toolset.slack(connection_id=CONNECTION_ID, actions=["SendMessage"]),
+        Toolset.sql("postgresql", connection_id=SQL_CONNECTION_ID),
         Toolset.memory(),
     )
     assert ts.tools() == {
-        "slack": {"actions": ["SendMessage"]},
-        "sql_runner": ["SELECT:conn-1:analytics:public"],
+        "slack": {"byConnection": {CONNECTION_ID: {"actions": ["SendMessage"]}}},
+        "postgresql": {"byConnection": {SQL_CONNECTION_ID: {"actions": ["query"]}}},
         "memory": {"enabled": True},
     }
 
 
 def test_combine_later_surface_wins():
     ts = Toolset.combine(
-        Toolset.slack(actions=["A"]),
-        Toolset.slack(actions=["B"]),
+        Toolset.slack(connection_id=CONNECTION_ID, actions=["A"]),
+        Toolset.slack(connection_id=CONNECTION_ID, actions=["B"]),
     )
-    assert ts.tools() == {"slack": {"actions": ["B"]}}
+    assert ts.tools() == {"slack": {"byConnection": {CONNECTION_ID: {"actions": ["B"]}}}}
 
 
 def test_merge_instance_method():
-    ts = Toolset.slack(actions=["SendMessage"]).merge(Toolset.memory())
+    ts = Toolset.slack(connection_id=CONNECTION_ID, actions=["SendMessage"]).merge(Toolset.memory())
     assert ts.tools() == {
-        "slack": {"actions": ["SendMessage"]},
+        "slack": {"byConnection": {CONNECTION_ID: {"actions": ["SendMessage"]}}},
         "memory": {"enabled": True},
     }
 
@@ -111,11 +168,14 @@ def test_dump_toolset_emits_surface_map():
 
 def test_dump_toolset_rejects_raw_dict():
     with pytest.raises(TypeError, match="Toolset"):
-        dump_toolset({"sql_runner": ["SELECT:conn-1:analytics:public"]})
+        dump_toolset({"postgresql": {"byConnection": {SQL_CONNECTION_ID: {"actions": ["query"]}}}})
 
 
 def test_parse_toolset_round_trips_surface_map():
-    raw = {"slack": {"actions": ["SendMessage"]}, "sql_runner": ["SELECT:a:b"]}
+    raw = {
+        "slack": {"byConnection": {CONNECTION_ID: {"actions": ["SendMessage"]}}},
+        "postgresql": {"byConnection": {SQL_CONNECTION_ID: {"actions": ["query"]}}},
+    }
     parsed = parse_toolset(raw)
     assert parsed is not None
     assert parsed.tools() == raw

@@ -293,6 +293,28 @@ context item writes must be enabled for your organization. They are off by defau
 enables them, `custom_items` writes raise `PermissionDeniedError` ("Custom context item writes are
 not enabled"). Ask Modus to turn them on.
 
+### Toolsets
+
+Choose each integration's Modus connection UUID explicitly. Grants and optional rules apply
+only to that connection; a runner without access to it cannot use its tools.
+
+```python
+from modus.management import Toolset
+
+# Use connection ids from client.connections.list().
+toolset = Toolset.combine(
+    Toolset.slack(connection_id=slack_connection_id, actions=["SendMessage"]),
+    Toolset.sql("snowflake", connection_id=sql_connection_id),
+    Toolset.memory(),
+)
+mgmt.scopes.update(scope.id, toolset=toolset)
+```
+
+`Toolset.integration(name, connection_id=..., actions=..., rules=...)` supports all
+integration platform keys. Action names have no connection/path suffixes. SQL grants
+`query`; scope selections control which data it can query. `combine` and `merge`
+replace an earlier entry for the same platform with the later entry.
+
 ## Pagination
 
 List endpoints return a `Page[T]`. Iterate the current page, or use `.auto_paging_iter()` for all pages:

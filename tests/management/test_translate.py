@@ -59,7 +59,7 @@ def test_scope_dto_detail_row_exposes_variation_fields(skill_detail_row):
     assert skill.variation.connection_set is not None
     row = skill.variation.connection_set[0]
     assert row.connection_id
-    assert row.connection_id == "conn-snowflake-001"
+    assert row.connection_id == "22222222-2222-4222-8222-222222222222"
     assert row.path == []
 
 

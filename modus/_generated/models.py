@@ -1421,8 +1421,6 @@ class McpExposureFamily(str, Enum):
     data_connection = 'data_connection'
     custom_mcp = 'custom_mcp'
     mcp_server = 'mcp_server'
-    connection_actions = 'connection_actions'
-    analytics = 'analytics'
     tool = 'tool'
 
 
@@ -1769,7 +1767,7 @@ class ToolCatalogActionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     name: str = Field(
         ...,
-        description='Stable action id: the exact string to list in `toolset.<id>.byConnection.<connectionId>.actions` (or `toolset.<id>.actions`, which binds to the newest workspace connection).',
+        description='Stable action name. A connected integration lists it in `toolset.<id>.byConnection.<connectionId>.actions` under the UUID of the connection the scope author selected; SQL platforms grant `query`. A general tool lists it in its own configuration, e.g. `toolset.web_search: ["search"]`.',
         examples=['list_dags'],
     )
     display_name: str = Field(
@@ -1789,14 +1787,14 @@ class ToolCatalogEntryDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(
         ...,
-        description='Stable id — use as the key in a toolset object, e.g. `{ [id]: { enabled: true } }`.',
-        examples=['sql_runner'],
+        description='Stable toolset key. Integrations use `{ [id]: { byConnection: { [connectionId]: { actions: ["query"] } } } }`; general tools keep their own configuration.',
+        examples=['postgresql'],
     )
     display_name: str = Field(
         ...,
         alias='displayName',
         description='Human-readable name for display.',
-        examples=['SQL Runner'],
+        examples=['PostgreSQL'],
     )
     category: str | None = Field(
         None,
@@ -4203,8 +4201,8 @@ class CreateSkillDto(BaseModel):
     )
     toolset: dict[str, Any] | None = Field(
         None,
-        description='Map of tool key to its configuration; unknown keys are rejected. A flat connected-integration entry such as slack binds to the newest workspace connection of that integration (create and update return 422 when there is none); use {"byConnection": {"<connectionId>": config}} to pick one.',
-        examples=[{'slack': {'actions': ['SendMessage'], 'rules': {'allowedChannelIds': ['C1']}}}],
+        description='Map of tool key to configuration; unknown keys are rejected. Integrations require `<platform>.byConnection[connectionUuid] = { actions, rules? }`; actions are catalog action names and SQL platforms grant `query`. Flat entries, action-string arrays and retired keys are rejected with HTTP 422.',
+        examples=[{'slack': {'byConnection': {'11111111-1111-4111-8111-111111111111': {'actions': ['SendMessage'], 'rules': {'allowedChannelIds': ['C1']}}}}}],
     )
     model: str | None = Field(
         None,
@@ -4377,8 +4375,8 @@ class SkillVariationDto(BaseModel):
     )
     toolset: dict[str, Any] = Field(
         ...,
-        description='Builder-managed toolset descriptor. Map of `{toolName: config}`; opaque to the API surface.',
-        examples=[{'web_search': {'enabled': True}, 'calculator': {'enabled': True}}],
+        description='Map of tool key to configuration. Integrations use `<platform>.byConnection[connectionUuid] = { actions, rules? }`; SQL platforms grant `query`. General tools and MCP configurations keep their own formats.',
+        examples=[{'postgresql': {'byConnection': {'11111111-1111-4111-8111-111111111111': {'actions': ['query']}}}, 'web_search': {'enabled': True}}],
     )
     connection_set: list[ConnectionSetItemReadDto] = Field(
         ...,
@@ -4502,8 +4500,8 @@ class UpdateSkillDto(BaseModel):
     )
     toolset: dict[str, Any] | None = Field(
         None,
-        description='Map of tool key to its configuration; unknown keys are rejected. A flat connected-integration entry such as slack binds to the newest workspace connection of that integration (create and update return 422 when there is none); use {"byConnection": {"<connectionId>": config}} to pick one.',
-        examples=[{'slack': {'actions': ['SendMessage'], 'rules': {'allowedChannelIds': ['C1']}}}],
+        description='Map of tool key to configuration; unknown keys are rejected. Integrations require `<platform>.byConnection[connectionUuid] = { actions, rules? }`; actions are catalog action names and SQL platforms grant `query`. Flat entries, action-string arrays and retired keys are rejected with HTTP 422.',
+        examples=[{'slack': {'byConnection': {'11111111-1111-4111-8111-111111111111': {'actions': ['SendMessage'], 'rules': {'allowedChannelIds': ['C1']}}}}}],
     )
     model: str | None = Field(
         None,

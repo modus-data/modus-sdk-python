@@ -9,6 +9,9 @@ Setup:
     python examples/scripts/manage_skill.py
     python examples/scripts/manage_skill.py --write
     python examples/scripts/manage_skill.py --write --delete
+
+Optional SQL tool: set MODUS_SQL_PLATFORM (e.g. postgresql) and
+MODUS_SQL_CONNECTION_ID (the connection's Modus UUID). Scope selections control data access.
 """
 
 from __future__ import annotations
@@ -52,12 +55,13 @@ def main(write: bool, delete: bool) -> None:
     mgmt = ModusManagement()
     name = _example_name()
     print(f"\n=== Creating scope: {name!r} ===")
-    # The SQL selector points at a specific connection/schema that won't exist in
-    # most orgs, so it's opt-in: set MODUS_SQL_SELECTOR to enable the SQL tool.
-    sql_selector = os.environ.get("MODUS_SQL_SELECTOR")
-    if sql_selector:
+    sql_platform = os.environ.get("MODUS_SQL_PLATFORM")
+    sql_connection_id = os.environ.get("MODUS_SQL_CONNECTION_ID")
+    if bool(sql_platform) != bool(sql_connection_id):
+        sys.exit("Set both MODUS_SQL_PLATFORM (e.g. postgresql) and MODUS_SQL_CONNECTION_ID.")
+    if sql_platform and sql_connection_id:
         toolset = Toolset.combine(
-            Toolset.sql_runner([sql_selector]),
+            Toolset.sql(sql_platform, connection_id=sql_connection_id),
             Toolset.memory(),
         )
     else:

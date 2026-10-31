@@ -55,10 +55,14 @@ def skill_detail_row(skill_list_row) -> dict:
             "model": "gpt-4o",
             "expectedOutput": "Structured JSON with data rows",
             "toolset": {
-                "sql_runner": ["SELECT:conn-snowflake-001:analytics:public"],
+                "snowflake": {
+                    "byConnection": {
+                        "22222222-2222-4222-8222-222222222222": {"actions": ["query"]}
+                    }
+                },
                 "memory": {"enabled": True},
             },
-            "connectionSet": [{"connection_id": "conn-snowflake-001", "path": []}],
+            "connectionSet": [{"connection_id": "22222222-2222-4222-8222-222222222222", "path": []}],
             "contextSelections": [],
             "interfaces": [],
             "evaluations": [],
