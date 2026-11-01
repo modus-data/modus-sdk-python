@@ -11,6 +11,8 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Added
 
+- **`gemini-3.8-flash` model.** Google's generally available Gemini 3.8 Flash is an accepted chat
+  model id.
 - **`mgmt.scopes.mcp_exposure_catalog(scope_id, request)`.** Lists the tools a scope can expose to MCP clients, sync and async. A field you send replaces the current draft for this call; a field you omit stays as stored. Nothing is saved. Rows you cannot access are left out, and stored selections on them are counted.
 - **Run methods take the request models.** `runs.create` (`AgentRunCreateRequest`), `create_scope` (`SkillRunCreateRequest`), `create_modus` (`ModusRunCreateRequest`), `resume` (`ResumeRunRequest`), `cancel` (`CancelRunRequest`), `interrupt` and `edit_queued` (`FollowUpRunRequest`), and `workflow_actions.execute` (`WorkflowActionRequest`) and `cancel`, sync and async, send a model by its camelCase field names. A model used to be sent with its snake_case field names and `None` values, so a field such as `session_id` never reached the server as `sessionId`. A mapping still works as before.
 - **Custom context item writes take the request models and return typed dicts.** `custom_items.create(CreateCustomContextItemDto(...))` and `update(uid, UpdateCustomContextItemDto(...))` take a model as well as keyword arguments (the keywords win), and `batch_create` and `create_relations` take models as well as dicts. The results are still dicts, now typed: `CreatedCustomContextItem` (`contextItemId`, `uid`, `contextType`, `dataPath`, `title`) and `UpdatedCustomContextItem` (`uid`). The models import from `modus.types.context`.
