@@ -47,6 +47,7 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Changed
 
+- **Breaking (pre-1.0): MCP tool exposure keys name a connection (CU-z93r0b9hub).** In `mcpToolExposure.allowedIntegrationKeys`, `toolset:<connectionId>` exposes every tool granted on that connection, now and later, and never another connection's; `toolset_action:<platform>:<connectionId>:<action>` exposes one tool, a SQL connection's query tool included (`toolset_action:postgresql:<connectionId>:query`). `toolset:<platform>`, `data_connection:<connectionId>` and `data_connection_tool:` keys are retired: a stored `toolset:<platform>` key became the `toolset:<connectionId>` key of each connection the scope grants on that platform, a stored `data_connection:` key on a SQL connection became that connection's `toolset:<connectionId>`, and a retired key naming no such connection was removed, and a write adding one returns 422. `mcp_exposure_catalog` lists one row per connection, and `McpExposureFamily` no longer has `data_connection`.
 - **Breaking MAJOR (CU-z93r0b8wwz): explicit integration connections.** `Toolset.integration`
   and every integration shortcut require `connection_id=` and produce
   `{platform: {byConnection: {connection_id: {actions, rules?}}}}`. Choose the Modus connection

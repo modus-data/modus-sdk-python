@@ -1418,7 +1418,6 @@ class McpExposureCatalogRequestDto(BaseModel):
 class McpExposureFamily(str, Enum):
     __str__ = str.__str__
     integration_actions = 'integration_actions'
-    data_connection = 'data_connection'
     custom_mcp = 'custom_mcp'
     mcp_server = 'mcp_server'
     tool = 'tool'
