@@ -4814,6 +4814,12 @@ class ScopeDto(BaseModel):
         description='Optional one-paragraph description of what this scope does.',
         examples=['Predicts churn risk for a customer given a 90-day usage window.'],
     )
+    generated_description: str | None = Field(
+        None,
+        alias='generatedDescription',
+        description='Summary written for this scope so a caller can choose it. Null when none has been written.',
+        examples=['Answers questions about warehouse revenue and churn.'],
+    )
     status: ResourceLifecycleStatus = Field(
         ...,
         description='Lifecycle status. `draft` = never deployed. `active` = deployed. `deleted` = soft-deleted.',

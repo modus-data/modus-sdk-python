@@ -65,8 +65,9 @@ class _WorkflowsResourceBase:
                 the first page.
             search: Case-insensitive substring filter on workflow name.
             type: Filter by workflow type.
-            view: Variation view. ``active`` reads deployed; ``draft`` reads the latest builder
-                snapshot.
+            view: Variation view. ``active`` reads the deployed version. ``draft`` reads the latest
+                builder snapshot. ``published`` reads only a published workflow of type workflow
+                that you can use; tasks are excluded.
             include_variation: Include the requested variation payload (``trigger``,
                 ``workflow_structure``, ``agent_selection``) on list rows.
 
@@ -245,8 +246,9 @@ class _AsyncWorkflowsResourceBase:
                 the first page.
             search: Case-insensitive substring filter on workflow name.
             type: Filter by workflow type.
-            view: Variation view. ``active`` reads deployed; ``draft`` reads the latest builder
-                snapshot.
+            view: Variation view. ``active`` reads the deployed version. ``draft`` reads the latest
+                builder snapshot. ``published`` reads only a published workflow of type workflow
+                that you can use; tasks are excluded.
             include_variation: Include the requested variation payload (``trigger``,
                 ``workflow_structure``, ``agent_selection``) on list rows.
 

@@ -108,7 +108,7 @@ class WorkflowsResource(_WorkflowsResourceBase):
 
         Args:
             workflow_id: Numeric workflow id.
-            view:        Variation view — ``"active"`` (deployed) or ``"draft"``.
+            view:        Variation view — ``"active"`` (deployed), ``"draft"``, or ``"published"``.
 
         Returns:
             Workflow record (``id``, ``name``, ``status``, …).

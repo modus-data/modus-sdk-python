@@ -45,8 +45,9 @@ class _ScopesResourceBase:
             page_token: Opaque page token from a previous response's ``next_page_token``. Omit for
                 the first page.
             search: Case-insensitive substring filter on scope name.
-            view: Variation view. ``active`` reads deployed; ``draft`` reads the latest builder
-                snapshot.
+            view: Variation view. ``active`` reads the deployed version, or the latest draft when
+                nothing is published. ``draft`` reads the latest builder snapshot. ``published``
+                reads only the published version, and only scopes you can use.
             manager_id: Return only scopes supervised by this manager scope id.
 
         Returns:
@@ -93,14 +94,16 @@ class _ScopesResourceBase:
         """
         Get a scope.
 
-        Returns a scope. ``view=active`` (default) returns the deployed version; ``view=draft``
-        returns the latest unpublished edits. Returns 404 if you cannot access the scope.
+        Returns a scope. ``view=active`` (default) is the deployed version, or the latest draft when
+        nothing is published. ``view=draft`` is the latest edits. ``view=published`` is only the
+        published version, and only if you can use the scope. Returns 404 if you cannot access it.
 
         **Requires:** ``scopes:read``
 
         Args:
             scope_id: Numeric scope id.
-            view: Which variation snapshot to read. Defaults to ``active``.
+            view: Which version to read. Defaults to ``active``. ``published`` is only the published
+                version, and only if you can use the scope.
 
         Example:
             >>> scope = mgmt.scopes.get("PLACEHOLDER_SCOPE_ID")
@@ -282,8 +285,9 @@ class _AsyncScopesResourceBase:
             page_token: Opaque page token from a previous response's ``next_page_token``. Omit for
                 the first page.
             search: Case-insensitive substring filter on scope name.
-            view: Variation view. ``active`` reads deployed; ``draft`` reads the latest builder
-                snapshot.
+            view: Variation view. ``active`` reads the deployed version, or the latest draft when
+                nothing is published. ``draft`` reads the latest builder snapshot. ``published``
+                reads only the published version, and only scopes you can use.
             manager_id: Return only scopes supervised by this manager scope id.
 
         Returns:
@@ -331,14 +335,16 @@ class _AsyncScopesResourceBase:
         """
         Get a scope.
 
-        Returns a scope. ``view=active`` (default) returns the deployed version; ``view=draft``
-        returns the latest unpublished edits. Returns 404 if you cannot access the scope.
+        Returns a scope. ``view=active`` (default) is the deployed version, or the latest draft when
+        nothing is published. ``view=draft`` is the latest edits. ``view=published`` is only the
+        published version, and only if you can use the scope. Returns 404 if you cannot access it.
 
         **Requires:** ``scopes:read``
 
         Args:
             scope_id: Numeric scope id.
-            view: Which variation snapshot to read. Defaults to ``active``.
+            view: Which version to read. Defaults to ``active``. ``published`` is only the published
+                version, and only if you can use the scope.
         """
         validate_id(scope_id, name="scope_id")
         query: dict = {}

@@ -788,6 +788,22 @@
       ],
       "title": "Description"
     },
+    "generatedDescription": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Summary written for this scope so a caller can choose it. Null when none has been written.",
+      "examples": [
+        "Answers questions about warehouse revenue and churn."
+      ],
+      "title": "Generateddescription"
+    },
     "status": {
       "$ref": "#/$defs/ResourceLifecycleStatus",
       "description": "Lifecycle status. `draft` = never deployed. `active` = deployed. `deleted` = soft-deleted.",

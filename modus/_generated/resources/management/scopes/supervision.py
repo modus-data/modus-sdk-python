@@ -10,7 +10,7 @@ from modus._http import AsyncHttpClient, HttpClient
 from modus._openapi_invoke import invoke_operation, invoke_operation_async
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_id
-from modus.types.views import VariationView
+from modus.types.views import SupervisionView
 
 
 class _ScopesSupervisionResourceBase:
@@ -21,7 +21,7 @@ class _ScopesSupervisionResourceBase:
         self._config = config
         self._scope_id = scope_id
 
-    def get(self, *, view: Optional[VariationView] = None) -> SupervisionDto:
+    def get(self, *, view: Optional[SupervisionView] = None) -> SupervisionDto:
         """
         Read the scope subordinate supervision list.
 
@@ -115,7 +115,7 @@ class _AsyncScopesSupervisionResourceBase:
         self._config = config
         self._scope_id = scope_id
 
-    async def get(self, *, view: Optional[VariationView] = None) -> SupervisionDto:
+    async def get(self, *, view: Optional[SupervisionView] = None) -> SupervisionDto:
         """
         Read the scope subordinate supervision list.
 
