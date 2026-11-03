@@ -1657,6 +1657,27 @@ class SearchMemoriesRequestDto(BaseModel):
     )
 
 
+class ContextType(str, Enum):
+    __str__ = str.__str__
+    files = 'files'
+    links = 'links'
+    notes = 'notes'
+    saved_queries = 'saved_queries'
+    dashboards = 'dashboards'
+
+
+class SelectedContextItemDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    uid: str = Field(..., description='Stable id of the pinned context item.')
+    label: str = Field(..., description='Label shown for the pinned context item.')
+    context_type: ContextType = Field(
+        ..., alias='contextType', description='Kind of user content this item is.'
+    )
+    connection_id: str | None = Field(
+        None, alias='connectionId', description='Connection the item belongs to, when it has one.'
+    )
+
+
 class DepthBelowRoot(IntEnum):
     integer_0 = 0
     integer_1 = 1
@@ -1672,6 +1693,55 @@ class SelectionModelRootDto(BaseModel):
     )
     arity: int = Field(
         ..., description='Number of path segments in a unit of this kind.', examples=[1]
+    )
+
+
+class Op(str, Enum):
+    __str__ = str.__str__
+    select_root = 'selectRoot'
+    deselect_root = 'deselectRoot'
+    set_root_deep_rules = 'setRootDeepRules'
+    set_connection_preferences = 'setConnectionPreferences'
+    pin_item = 'pinItem'
+    unpin_item = 'unpinItem'
+    clear_pinned_items = 'clearPinnedItems'
+    set_additional_context_rules = 'setAdditionalContextRules'
+
+
+class SelectionOpDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    op: Op = Field(
+        ...,
+        description='Which selection edit this op makes. selectRoot, deselectRoot, and setRootDeepRules are deprecated and will be removed; use setConnectionPreferences.',
+    )
+    connection_id: str | None = Field(
+        None,
+        alias='connectionId',
+        description='Connection of the data-asset root, or whose preferences are set.',
+    )
+    path: list[str] | None = Field(
+        None, description='Path of the data-asset root within its connection.'
+    )
+    includes: list[list[str]] | None = Field(
+        None,
+        description='Fully-selected subtree paths strictly beneath the root. Each path is an array of strings.',
+    )
+    excludes: list[list[str]] | None = Field(
+        None,
+        description='Unselected subtree paths beneath the root. Each path is an array of strings.',
+    )
+    preferences: dict[str, Any] | None = Field(
+        None, description='The connection’s whole data selection, as workspace access preferences.'
+    )
+    context_enabled: bool | None = Field(
+        None,
+        alias='contextEnabled',
+        description='Deprecated. Use `preferences` alone: the scope always reads context from its connections. Omit it; `false` is accepted only when the connection is already stored with `false`.',
+    )
+    item: SelectedContextItemDto | None = Field(None, description='The pinned context item.')
+    uid: str | None = Field(None, description='Uid of the pinned item to remove.')
+    value: dict[str, Any] | None = Field(
+        None, description='Additional context rules; null clears them.'
     )
 
 
@@ -2559,6 +2629,21 @@ class AgentInterfaceDto(BaseModel):
         alias='updatedAt',
         description='Most recent update timestamp.',
         examples=['2026-05-11T10:00:00.000Z'],
+    )
+
+
+class ApplySelectionOpsDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    ops: list[SelectionOpDto] = Field(
+        ..., description='Selection ops, applied in order.', max_length=5000
+    )
+    toolset: dict[str, Any] | None = Field(
+        None, description='The scope toolset after the edit, when the edit changed it.'
+    )
+    validate_only: bool | None = Field(
+        None,
+        alias='validateOnly',
+        description='When true, run every check a commit would and return the scope that would be saved, without writing it. The response carries `connectionSet`, `toolset` and `contextSelections` as they would be stored, with secret header values withheld and no secret minted, and is marked `validateOnly: true` at the top level. Every other field keeps its stored value, so a preview still needs a second call without `validateOnly` to save.',
     )
 
 
@@ -4523,7 +4608,7 @@ class UpdateSkillDto(BaseModel):
     context_selections: list[dict[str, Any]] | None = Field(
         None,
         alias='contextSelections',
-        description="Updated context selections (sources / docs the scope may read). Replaces the whole list, so send every selection to keep, including the scope's own learnings. `null` clears it.",
+        description="Updated context selections (sources / docs the scope may read). Replaces the whole list, so send every selection to keep, including the scope's own learnings. `null` clears it. For an incremental edit, use Apply selection changes to a scope.",
         examples=[[]],
     )
     interfaces: list[ScopeMcpInterfaceInputDto] | None = Field(
@@ -4900,6 +4985,12 @@ class ScopeDto(BaseModel):
         alias='manageDenial',
         description='Why `canManage` is false, for client-facing guidance: `needs_group_manage` (shared, but no group you belong to grants Manage) or `not_owner` (private, and you are not the owner). `null` when `canManage` is true.',
         examples=['needs_group_manage'],
+    )
+    validate_only: bool | None = Field(
+        None,
+        alias='validateOnly',
+        description='Present and `true` only on an `applySelectionOps` preview (`validateOnly: true`): the `variation` below is the selection that **would** be saved, and nothing was written. Absent on every committed response. Without it a preview is indistinguishable from a commit -- the surrounding fields (`updatedAt`, `hasUnpublishedChanges`, `activeVariationId`, `draftVariationId`) all keep their stored values -- so a caller that stops here silently never saves the selection.',
+        examples=[True],
     )
 
 

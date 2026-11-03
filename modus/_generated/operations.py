@@ -965,6 +965,17 @@ OPERATIONS: dict[str, OperationSpec] = {
         "response_schema": 'EvaluationCaseDto',
         "idempotent": False,
     },
+    "ScopesController_applySelectionOps": {
+        "method": "POST",
+        "path": '/api/v1/scopes/{id}/applySelectionOps',
+        "service": 'modus-api',
+        "server_url": 'https://api.getmodus.com',
+        "path_params": ('id',),
+        "query_params": (),
+        "request_schema": 'ApplySelectionOpsDto',
+        "response_schema": 'ScopeDto',
+        "idempotent": False,
+    },
     "ScopesController_cancelOwnershipTransfer": {
         "method": "DELETE",
         "path": '/api/v1/scopes/{id}/transfer-ownership',

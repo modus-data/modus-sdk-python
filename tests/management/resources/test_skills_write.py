@@ -297,6 +297,36 @@ def test_skills_update_evaluations_supervision_and_mask():
 
 
 @respx.mock
+def test_skills_apply_selection_ops_omits_catalog_and_false_validate_only():
+    route = respx.post(f"{BASE}/api/v1/scopes/1/applySelectionOps").mock(
+        return_value=httpx.Response(200, json=SKILL_RESP)
+    )
+    ops = [{
+        "op": "setConnectionPreferences",
+        "connectionId": "11111111-1111-4111-8111-111111111111",
+        "preferences": {"schemaVersion": 2, "mode": "all", "include": [], "exclude": []},
+    }]
+    skill = _client().scopes.apply_selection_ops(1, ops)
+    assert isinstance(skill, Skill)
+    body = json.loads(route.calls[0].request.read())
+    assert body == {"ops": ops}
+    assert "catalog" not in body
+    assert "validateOnly" not in body
+
+
+@respx.mock
+def test_skills_apply_selection_ops_preview_sends_validate_only():
+    route = respx.post(f"{BASE}/api/v1/scopes/1/applySelectionOps").mock(
+        return_value=httpx.Response(200, json=SKILL_RESP)
+    )
+    _client().scopes.apply_selection_ops(1, [{"op": "setConnectionPreferences"}], validate_only=True, toolset={})
+    body = json.loads(route.calls[0].request.read())
+    assert body["validateOnly"] is True
+    assert body["toolset"] == {}
+    assert "catalog" not in body
+
+
+@respx.mock
 def test_skills_deploy():
     respx.post(f"{BASE}/api/v1/scopes/1/deploy").mock(
         return_value=httpx.Response(200, json=DEPLOY_RESP)
