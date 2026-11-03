@@ -11,6 +11,7 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Added
 
+- **`status_reason` on workflow run lists.** Each run in a workflow run list now carries the optional `status_reason` that run reads already had, so you no longer have to fetch each run to see it. It gains a value: `"agent_reported_issue"` marks a completed run in which a workflow step said it could not finish part of its task; `"approval_timeout"` is unchanged. The run is still `completed`.
 - **`generated_description` on a scope.** Scope reads include `generated_description` (`str | None`), the summary written for the scope so a caller can choose it, sync and async. Null when none has been written.
 - **Breaking (pre-1.0): `SupervisionView`.** `mgmt.scopes.supervision(id).get(view=...)` takes `SupervisionView` (`"active"` or `"draft"`), sync and async. `"published"` is not a supervision view. `VariationView` now also allows `"published"`, so a value typed as `VariationView` no longer type-checks there. Migration: type it as `SupervisionView`. Runtime values are unchanged.
 - **`view="published"` on scope and workflow list and get.** Returns the published version you can use, sync and async. A scope or workflow that is only a draft, deleted, or that you can manage but not use is left out. For workflows it is also type workflow only; a task is left out. `active` and `draft` are unchanged.

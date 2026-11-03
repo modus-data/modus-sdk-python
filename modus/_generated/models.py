@@ -154,6 +154,12 @@ class ApiErrorStatus(str, Enum):
     deadline_exceeded = 'DEADLINE_EXCEEDED'
 
 
+class StatusReason(str, Enum):
+    __str__ = str.__str__
+    approval_timeout = 'approval_timeout'
+    agent_reported_issue = 'agent_reported_issue'
+
+
 class AutomationRunListItemDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(
@@ -183,6 +189,11 @@ class AutomationRunListItemDto(BaseModel):
         ...,
         description='Run status (running / awaiting_human / completed / error / cancelled).',
         examples=['completed'],
+    )
+    status_reason: StatusReason | None = Field(
+        None,
+        alias='statusReason',
+        description='Display-only annotation of a completed run: `approval_timeout` when a human approval timed out, `agent_reported_issue` when a workflow step said it could not finish part of its task.',
     )
     trigger_type: str | None = Field(
         None,
@@ -1110,11 +1121,6 @@ class FileUploadResourceStatus(str, Enum):
     failed = 'failed'
 
 
-class StatusReason(str, Enum):
-    __str__ = str.__str__
-    approval_timeout = 'approval_timeout'
-
-
 class GetAutomationRunResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(
@@ -1145,6 +1151,11 @@ class GetAutomationRunResponseDto(BaseModel):
         description='Run status (running / awaiting_human / completed / error / cancelled).',
         examples=['completed'],
     )
+    status_reason: StatusReason | None = Field(
+        None,
+        alias='statusReason',
+        description='Display-only annotation of a completed run: `approval_timeout` when a human approval timed out, `agent_reported_issue` when a workflow step said it could not finish part of its task.',
+    )
     trigger_type: str | None = Field(
         None,
         alias='triggerType',
@@ -1166,11 +1177,6 @@ class GetAutomationRunResponseDto(BaseModel):
         None,
         alias='pendingApproval',
         description='Pending approval payload (only present when status is awaiting_human).',
-    )
-    status_reason: StatusReason | None = Field(
-        None,
-        alias='statusReason',
-        description='Display-only signal that the workflow closed for a non-success reason.',
     )
     source: AutomationRunSource = Field(
         ...,
