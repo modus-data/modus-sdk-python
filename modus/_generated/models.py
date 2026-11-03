@@ -1984,7 +1984,8 @@ class UpdateCustomContextItemDto(BaseModel):
         examples=['Updated internal billing metadata.'],
     )
     content: dict[str, Any] | None = Field(
-        None, description='Replacement main textual or structured content.'
+        None,
+        description='Replacement main textual or structured content. Long text or structured bodies are also split into searchable excerpts asynchronously.',
     )
     url: str | None = Field(
         None,
@@ -2852,7 +2853,8 @@ class CreateCustomContextItemDto(BaseModel):
         examples=['Enterprise contract renewal metadata from the internal billing system.'],
     )
     content: dict[str, Any] | None = Field(
-        None, description='Main textual or structured content for the custom item.'
+        None,
+        description='Main textual or structured content for the custom item. Long text or structured bodies are also split into searchable excerpts asynchronously.',
     )
     url: str | None = Field(
         None,
