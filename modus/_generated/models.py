@@ -4782,7 +4782,9 @@ class RunConfigDto(BaseModel):
         description='Database connection selections (runtime-owned shape).',
     )
     connection_set: list[dict[str, Any]] | None = Field(
-        None, alias='connectionSet', description='Schema scopes (runtime-owned shape).'
+        None,
+        alias='connectionSet',
+        description="Connection-set entries (runtime-owned shape): `connection_id`, and optionally `preferences` (the connection's workspace-access preferences), `context_enabled` and `path` (a row the preferences compile to).",
     )
     connection_all_mode_ids: list[str] | None = Field(None, alias='connectionAllModeIds')
     guardrails: list[str] | None = Field(None, description='Guardrail ids applied to the run.')
