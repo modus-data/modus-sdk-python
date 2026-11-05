@@ -2502,6 +2502,7 @@ class RunSource(str, Enum):
     slack_dm = 'slack_dm'
     teams = 'teams'
     context_chat = 'context_chat'
+    context_suggestions = 'context_suggestions'
     dashboard_copilot = 'dashboard_copilot'
     dashboard_assistant = 'dashboard_assistant'
     other = 'other'

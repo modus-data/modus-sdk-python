@@ -11,6 +11,7 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Added
 
+- **`context_suggestions` conversation source.** Filter conversation lists to discussions started from context suggestions.
 - **`status_reason` on workflow run lists.** Each run in a workflow run list now carries the optional `status_reason` that run reads already had, so you no longer have to fetch each run to see it. It gains a value: `"agent_reported_issue"` marks a completed run in which a workflow step said it could not finish part of its task; `"approval_timeout"` is unchanged. The run is still `completed`.
 - **`generated_description` on a scope.** Scope reads include `generated_description` (`str | None`), the summary written for the scope so a caller can choose it, sync and async. Null when none has been written.
 - **Breaking (pre-1.0): `SupervisionView`.** `mgmt.scopes.supervision(id).get(view=...)` takes `SupervisionView` (`"active"` or `"draft"`), sync and async. `"published"` is not a supervision view. `VariationView` now also allows `"published"`, so a value typed as `VariationView` no longer type-checks there. Migration: type it as `SupervisionView`. Runtime values are unchanged.
