@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import List, Optional, TypedDict
+
 from .._generated.models import (
     ContextItemAccessDto,
     ContextItemAccessResponseDto,
@@ -11,10 +13,15 @@ from .._generated.models import (
     ContextItemSharedUserDto,
     ContextItemSharePermission,
     ContextItemVisibility,
+    CreateCustomContextItemDto,
+    CreateCustomContextItemRelationDto,
     CreatedContextItemResponseDto,
+    CustomAttributeDto,
+    CustomContextItemKind,
     DeleteContextItemResponseDto,
     LookupContextItemRowDto,
     MoveContextItemResponseDto,
+    UpdateCustomContextItemDto,
 )
 
 ContextItem = ContextItemDto
@@ -37,6 +44,23 @@ class CreatedContextItem(CreatedContextItemResponseDto):
         return self.context_item_id
 
 
+class CreatedCustomContextItem(TypedDict):
+    """``custom_items.create`` result: the API's response, plus ``uid``."""
+
+    contextItemId: str
+    uid: str
+    """Same value as ``contextItemId``: prefer it in new code (list/get parity)."""
+    contextType: str
+    dataPath: List[str]
+    title: Optional[str]
+
+
+class UpdatedCustomContextItem(TypedDict):
+    """``custom_items.update`` result."""
+
+    uid: str
+
+
 # OpenAPI context_type is a string; keep a loose alias for annotations in user code.
 ContextType = str
 
@@ -55,6 +79,13 @@ __all__ = [
     "ContextItemDto",
     "ContextItemLookupRow",
     "ContextType",
+    "CreateCustomContextItemDto",
+    "CreateCustomContextItemRelationDto",
     "CreatedContextItem",
+    "CreatedCustomContextItem",
+    "CustomAttributeDto",
+    "CustomContextItemKind",
     "LookupContextItemRowDto",
+    "UpdateCustomContextItemDto",
+    "UpdatedCustomContextItem",
 ]

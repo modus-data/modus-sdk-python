@@ -23,18 +23,11 @@ FIRST_MESSAGE = (
 FOLLOW_UP = "Which customer segments contributed most to that growth?"
 
 
-def _scope_id_matches(scope_id: object, raw: str) -> bool:
-    try:
-        return float(scope_id) == float(raw)
-    except (TypeError, ValueError):
-        return str(scope_id) == raw
-
-
-def _pick_scope(scopes: list) -> object:
+def _pick_scope(scopes: list[modus.Scope]) -> modus.Scope:
     raw = os.environ.get("MODUS_SCOPE_ID")
     if raw:
         for scope in scopes:
-            if _scope_id_matches(scope.id, raw):
+            if str(scope.id) == raw.strip():
                 if scope.status != "active":
                     sys.exit(f"MODUS_SCOPE_ID={raw} found, but the scope is not active.")
                 return scope

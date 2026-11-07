@@ -39,6 +39,7 @@ from ._exceptions import (
     UnprocessableError,
 )
 from ._retry import is_retry_safe
+from ._trace import request_headers, trace_id_of
 
 try:
     _SDK_VERSION = version("modus")
@@ -265,6 +266,17 @@ def _sse_body_preview_from_lines(lines: Iterator[str], limit: int = 200) -> str:
     return preview
 
 
+def _trace(client_headers: httpx.Headers) -> Dict[str, str]:
+    """This request's trace headers; none when the caller set their own ``traceparent``."""
+    return {} if "traceparent" in client_headers else request_headers()
+
+
+def _tag(exc: ModusError, headers: httpx.Headers, sent: Mapping[str, str]) -> ModusError:
+    """Stamp the trace id of the request that failed on its error."""
+    exc.trace_id = trace_id_of(sent.get("traceparent") or headers.get("traceparent"))
+    return exc
+
+
 def _client_headers(config: ModusConfig) -> httpx.Headers:
     headers = httpx.Headers(
         {"Accept": "application/json", "User-Agent": _USER_AGENT, "X-Modus-Client": "sdk"}
@@ -309,16 +321,20 @@ class HttpClient:
         params: Optional[Dict[str, Any]] = None,
         json: Optional[Dict[str, Any]] = None,
     ) -> Any:
+        trace = _trace(self._client.headers)
         try:
-            response = self._client.request(
-                method, _request_url(path, base_url), params=params, json=json
-            )
-        except _NETWORK_ERRORS as exc:
-            raise _wrap_network_error(
-                exc, base_url or self._config.base_url, method, idempotent
-            ) from exc
-        _raise_for_status(response, method, idempotent)
-        return _json_or_none(response)
+            try:
+                response = self._client.request(
+                    method, _request_url(path, base_url), params=params, json=json, headers=trace
+                )
+            except _NETWORK_ERRORS as exc:
+                raise _wrap_network_error(
+                    exc, base_url or self._config.base_url, method, idempotent
+                ) from exc
+            _raise_for_status(response, method, idempotent)
+            return _json_or_none(response)
+        except ModusError as exc:
+            raise _tag(exc, self._client.headers, trace)
 
     def get(
         self,
@@ -388,6 +404,7 @@ class HttpClient:
     ) -> Iterator[str]:
         """Make a streaming request and yield raw SSE lines."""
         effective_base_url = base_url or self._config.base_url
+        trace = _trace(self._client.headers)
         try:
             # Override client default Accept: application/json — agent-service
             # negotiates SSE vs JSON polling on Accept.
@@ -395,7 +412,7 @@ class HttpClient:
                 method,
                 _request_url(path, base_url),
                 json=json,
-                headers={**(headers or {}), "Accept": "text/event-stream"},
+                headers={**trace, **(headers or {}), "Accept": "text/event-stream"},
             ) as response:
                 _raise_for_status(response, method)
                 ct = (response.headers.get("content-type") or "").lower()
@@ -406,7 +423,11 @@ class HttpClient:
                     if line.strip():
                         yield line
         except _NETWORK_ERRORS as exc:
-            raise _wrap_network_error(exc, effective_base_url, method) from exc
+            raise _tag(
+                _wrap_network_error(exc, effective_base_url, method), self._client.headers, trace
+            ) from exc
+        except ModusError as exc:
+            raise _tag(exc, self._client.headers, trace)
 
     def close(self) -> None:
         self._client.close()
@@ -451,16 +472,20 @@ class AsyncHttpClient:
         params: Optional[Dict[str, Any]] = None,
         json: Optional[Dict[str, Any]] = None,
     ) -> Any:
+        trace = _trace(self._client.headers)
         try:
-            response = await self._client.request(
-                method, _request_url(path, base_url), params=params, json=json
-            )
-        except _NETWORK_ERRORS as exc:
-            raise _wrap_network_error(
-                exc, base_url or self._config.base_url, method, idempotent
-            ) from exc
-        _raise_for_status(response, method, idempotent)
-        return _json_or_none(response)
+            try:
+                response = await self._client.request(
+                    method, _request_url(path, base_url), params=params, json=json, headers=trace
+                )
+            except _NETWORK_ERRORS as exc:
+                raise _wrap_network_error(
+                    exc, base_url or self._config.base_url, method, idempotent
+                ) from exc
+            _raise_for_status(response, method, idempotent)
+            return _json_or_none(response)
+        except ModusError as exc:
+            raise _tag(exc, self._client.headers, trace)
 
     async def get(
         self,
@@ -529,12 +554,13 @@ class AsyncHttpClient:
     ) -> AsyncIterator[str]:
         """Streaming request — yields raw SSE lines."""
         effective_base_url = base_url or self._config.base_url
+        trace = _trace(self._client.headers)
         try:
             async with self._client.stream(
                 method,
                 _request_url(path, base_url),
                 json=json,
-                headers={**(headers or {}), "Accept": "text/event-stream"},
+                headers={**trace, **(headers or {}), "Accept": "text/event-stream"},
             ) as response:
                 await _raise_for_status_async(response, method)
                 ct = (response.headers.get("content-type") or "").lower()
@@ -555,7 +581,11 @@ class AsyncHttpClient:
                     if line.strip():
                         yield line
         except _NETWORK_ERRORS as exc:
-            raise _wrap_network_error(exc, effective_base_url, method) from exc
+            raise _tag(
+                _wrap_network_error(exc, effective_base_url, method), self._client.headers, trace
+            ) from exc
+        except ModusError as exc:
+            raise _tag(exc, self._client.headers, trace)
 
     async def aclose(self) -> None:
         await self._client.aclose()

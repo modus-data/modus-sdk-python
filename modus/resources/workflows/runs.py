@@ -16,7 +16,9 @@ from typing import (
 )
 from uuid import uuid4
 
-from ..._agent_run_request import with_agent_run_session_id
+from pydantic import BaseModel
+
+from ..._agent_run_request import request_dict, with_agent_run_session_id
 from ..._config import ModusConfig
 from ..._exceptions import ValidationError
 from ..._generated.models import (
@@ -25,6 +27,7 @@ from ..._generated.models import (
     GetAutomationRunResponseDto,
     ListAutomationRunsResponseDto,
     RunAdmissionResponseDto,
+    RunEventsPollResponseDto,
 )
 from ..._http import AsyncHttpClient, HttpClient
 from ..._openapi_invoke import (
@@ -40,8 +43,15 @@ from ..._validation import validate_id, validate_page_size
 from ...types.agent_runs import (
     ActiveConversationRun,
     AgentRun,
+    AgentRunCreateRequest,
     AgentRunListItem,
+    CancelRunRequest,
+    FollowUpRunRequest,
+    ModusRunCreateRequest,
+    ResumeRunRequest,
     RunAdmission,
+    RunEventsPoll,
+    SkillRunCreateRequest,
 )
 from ...types.pagination import AsyncPage, Page
 from ...types.runs import RunEvent
@@ -123,13 +133,13 @@ def _runs_list_params(
     return params
 
 
-def _request_body(body: Mapping[str, Any]) -> Dict[str, Any]:
+def _request_body(body: Union[BaseModel, Mapping[str, Any]]) -> Dict[str, Any]:
     """Copy body and mint sessionId when omitted (parity with chat)."""
     return with_agent_run_session_id(body)
 
 
-def _optional_body(body: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
-    return dict(body or {})
+def _optional_body(body: Union[CancelRunRequest, Mapping[str, Any], None]) -> Dict[str, Any]:
+    return request_dict(body) if body is not None else {}
 
 
 def _require_session_id(body: Mapping[str, Any]) -> None:
@@ -139,12 +149,10 @@ def _require_session_id(body: Mapping[str, Any]) -> None:
         raise ValidationError("sessionId must be the run's conversation id (a non-empty string)")
 
 
-def _interrupt_body(
-    next_run: Mapping[str, Any], last_seen_event_id: Optional[str]
-) -> Dict[str, Any]:
+def _interrupt_body(next_run: Union[FollowUpRunRequest, Mapping[str, Any]], last_seen_event_id: Optional[str]) -> Dict[str, Any]:
     """Pin ``nextRun.runId`` so a retried request returns the same run, not a second turn."""
-    _require_session_id(next_run)
-    pinned = dict(next_run)
+    pinned = request_dict(next_run)
+    _require_session_id(pinned)
     run_id = pinned.get("runId")
     pinned["runId"] = run_id.strip() if isinstance(run_id, str) and run_id.strip() else str(uuid4())
     body: Dict[str, Any] = {"nextRun": pinned}
@@ -153,14 +161,16 @@ def _interrupt_body(
     return body
 
 
-def _edit_queued_body(next_run: Mapping[str, Any]) -> Dict[str, Any]:
-    _require_session_id(next_run)
-    return {"nextRun": dict(next_run)}
-
-
-def _resume_body(body: Mapping[str, Any]) -> Dict[str, Any]:
+def _edit_queued_body(next_run: Union[FollowUpRunRequest, Mapping[str, Any]]) -> Dict[str, Any]:
+    body = request_dict(next_run)
     _require_session_id(body)
-    return dict(body)
+    return {"nextRun": body}
+
+
+def _resume_body(body: Union[ResumeRunRequest, Mapping[str, Any]]) -> Dict[str, Any]:
+    out = request_dict(body)
+    _require_session_id(out)
+    return out
 
 
 def _last_event_id_header(last_event_id: Optional[str]) -> Optional[Dict[str, str]]:
@@ -389,7 +399,7 @@ class WorkflowRunsResource:
     def create(
         self,
         workflow_id: Union[int, str],
-        body: Mapping[str, Any],
+        body: Union[AgentRunCreateRequest, Mapping[str, Any]],
     ) -> Iterator[RunEvent]:
         """
         Start a workflow run and stream its events.
@@ -427,7 +437,7 @@ class WorkflowRunsResource:
     def create_scope(
         self,
         scope_id: Union[int, str],
-        body: Mapping[str, Any],
+        body: Union[SkillRunCreateRequest, Mapping[str, Any]],
     ) -> Iterator[RunEvent]:
         """
         Start a scope run and stream its events.
@@ -461,7 +471,9 @@ class WorkflowRunsResource:
             )
         )
 
-    def create_modus(self, body: Mapping[str, Any]) -> Iterator[RunEvent]:
+    def create_modus(
+        self, body: Union[ModusRunCreateRequest, Mapping[str, Any]]
+    ) -> Iterator[RunEvent]:
         """
         Start a Modus org-assistant run and stream its events.
 
@@ -487,7 +499,9 @@ class WorkflowRunsResource:
             )
         )
 
-    def resume(self, run_id: str, body: Mapping[str, Any]) -> Iterator[RunEvent]:
+    def resume(
+        self, run_id: str, body: Union[ResumeRunRequest, Mapping[str, Any]]
+    ) -> Iterator[RunEvent]:
         """
         Resume a run paused at an approval or connect interrupt, and stream the continuation.
 
@@ -521,7 +535,9 @@ class WorkflowRunsResource:
             )
         )
 
-    def cancel(self, run_id: str, body: Optional[Mapping[str, Any]] = None) -> None:
+    def cancel(
+        self, run_id: str, body: Union[CancelRunRequest, Mapping[str, Any], None] = None
+    ) -> None:
         """
         Cancel a run that is still in progress.
 
@@ -546,7 +562,7 @@ class WorkflowRunsResource:
     def interrupt(
         self,
         run_id: str,
-        next_run: Mapping[str, Any],
+        next_run: Union[FollowUpRunRequest, Mapping[str, Any]],
         *,
         last_seen_event_id: Optional[str] = None,
     ) -> RunAdmission:
@@ -594,7 +610,7 @@ class WorkflowRunsResource:
             )
         )
 
-    def edit_queued(self, run_id: str, next_run: Mapping[str, Any]) -> RunAdmission:
+    def edit_queued(self, run_id: str, next_run: Union[FollowUpRunRequest, Mapping[str, Any]]) -> RunAdmission:
         """
         Replace the turn of a run that is still queued (not yet started).
 
@@ -630,7 +646,7 @@ class WorkflowRunsResource:
             )
         )
 
-    def events(self, run_id: str) -> Dict[str, Any]:
+    def events(self, run_id: str) -> RunEventsPoll:
         """
         Poll a run's buffered events once (the JSON transport, not SSE).
 
@@ -638,17 +654,26 @@ class WorkflowRunsResource:
             run_id: Run ID to read.
 
         Returns:
-            The poll response: ``events`` (each with its stream ``id``),
-            ``cursor``, ``status`` and ``done``.
+            The poll response: ``events`` (each with its stream ``id`` and ``type``; the
+            other fields of an event are in its ``model_extra``), ``cursor``, ``status``
+            and ``done``.
+
+        Example:
+            >>> poll = client.workflows.runs.events(run_id)
+            >>> for event in poll.events:
+            ...     print(event.id, event.type)
+            >>> poll.done
         """
         validate_id(run_id, name="run_id")
-        return with_retry(
-            lambda: invoke_operation(
-                self._http,
-                "RunLifecycleController_events",
-                path_params={"runId": run_id},
-            ),
-            self._config.max_retries,
+        return RunEventsPollResponseDto.model_validate(
+            with_retry(
+                lambda: invoke_operation(
+                    self._http,
+                    "RunLifecycleController_events",
+                    path_params={"runId": run_id},
+                ),
+                self._config.max_retries,
+            )
         )
 
     def stream(self, run_id: str, *, last_event_id: Optional[str] = None) -> Iterator[RunEvent]:
@@ -868,7 +893,7 @@ class AsyncWorkflowRunsResource:
     async def create(
         self,
         workflow_id: Union[int, str],
-        body: Mapping[str, Any],
+        body: Union[AgentRunCreateRequest, Mapping[str, Any]],
     ) -> AsyncIterator[RunEvent]:
         """
         Start a workflow run and stream its events.
@@ -891,7 +916,7 @@ class AsyncWorkflowRunsResource:
     async def create_scope(
         self,
         scope_id: Union[int, str],
-        body: Mapping[str, Any],
+        body: Union[SkillRunCreateRequest, Mapping[str, Any]],
     ) -> AsyncIterator[RunEvent]:
         """
         Start a scope run and stream its events.
@@ -911,7 +936,9 @@ class AsyncWorkflowRunsResource:
         ):
             yield event
 
-    async def create_modus(self, body: Mapping[str, Any]) -> AsyncIterator[RunEvent]:
+    async def create_modus(
+        self, body: Union[ModusRunCreateRequest, Mapping[str, Any]]
+    ) -> AsyncIterator[RunEvent]:
         """
         Start a Modus run and stream its events.
 
@@ -927,7 +954,9 @@ class AsyncWorkflowRunsResource:
         ):
             yield event
 
-    async def resume(self, run_id: str, body: Mapping[str, Any]) -> AsyncIterator[RunEvent]:
+    async def resume(
+        self, run_id: str, body: Union[ResumeRunRequest, Mapping[str, Any]]
+    ) -> AsyncIterator[RunEvent]:
         """
         Resume a run paused at an approval or connect interrupt, and stream the continuation.
 
@@ -950,7 +979,9 @@ class AsyncWorkflowRunsResource:
         ):
             yield event
 
-    async def cancel(self, run_id: str, body: Optional[Mapping[str, Any]] = None) -> None:
+    async def cancel(
+        self, run_id: str, body: Union[CancelRunRequest, Mapping[str, Any], None] = None
+    ) -> None:
         """
         Cancel a run.
 
@@ -972,7 +1003,7 @@ class AsyncWorkflowRunsResource:
     async def interrupt(
         self,
         run_id: str,
-        next_run: Mapping[str, Any],
+        next_run: Union[FollowUpRunRequest, Mapping[str, Any]],
         *,
         last_seen_event_id: Optional[str] = None,
     ) -> RunAdmission:
@@ -1004,7 +1035,7 @@ class AsyncWorkflowRunsResource:
             )
         )
 
-    async def edit_queued(self, run_id: str, next_run: Mapping[str, Any]) -> RunAdmission:
+    async def edit_queued(self, run_id: str, next_run: Union[FollowUpRunRequest, Mapping[str, Any]]) -> RunAdmission:
         """
         Replace the turn of a run that is still queued (not yet started).
 
@@ -1032,7 +1063,7 @@ class AsyncWorkflowRunsResource:
             )
         )
 
-    async def events(self, run_id: str) -> Dict[str, Any]:
+    async def events(self, run_id: str) -> RunEventsPoll:
         """
         Poll a run's buffered events once (the JSON transport, not SSE).
 
@@ -1040,16 +1071,19 @@ class AsyncWorkflowRunsResource:
             run_id: Run ID to read.
 
         Returns:
-            The poll response: ``events``, ``cursor``, ``status`` and ``done``.
+            The poll response: ``events`` (each with its stream ``id`` and ``type``),
+            ``cursor``, ``status`` and ``done``.
         """
         validate_id(run_id, name="run_id")
-        return await async_with_retry(
-            lambda: invoke_operation_async(
-                self._http,
-                "RunLifecycleController_events",
-                path_params={"runId": run_id},
-            ),
-            self._config.max_retries,
+        return RunEventsPollResponseDto.model_validate(
+            await async_with_retry(
+                lambda: invoke_operation_async(
+                    self._http,
+                    "RunLifecycleController_events",
+                    path_params={"runId": run_id},
+                ),
+                self._config.max_retries,
+            )
         )
 
     async def stream(

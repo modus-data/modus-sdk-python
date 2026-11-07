@@ -1,7 +1,7 @@
 # Auto-generated from the Modus API schema. Do not edit by hand.
 from __future__ import annotations
 
-from enum import Enum
+from enum import Enum, IntEnum
 from typing import Any, Literal
 from uuid import UUID
 
@@ -10,11 +10,13 @@ from pydantic.alias_generators import to_camel
 
 
 class Visibility(str, Enum):
+    __str__ = str.__str__
     shared = 'shared'
     private = 'private'
 
 
 class Scope(str, Enum):
+    __str__ = str.__str__
     all = 'all'
     groups = 'groups'
     users = 'users'
@@ -68,6 +70,7 @@ class AgentGroupPermissionDto(BaseModel):
 
 
 class AgentInterfaceType(str, Enum):
+    __str__ = str.__str__
     slack = 'slack'
     mcp = 'mcp'
     teams = 'teams'
@@ -75,15 +78,10 @@ class AgentInterfaceType(str, Enum):
 
 class AgentSelectionEntryDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    agent_id: float = Field(
-        ...,
-        description='Numeric scope (workflow) id to invoke at this step.',
-        examples=[17],
-        ge=1.0,
+    agent_id: int = Field(
+        ..., description='Numeric scope (workflow) id to invoke at this step.', examples=[17], ge=1
     )
-    priority_order: float = Field(
-        ..., description='Execution order (1-indexed).', examples=[1], ge=1.0
-    )
+    priority_order: int = Field(..., description='Execution order (1-indexed).', examples=[1], ge=1)
     role: str | None = Field(None, description='Optional role label.', examples=['researcher'])
     instructions: str | None = Field(
         None,
@@ -123,11 +121,13 @@ class AgentSharedUserDto(BaseModel):
 
 
 class AgentType(str, Enum):
+    __str__ = str.__str__
     task = 'task'
     workflow = 'workflow'
 
 
 class ApiErrorCode(str, Enum):
+    __str__ = str.__str__
     validation = 'VALIDATION'
     bad_request = 'BAD_REQUEST'
     unauthorized = 'UNAUTHORIZED'
@@ -142,6 +142,7 @@ class ApiErrorCode(str, Enum):
 
 
 class ApiErrorStatus(str, Enum):
+    __str__ = str.__str__
     invalid_argument = 'INVALID_ARGUMENT'
     unauthenticated = 'UNAUTHENTICATED'
     permission_denied = 'PERMISSION_DENIED'
@@ -151,6 +152,12 @@ class ApiErrorStatus(str, Enum):
     internal = 'INTERNAL'
     unavailable = 'UNAVAILABLE'
     deadline_exceeded = 'DEADLINE_EXCEEDED'
+
+
+class StatusReason(str, Enum):
+    __str__ = str.__str__
+    approval_timeout = 'approval_timeout'
+    agent_reported_issue = 'agent_reported_issue'
 
 
 class AutomationRunListItemDto(BaseModel):
@@ -168,7 +175,7 @@ class AutomationRunListItemDto(BaseModel):
         alias='temporalRunId',
         description='Run identifier; a workflow may have multiple runs after a retry.',
     )
-    agent_id: float = Field(..., alias='agentId', description='Parent workflow id.', examples=[42])
+    agent_id: int = Field(..., alias='agentId', description='Parent workflow id.', examples=[42])
     agent_name: str = Field(
         ...,
         alias='agentName',
@@ -183,6 +190,11 @@ class AutomationRunListItemDto(BaseModel):
         description='Run status (running / awaiting_human / completed / error / cancelled).',
         examples=['completed'],
     )
+    status_reason: StatusReason | None = Field(
+        None,
+        alias='statusReason',
+        description='Display-only annotation of a completed run: `approval_timeout` when a human approval timed out, `agent_reported_issue` when a workflow step said it could not finish part of its task.',
+    )
     trigger_type: str | None = Field(
         None,
         alias='triggerType',
@@ -192,7 +204,7 @@ class AutomationRunListItemDto(BaseModel):
     ended_at: str | None = Field(
         None, alias='endedAt', description='ISO-8601 end timestamp; absent for in-flight runs.'
     )
-    duration_ms: float | None = Field(
+    duration_ms: int | None = Field(
         None,
         alias='durationMs',
         description='Duration in milliseconds (when end timestamp is known).',
@@ -208,13 +220,14 @@ class AutomationRunListItemDto(BaseModel):
 
 
 class AutomationRunSource(str, Enum):
+    __str__ = str.__str__
     live_query = 'live-query'
     history = 'history'
 
 
 class BatchCreateCustomContextItemRelationsResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    upserted_count: float = Field(
+    upserted_count: int = Field(
         ...,
         alias='upsertedCount',
         description='Number of relations created or updated by the batch.',
@@ -236,7 +249,7 @@ class BulkUploadUrlItemDto(BaseModel):
         description='MIME type of the file. `application/octet-stream` falls back to an extension-based guess. Allowed categories: PDF, images, text, Office/OpenDocument documents, audio, and video.',
         examples=['application/pdf'],
     )
-    file_size: float | None = Field(
+    file_size: int | None = Field(
         None,
         alias='fileSize',
         description='File size in bytes. Rejected above 50MB.',
@@ -252,6 +265,7 @@ class BulkUploadUrlsDto(BaseModel):
 
 
 class ChatInterfaceAccessMode(str, Enum):
+    __str__ = str.__str__
     all = 'all'
     allow_list = 'allow-list'
     allow_org = 'allow-org'
@@ -280,6 +294,7 @@ class ChatInterfaceConfigDto(BaseModel):
 
 
 class ChatInterfaceType(str, Enum):
+    __str__ = str.__str__
     slack = 'slack'
     teams = 'teams'
 
@@ -292,12 +307,12 @@ class ComposeSkillContextRequestDto(BaseModel):
         examples=['What tables describe customer churn?'],
         min_length=1,
     )
-    limit: float | None = Field(
+    limit: int | None = Field(
         None,
         description='Maximum context items to return. Omit to return all selected items.',
         examples=[25],
-        ge=1.0,
-        le=200.0,
+        ge=1,
+        le=200,
     )
 
 
@@ -315,13 +330,13 @@ class ComposeSkillContextResponseDto(BaseModel):
         description='Deprecated. Always an empty array. Use `context` for composed text (markdown or JSON fallback).',
         examples=[[]],
     )
-    original_count: float = Field(
+    original_count: int = Field(
         ...,
         alias='originalCount',
         description="Total context items in the scope's configured context selection (before composition strategies).",
         examples=[42],
     )
-    selected_count: float = Field(
+    selected_count: int = Field(
         ...,
         alias='selectedCount',
         description='Context items the composer kept for this intent.',
@@ -439,6 +454,7 @@ class ContextItemAncestorDto(BaseModel):
 
 
 class UserFeedback(str, Enum):
+    __str__ = str.__str__
     negative = 'negative'
     neutral = 'neutral'
     positive = 'positive'
@@ -453,12 +469,14 @@ class ContextItemGroupPermissionDto(BaseModel):
 
 
 class ContextItemKind(str, Enum):
+    __str__ = str.__str__
     note = 'note'
     saved_query = 'saved_query'
     link = 'link'
 
 
 class ContextItemSharePermission(str, Enum):
+    __str__ = str.__str__
     use = 'use'
     manage = 'manage'
 
@@ -474,6 +492,7 @@ class ContextItemSharedUserDto(BaseModel):
 
 
 class ContextItemVisibility(str, Enum):
+    __str__ = str.__str__
     shared = 'shared'
     private = 'private'
 
@@ -483,7 +502,7 @@ class ConversationListItemDto(BaseModel):
     thread_id: str = Field(
         ..., alias='threadId', description='Opaque thread id.', examples=['agent_42_abc-xyz']
     )
-    scope_id: float = Field(
+    scope_id: int = Field(
         ...,
         alias='scopeId',
         description='Numeric scope id returned by the list adapter. This is not conversation ownership.',
@@ -505,7 +524,7 @@ class ConversationListItemDto(BaseModel):
         description='UI surface the conversation was started from (e.g. `context_chat`, `home`). Not constrained to the `RunSource` enum: historical rows carry legacy values. Null when unknown, absent on responses that predate the field.',
         examples=['context_chat'],
     )
-    message_count: float = Field(
+    message_count: int = Field(
         ...,
         alias='messageCount',
         description='Total number of message turns in the (post-collapse) conversation.',
@@ -538,6 +557,7 @@ class ConversationListItemDto(BaseModel):
 
 
 class ConversationMessageType(str, Enum):
+    __str__ = str.__str__
     human = 'human'
     ai = 'ai'
     system = 'system'
@@ -547,19 +567,19 @@ class ConversationMessageType(str, Enum):
 
 class ConversationMessageWindowDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    start_index: float = Field(
+    start_index: int = Field(
         ...,
         alias='startIndex',
         description='Zero-based source-message index of the first returned message. Source-message indexes include non-visible tool and system messages.',
         examples=[90],
     )
-    end_index: float = Field(
+    end_index: int = Field(
         ...,
         alias='endIndex',
         description='Exclusive zero-based source-message index after the last returned message.',
         examples=[120],
     )
-    total_messages: float = Field(
+    total_messages: int = Field(
         ...,
         alias='totalMessages',
         description='Total source-message count used for paging. The returned visible message array can be shorter than endIndex - startIndex.',
@@ -674,6 +694,7 @@ class CustomAttributeDto(BaseModel):
 
 
 class CustomContextItemKind(str, Enum):
+    __str__ = str.__str__
     source = 'source'
     collection = 'collection'
     entity = 'entity'
@@ -695,6 +716,7 @@ class DashboardDraftSnapshotDto(BaseModel):
 
 
 class DashboardElementKind(str, Enum):
+    __str__ = str.__str__
     chart = 'chart'
     kpi = 'kpi'
     table = 'table'
@@ -781,6 +803,7 @@ class DashboardFilterOptionsQueryPatchDto(BaseModel):
 
 
 class DashboardFilterType(str, Enum):
+    __str__ = str.__str__
     text_pattern = 'text_pattern'
     dropdown = 'dropdown'
     query_dropdown = 'query_dropdown'
@@ -796,6 +819,7 @@ class DashboardFilterType(str, Enum):
 
 
 class DashboardFilterValueType(str, Enum):
+    __str__ = str.__str__
     string = 'string'
     number = 'number'
     boolean = 'boolean'
@@ -824,12 +848,14 @@ class DashboardLayoutElementDto(BaseModel):
 
 
 class DashboardQuotationStyle(str, Enum):
+    __str__ = str.__str__
     single = 'single'
     double = 'double'
     none = 'none'
 
 
 class DashboardSharePermission(str, Enum):
+    __str__ = str.__str__
     use = 'use'
     manage = 'manage'
 
@@ -842,6 +868,7 @@ class DashboardSharedUserDto(BaseModel):
 
 
 class DashboardTileKind(str, Enum):
+    __str__ = str.__str__
     chart = 'chart'
     kpi = 'kpi'
     table = 'table'
@@ -849,22 +876,26 @@ class DashboardTileKind(str, Enum):
 
 
 class DashboardValueFormat(str, Enum):
+    __str__ = str.__str__
     number = 'number'
     currency = 'currency'
     percent = 'percent'
 
 
 class DashboardVersionKind(str, Enum):
+    __str__ = str.__str__
     published = 'published'
     draft_snapshot = 'draft_snapshot'
 
 
 class DashboardView(str, Enum):
+    __str__ = str.__str__
     active = 'active'
     draft = 'draft'
 
 
 class DashboardVisibility(str, Enum):
+    __str__ = str.__str__
     shared = 'shared'
     private = 'private'
 
@@ -906,12 +937,12 @@ class ErrorEnvelopeDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     code: ApiErrorCode = Field(..., description='Modus-specific machine code.')
     status: ApiErrorStatus = Field(..., description='Canonical status string for the error.')
-    message: str = Field(..., examples=['Skill was not found or you lack permission.'])
+    message: str = Field(..., examples=['Scope was not found or you lack permission.'])
     request_id: str = Field(..., alias='requestId', examples=['req_01HQ7K8ABCDEFGHIJKLMNOPQRS'])
     info: dict[str, Any] | None = Field(
         None,
         description="Optional domain-specific context. Shape varies per endpoint — see the operation's error response examples.",
-        examples=[{'skillId': 'sk_abc123'}],
+        examples=[{'scopeId': 42}],
     )
 
 
@@ -921,6 +952,7 @@ class ErrorResponseDto(BaseModel):
 
 
 class EvaluationCadenceFrequency(str, Enum):
+    __str__ = str.__str__
     daily = 'daily'
     weekly = 'weekly'
     monthly = 'monthly'
@@ -980,6 +1012,7 @@ class EvaluationResultDto(BaseModel):
 
 
 class EvaluationRunStatus(str, Enum):
+    __str__ = str.__str__
     running = 'running'
     completed = 'completed'
     completed_with_errors = 'completed_with_errors'
@@ -987,6 +1020,7 @@ class EvaluationRunStatus(str, Enum):
 
 
 class EvaluationRunTrigger(str, Enum):
+    __str__ = str.__str__
     scheduled = 'scheduled'
     manual = 'manual'
 
@@ -994,18 +1028,18 @@ class EvaluationRunTrigger(str, Enum):
 class EvaluationRunWithResultsDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(..., description='Run ID')
-    skill_id: float = Field(..., alias='skillId', description='Scope ID')
+    skill_id: int = Field(..., alias='skillId', description='Scope ID')
     trigger: EvaluationRunTrigger = Field(..., description='How the run was triggered')
     status: EvaluationRunStatus = Field(..., description='Run status')
     started_at: AwareDatetime = Field(..., alias='startedAt', description='When the run started')
     finished_at: AwareDatetime | None = Field(
         None, alias='finishedAt', description='When the run finished'
     )
-    total_cases: float = Field(
+    total_cases: int = Field(
         ..., alias='totalCases', description='Total number of evaluation cases'
     )
-    passed_cases: float = Field(..., alias='passedCases', description='Number of passed cases')
-    failed_cases: float = Field(..., alias='failedCases', description='Number of failed cases')
+    passed_cases: int = Field(..., alias='passedCases', description='Number of passed cases')
+    failed_cases: int = Field(..., alias='failedCases', description='Number of failed cases')
     avg_score: float | None = Field(None, alias='avgScore', description='Average score (0-100)')
     is_regression: bool = Field(
         ..., alias='isRegression', description='Whether this run detected a regression'
@@ -1029,7 +1063,7 @@ class EvaluationSlackChannelDto(BaseModel):
 
 class FailedFinalizeDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    index: float = Field(
+    index: int = Field(
         ..., description='Index of the failing entry in the request `uploads` array.', examples=[2]
     )
     upload_id: str = Field(
@@ -1047,7 +1081,7 @@ class FailedFinalizeDto(BaseModel):
 
 class FailedUploadFromUrlDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    index: float = Field(
+    index: int = Field(
         ..., description='Index of the failing entry in the request `urls` array.', examples=[1]
     )
     url: str = Field(
@@ -1064,7 +1098,7 @@ class FailedUploadFromUrlDto(BaseModel):
 
 class FailedUploadUrlDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    index: float = Field(
+    index: int = Field(
         ..., description='Index of the failing entry in the request `files` array.', examples=[2]
     )
     file_name: str = Field(
@@ -1081,13 +1115,10 @@ class FailedUploadUrlDto(BaseModel):
 
 
 class FileUploadResourceStatus(str, Enum):
+    __str__ = str.__str__
     processing = 'processing'
     ready = 'ready'
     failed = 'failed'
-
-
-class StatusReason(str, Enum):
-    approval_timeout = 'approval_timeout'
 
 
 class GetAutomationRunResponseDto(BaseModel):
@@ -1105,7 +1136,7 @@ class GetAutomationRunResponseDto(BaseModel):
         alias='temporalRunId',
         description='Run identifier; a workflow may have multiple runs after a retry.',
     )
-    agent_id: float = Field(..., alias='agentId', description='Parent workflow id.', examples=[42])
+    agent_id: int = Field(..., alias='agentId', description='Parent workflow id.', examples=[42])
     agent_name: str = Field(
         ...,
         alias='agentName',
@@ -1120,6 +1151,11 @@ class GetAutomationRunResponseDto(BaseModel):
         description='Run status (running / awaiting_human / completed / error / cancelled).',
         examples=['completed'],
     )
+    status_reason: StatusReason | None = Field(
+        None,
+        alias='statusReason',
+        description='Display-only annotation of a completed run: `approval_timeout` when a human approval timed out, `agent_reported_issue` when a workflow step said it could not finish part of its task.',
+    )
     trigger_type: str | None = Field(
         None,
         alias='triggerType',
@@ -1129,7 +1165,7 @@ class GetAutomationRunResponseDto(BaseModel):
     ended_at: str | None = Field(
         None, alias='endedAt', description='ISO-8601 end timestamp; absent for in-flight runs.'
     )
-    duration_ms: float | None = Field(
+    duration_ms: int | None = Field(
         None,
         alias='durationMs',
         description='Duration in milliseconds (when end timestamp is known).',
@@ -1141,11 +1177,6 @@ class GetAutomationRunResponseDto(BaseModel):
         None,
         alias='pendingApproval',
         description='Pending approval payload (only present when status is awaiting_human).',
-    )
-    status_reason: StatusReason | None = Field(
-        None,
-        alias='statusReason',
-        description='Display-only signal that the workflow closed for a non-success reason.',
     )
     source: AutomationRunSource = Field(
         ...,
@@ -1186,10 +1217,12 @@ class GroupPermissionDto(BaseModel):
 
 
 class HttpIngestedDataRequestType(str, Enum):
+    __str__ = str.__str__
     http = 'http'
 
 
 class IngestedDataResponseFormat(str, Enum):
+    __str__ = str.__str__
     csv = 'csv'
     json = 'json'
     xml = 'xml'
@@ -1206,7 +1239,7 @@ class ListAutomationRunsResponseDto(BaseModel):
         alias='nextPageToken',
         description='Opaque token for the next page; null when this was the last page. Pass as `pageToken` on the next request.',
     )
-    counts: dict[str, float] = Field(
+    counts: dict[str, int] = Field(
         ...,
         description='Per-status counts (all_executions / running / awaiting_human / error / completed).',
         examples=[{'all_executions': 100, 'running': 1, 'awaiting_human': 0, 'error': 2, 'completed': 97}],
@@ -1249,18 +1282,18 @@ class ListConversationsResponseDto(BaseModel):
         description='Opaque token for the next page. `null` when there are no further pages.',
         examples=['eyJwYWdlIjoxLCJwYWdlU2l6ZSI6MTB9'],
     )
-    total_count: float = Field(
+    total_count: int = Field(
         ...,
         alias='totalCount',
         description='Total threads visible in the scanned window after filters. Not a global count.',
         examples=[47],
     )
-    page: float | None = Field(
+    page: int | None = Field(
         None,
         description='Legacy echo of the requested 0-indexed page. Retained for SPA backwards-compatibility; new callers should rely on `pageToken` / `nextPageToken`.',
         examples=[0],
     )
-    page_size: float | None = Field(
+    page_size: int | None = Field(
         None,
         alias='pageSize',
         description='Legacy echo of the requested `pageSize`. Retained for SPA backwards-compatibility.',
@@ -1276,11 +1309,13 @@ class ListDashboardDraftSnapshotsResponseDto(BaseModel):
 
 
 class Rollup(str, Enum):
+    __str__ = str.__str__
     hour = 'hour'
     day = 'day'
 
 
 class GroupBy(str, Enum):
+    __str__ = str.__str__
     all = 'all'
     skill = 'skill'
     agent = 'agent'
@@ -1352,16 +1387,60 @@ class McpCoreToolsConfigDto(BaseModel):
     )
 
 
+class McpExposureCatalogChildDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    key: str = Field(
+        ...,
+        description='Exposure key for this tool.',
+        examples=['toolset_action:web_search::tavily_search'],
+    )
+    action_key: str | None = Field(
+        None,
+        alias='actionKey',
+        description='Action or tool name this key selects.',
+        examples=['tavily_search'],
+    )
+    label: str = Field(..., description='Name shown for this tool.', examples=['Web Search'])
+
+
+class McpExposureCatalogRequestDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    toolset: dict[str, Any] | None = Field(
+        None,
+        description='Toolset to preview. Omit to keep the current draft. An object replaces it for this call only.',
+    )
+    connection_set: list[dict[str, Any]] | None = Field(
+        None,
+        alias='connectionSet',
+        description='Connections to preview. Omit to keep the current draft. A list replaces it for this call only.',
+    )
+    mcp_tool_exposure: dict[str, Any] | None = Field(
+        None,
+        alias='mcpToolExposure',
+        description='Tool exposure to resolve. Omit to keep the current draft. An object replaces it for this call only.',
+    )
+
+
+class McpExposureFamily(str, Enum):
+    __str__ = str.__str__
+    integration_actions = 'integration_actions'
+    custom_mcp = 'custom_mcp'
+    mcp_server = 'mcp_server'
+    tool = 'tool'
+
+
 class McpToolExposureMode(str, Enum):
+    __str__ = str.__str__
     subset = 'subset'
     discovery = 'discovery'
 
 
-class McpToolExposureVersion(float, Enum):
-    number_1 = 1
+class McpToolExposureVersion(IntEnum):
+    integer_1 = 1
 
 
 class MemberGroupSource(str, Enum):
+    __str__ = str.__str__
     native = 'native'
     directory = 'directory'
 
@@ -1402,12 +1481,12 @@ class ModusContextRequestDto(BaseModel):
         examples=['What tables describe customer churn?'],
         min_length=1,
     )
-    limit: float | None = Field(
+    limit: int | None = Field(
         None,
         description='Maximum context items to return. Omit to return all selected items.',
         examples=[25],
-        ge=1.0,
-        le=200.0,
+        ge=1,
+        le=200,
     )
 
 
@@ -1423,12 +1502,12 @@ class ModusContextResponseDto(BaseModel):
         description='Deprecated. Always an empty array. Use `context` for composed text (markdown or JSON fallback).',
         examples=[[]],
     )
-    original_count: float = Field(
+    original_count: int = Field(
         ...,
         alias='originalCount',
         description='Total context items in the configured scope (before composition strategies).',
     )
-    selected_count: float = Field(
+    selected_count: int = Field(
         ..., alias='selectedCount', description='Context items the composer kept for this intent.'
     )
     context_item_uids: list[str] = Field(
@@ -1468,7 +1547,7 @@ class OrgMemberDto(BaseModel):
     first_name: str
     last_name: str
     email: str
-    image_url: str
+    image_url: str | None
     role: str
 
 
@@ -1511,6 +1590,7 @@ class PublishDashboardDto(BaseModel):
 
 
 class ReasoningEffort(str, Enum):
+    __str__ = str.__str__
     none = 'none'
     minimal = 'minimal'
     low = 'low'
@@ -1521,12 +1601,14 @@ class ReasoningEffort(str, Enum):
 
 
 class ResourceLifecycleStatus(str, Enum):
+    __str__ = str.__str__
     draft = 'draft'
     active = 'active'
     deleted = 'deleted'
 
 
 class ManageDenial(str, Enum):
+    __str__ = str.__str__
     not_owner = 'not_owner'
     needs_group_manage = 'needs_group_manage'
 
@@ -1536,7 +1618,7 @@ class ScopeInterfaceDto(BaseModel):
     id: str = Field(
         ..., description='Interface id (UUID).', examples=['00000000-0000-4000-a000-000000000500']
     )
-    scope_id: float = Field(..., alias='scopeId', description='Scope id.', examples=[42])
+    scope_id: int = Field(..., alias='scopeId', description='Scope id.', examples=[42])
     type: ChatInterfaceType = Field(..., examples=['slack'])
     name: str = Field(..., description='Display name.', examples=['Slack'])
     config: ChatInterfaceConfigDto
@@ -1555,6 +1637,7 @@ class ScopeInterfaceDto(BaseModel):
 
 
 class ScopeMcpInterfaceType(str, Enum):
+    __str__ = str.__str__
     mcp = 'mcp'
 
 
@@ -1571,18 +1654,39 @@ class SearchMemoriesRequestDto(BaseModel):
         description='Narrow results to memories tagged with this end-user id.',
         examples=['user_clerk_X'],
     )
-    limit: float | None = Field(
+    limit: int | None = Field(
         None,
         description='Override the default page size for search results (legacy default is 10).',
         examples=[10],
-        ge=1.0,
-        le=1000.0,
+        ge=1,
+        le=1000,
     )
 
 
-class DepthBelowRoot(float, Enum):
-    number_0 = 0
-    number_1 = 1
+class ContextType(str, Enum):
+    __str__ = str.__str__
+    files = 'files'
+    links = 'links'
+    notes = 'notes'
+    saved_queries = 'saved_queries'
+    dashboards = 'dashboards'
+
+
+class SelectedContextItemDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    uid: str = Field(..., description='Stable id of the pinned context item.')
+    label: str = Field(..., description='Label shown for the pinned context item.')
+    context_type: ContextType = Field(
+        ..., alias='contextType', description='Kind of user content this item is.'
+    )
+    connection_id: str | None = Field(
+        None, alias='connectionId', description='Connection the item belongs to, when it has one.'
+    )
+
+
+class DepthBelowRoot(IntEnum):
+    integer_0 = 0
+    integer_1 = 1
 
 
 class SelectionModelRootDto(BaseModel):
@@ -1593,14 +1697,63 @@ class SelectionModelRootDto(BaseModel):
         description='Kind of unit, such as repository or schema.',
         examples=['repository'],
     )
-    arity: float = Field(
+    arity: int = Field(
         ..., description='Number of path segments in a unit of this kind.', examples=[1]
+    )
+
+
+class Op(str, Enum):
+    __str__ = str.__str__
+    select_root = 'selectRoot'
+    deselect_root = 'deselectRoot'
+    set_root_deep_rules = 'setRootDeepRules'
+    set_connection_preferences = 'setConnectionPreferences'
+    pin_item = 'pinItem'
+    unpin_item = 'unpinItem'
+    clear_pinned_items = 'clearPinnedItems'
+    set_additional_context_rules = 'setAdditionalContextRules'
+
+
+class SelectionOpDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    op: Op = Field(
+        ...,
+        description='Which selection edit this op makes. selectRoot, deselectRoot, and setRootDeepRules are deprecated and will be removed; use setConnectionPreferences.',
+    )
+    connection_id: str | None = Field(
+        None,
+        alias='connectionId',
+        description='Connection of the data-asset root, or whose preferences are set.',
+    )
+    path: list[str] | None = Field(
+        None, description='Path of the data-asset root within its connection.'
+    )
+    includes: list[list[str]] | None = Field(
+        None,
+        description='Fully-selected subtree paths strictly beneath the root. Each path is an array of strings.',
+    )
+    excludes: list[list[str]] | None = Field(
+        None,
+        description='Unselected subtree paths beneath the root. Each path is an array of strings.',
+    )
+    preferences: dict[str, Any] | None = Field(
+        None, description='The connection’s whole data selection, as workspace access preferences.'
+    )
+    context_enabled: bool | None = Field(
+        None,
+        alias='contextEnabled',
+        description='Deprecated. Use `preferences` alone: the scope always reads context from its connections. Omit it; `false` is accepted only when the connection is already stored with `false`.',
+    )
+    item: SelectedContextItemDto | None = Field(None, description='The pinned context item.')
+    uid: str | None = Field(None, description='Uid of the pinned item to remove.')
+    value: dict[str, Any] | None = Field(
+        None, description='Additional context rules; null clears them.'
     )
 
 
 class SetSupervisionRequestDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    subordinate_agent_ids: list[float] = Field(
+    subordinate_agent_ids: list[int] = Field(
         ...,
         alias='subordinateAgentIds',
         description='Replacement list of subordinate scope ids. The previous list is fully replaced; pass `[]` to clear.',
@@ -1609,6 +1762,7 @@ class SetSupervisionRequestDto(BaseModel):
 
 
 class SharedUserPermission(str, Enum):
+    __str__ = str.__str__
     use = 'use'
     manage = 'manage'
 
@@ -1628,14 +1782,17 @@ class SkillMcpInterfaceConfigDto(BaseModel):
 
 
 class SqlIngestedDataRequestType(str, Enum):
+    __str__ = str.__str__
     sql = 'sql'
 
 
 class SuggestionEventSource(str, Enum):
+    __str__ = str.__str__
     home = 'home'
 
 
 class SuggestionEventType(str, Enum):
+    __str__ = str.__str__
     shown = 'shown'
     clicked = 'clicked'
     dismissed = 'dismissed'
@@ -1645,7 +1802,7 @@ class SuggestionEventType(str, Enum):
 class SuggestionQuestionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(..., description='Stable suggestion id.')
-    skill_id: float | None = Field(
+    skill_id: int | None = Field(
         None, alias='skillId', description='Numeric scope id this suggestion is scoped to.'
     )
     label: str = Field(..., description='Short Home button label.')
@@ -1658,13 +1815,13 @@ class SuggestionQuestionDto(BaseModel):
 
 class SupervisionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    supervisor_agent_id: float = Field(
+    supervisor_agent_id: int = Field(
         ...,
         alias='supervisorAgentId',
         description='Numeric id of the scope that supervises the listed subordinates. Echoes the `:id` from the URL path.',
         examples=[42],
     )
-    subordinate_agent_ids: list[float] = Field(
+    subordinate_agent_ids: list[int] = Field(
         ...,
         alias='subordinateAgentIds',
         description='Numeric ids of the scopes supervised by `supervisorAgentId`. The order is preserved across writes and reads.',
@@ -1685,7 +1842,7 @@ class ToolCatalogActionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     name: str = Field(
         ...,
-        description='Stable action id: the exact string to list in `toolset.<id>.byConnection.<connectionId>.actions` (or `toolset.<id>.actions`, which binds to the newest workspace connection).',
+        description='Stable action name. A connected integration lists it in `toolset.<id>.byConnection.<connectionId>.actions` under the UUID of the connection the scope author selected; SQL platforms grant `query`. A general tool lists it in its own configuration, e.g. `toolset.web_search: ["search"]`.',
         examples=['list_dags'],
     )
     display_name: str = Field(
@@ -1705,14 +1862,14 @@ class ToolCatalogEntryDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(
         ...,
-        description='Stable id — use as the key in a toolset object, e.g. `{ [id]: { enabled: true } }`.',
-        examples=['sql_runner'],
+        description='Stable toolset key. Integrations use `{ [id]: { byConnection: { [connectionId]: { actions: ["query"] } } } }`; general tools keep their own configuration.',
+        examples=['postgresql'],
     )
     display_name: str = Field(
         ...,
         alias='displayName',
         description='Human-readable name for display.',
-        examples=['SQL Runner'],
+        examples=['PostgreSQL'],
     )
     category: str | None = Field(
         None,
@@ -1753,6 +1910,7 @@ class TransferOwnershipDto(BaseModel):
 
 
 class TriggerType(str, Enum):
+    __str__ = str.__str__
     schedule = 'schedule'
     webhook = 'webhook'
     api = 'api'
@@ -1769,6 +1927,7 @@ class TriggerEvaluationRunResponseDto(BaseModel):
 
 
 class Frequency(str, Enum):
+    __str__ = str.__str__
     hourly = 'hourly'
     daily = 'daily'
     weekly = 'weekly'
@@ -1777,6 +1936,7 @@ class Frequency(str, Enum):
 
 
 class Weekday(str, Enum):
+    __str__ = str.__str__
     monday = 'monday'
     tuesday = 'tuesday'
     wednesday = 'wednesday'
@@ -1801,12 +1961,12 @@ class TriggerScheduleDto(BaseModel):
         description='Required for weekly schedules. Lowercase day names.',
         examples=[['monday', 'wednesday', 'friday']],
     )
-    day_of_month: float | None = Field(
+    day_of_month: int | None = Field(
         None,
         description='Required for monthly schedules. Calendar day 1-31.',
         examples=[15],
-        ge=1.0,
-        le=31.0,
+        ge=1,
+        le=31,
     )
     cron_expressions: list[str] | None = Field(
         None,
@@ -1900,7 +2060,8 @@ class UpdateCustomContextItemDto(BaseModel):
         examples=['Updated internal billing metadata.'],
     )
     content: dict[str, Any] | None = Field(
-        None, description='Replacement main textual or structured content.'
+        None,
+        description='Replacement main textual or structured content. Long text or structured bodies are also split into searchable excerpts asynchronously.',
     )
     url: str | None = Field(
         None,
@@ -2036,7 +2197,7 @@ class UploadUrlDto(BaseModel):
         description='MIME type of the file. `application/octet-stream` falls back to an extension-based guess. Allowed categories: PDF, images, text, Office/OpenDocument documents, audio, and video.',
         examples=['application/pdf'],
     )
-    file_size: float = Field(
+    file_size: int = Field(
         ...,
         alias='fileSize',
         description='File size in bytes. Rejected above 50MB.',
@@ -2099,19 +2260,19 @@ class UsageBucketDto(BaseModel):
     group_value: str = Field(
         ..., description='The grouped dimension value (scope/workflow id, interface, or model).'
     )
-    call_count: float = Field(
+    call_count: int = Field(
         ..., description='Number of LLM_CALL events in this bucket for this model.'
     )
-    input_tokens: float = Field(..., description='Sum of input (prompt) tokens.')
-    output_tokens: float = Field(..., description='Sum of output (response) tokens.')
+    input_tokens: int = Field(..., description='Sum of input (prompt) tokens.')
+    output_tokens: int = Field(..., description='Sum of output (response) tokens.')
     credits: float = Field(..., description='Credits consumed in this bucket.')
 
 
 class UsageTotalsDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    call_count: float
-    input_tokens: float
-    output_tokens: float
+    call_count: int
+    input_tokens: int
+    output_tokens: int
     credits: float = Field(
         ..., description='Total credits consumed across all buckets in the window.'
     )
@@ -2146,6 +2307,7 @@ class WorkflowNodePositionDto(BaseModel):
 
 
 class WorkflowNodeType(str, Enum):
+    __str__ = str.__str__
     start = 'start'
     action = 'action'
     condition = 'condition'
@@ -2168,12 +2330,12 @@ class WorkflowTriggerScheduleResponseDto(BaseModel):
         description='Required for weekly schedules. Lowercase day names.',
         examples=[['monday', 'wednesday', 'friday']],
     )
-    day_of_month: float | None = Field(
+    day_of_month: int | None = Field(
         None,
         description='Required for monthly schedules. Calendar day 1-31.',
         examples=[15],
-        ge=1.0,
-        le=31.0,
+        ge=1,
+        le=31,
     )
     cron_expressions: list[str] | None = Field(
         None,
@@ -2188,6 +2350,7 @@ class WorkflowTriggerScheduleResponseDto(BaseModel):
 
 
 class ActiveConversationRunStatus(str, Enum):
+    __str__ = str.__str__
     queued = 'queued'
     pending = 'pending'
     running = 'running'
@@ -2204,12 +2367,13 @@ class ActiveRunsBySessionDto(BaseModel):
 
 
 class Version(str, Enum):
+    __str__ = str.__str__
     published = 'published'
     draft = 'draft'
 
 
-class StreamProtocolVersion(float, Enum):
-    number_2 = 2
+class StreamProtocolVersion(IntEnum):
+    integer_2 = 2
 
 
 class ApprovalTargetDto(BaseModel):
@@ -2241,10 +2405,10 @@ class DocumentAttachmentDto(BaseModel):
     parsed_content: str | None = Field(None, alias='parsedContent')
     upload_id: str | None = Field(None, alias='uploadId')
     mime_type: str | None = Field(None, alias='mimeType')
-    original_size: float | None = Field(None, alias='originalSize')
+    original_size: int | None = Field(None, alias='originalSize')
     storage_file_name: str | None = Field(None, alias='storageFileName')
     raw_content_s3_key: str | None = Field(None, alias='rawContentS3Key')
-    size_bytes: float | None = Field(None, alias='sizeBytes')
+    size_bytes: int | None = Field(None, alias='sizeBytes')
     summary: str | None = None
 
 
@@ -2276,6 +2440,7 @@ class ImageAttachmentDto(BaseModel):
 
 
 class Decision(str, Enum):
+    __str__ = str.__str__
     approve = 'approve'
     deny = 'deny'
     connected = 'connected'
@@ -2292,7 +2457,30 @@ class RunAdmissionResponseDto(BaseModel):
     status: str = Field(..., description='Status of the admitted run, e.g. `pending` or `queued`.')
 
 
+class RunEventsPollEventDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="allow")
+    id: str = Field(
+        ...,
+        description='Stream id of the event. Send the last one as `Last-Event-ID` to resume after it.',
+    )
+    type: str = Field(
+        ...,
+        description='Event type, such as `token`, `done`, `error` or `cancelled`. The other fields depend on it.',
+    )
+
+
+class RunEventsPollStatus(str, Enum):
+    __str__ = str.__str__
+    queued = 'queued'
+    pending = 'pending'
+    running = 'running'
+    succeeded = 'succeeded'
+    cancelled = 'cancelled'
+    failed = 'failed'
+
+
 class RunReasoningEffort(str, Enum):
+    __str__ = str.__str__
     none = 'none'
     minimal = 'minimal'
     low = 'low'
@@ -2303,6 +2491,7 @@ class RunReasoningEffort(str, Enum):
 
 
 class RunSource(str, Enum):
+    __str__ = str.__str__
     home = 'home'
     agent_settings = 'agent_settings'
     agent = 'agent'
@@ -2313,12 +2502,14 @@ class RunSource(str, Enum):
     slack_dm = 'slack_dm'
     teams = 'teams'
     context_chat = 'context_chat'
+    context_suggestions = 'context_suggestions'
     dashboard_copilot = 'dashboard_copilot'
     dashboard_assistant = 'dashboard_assistant'
     other = 'other'
 
 
 class SupplementalContextSource(str, Enum):
+    __str__ = str.__str__
     slack = 'slack'
     teams = 'teams'
 
@@ -2336,6 +2527,7 @@ class UserContextDto(BaseModel):
 
 
 class WorkflowActionSource(str, Enum):
+    __str__ = str.__str__
     agent = 'agent'
     api = 'api'
     other = 'other'
@@ -2417,7 +2609,7 @@ class AgentInterfaceDto(BaseModel):
         description='Interface row id (UUID).',
         examples=['00000000-0000-4000-a000-000000000300'],
     )
-    agent_id: float = Field(..., alias='agentId', description='Parent workflow id.', examples=[42])
+    agent_id: int = Field(..., alias='agentId', description='Parent workflow id.', examples=[42])
     type: AgentInterfaceType = Field(
         ...,
         description='Interface type. `slack` and `teams` deliver chat triggers; `mcp` exposes the workflow as an MCP server.',
@@ -2444,6 +2636,21 @@ class AgentInterfaceDto(BaseModel):
         alias='updatedAt',
         description='Most recent update timestamp.',
         examples=['2026-05-11T10:00:00.000Z'],
+    )
+
+
+class ApplySelectionOpsDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    ops: list[SelectionOpDto] = Field(
+        ..., description='Selection ops, applied in order.', max_length=5000
+    )
+    toolset: dict[str, Any] | None = Field(
+        None, description='The scope toolset after the edit, when the edit changed it.'
+    )
+    validate_only: bool | None = Field(
+        None,
+        alias='validateOnly',
+        description='When true, run every check a commit would and return the scope that would be saved, without writing it. The response carries `connectionSet`, `toolset` and `contextSelections` as they would be stored, with secret header values withheld and no secret minted, and is marked `validateOnly: true` at the top level. Every other field keeps its stored value, so a preview still needs a second call without `validateOnly` to save.',
     )
 
 
@@ -2738,7 +2945,8 @@ class CreateCustomContextItemDto(BaseModel):
         examples=['Enterprise contract renewal metadata from the internal billing system.'],
     )
     content: dict[str, Any] | None = Field(
-        None, description='Main textual or structured content for the custom item.'
+        None,
+        description='Main textual or structured content for the custom item. Long text or structured bodies are also split into searchable excerpts asynchronously.',
     )
     url: str | None = Field(
         None,
@@ -2814,13 +3022,13 @@ class CreateLinkDto(BaseModel):
         description='When true, runs a web search for the supplied URL and stores up to `pageLimit` results, which may come from other sites. It does not crawl the site’s pages.',
         examples=[False],
     )
-    page_limit: float | None = Field(
+    page_limit: int | None = Field(
         None,
         alias='pageLimit',
         description='Maximum number of search results to store when `isCrawl` is true. Ignored otherwise.',
         examples=[10],
-        ge=1.0,
-        le=200.0,
+        ge=1,
+        le=200,
     )
     access: UpdateContextItemAccessDto | None = Field(
         None,
@@ -3095,8 +3303,8 @@ class EvaluationCadenceDto(BaseModel):
     weekdays: list[str] | None = Field(
         None, description='Days of week for weekly frequency', examples=[['MONDAY', 'WEDNESDAY']]
     )
-    day_of_month: float | None = Field(
-        None, alias='dayOfMonth', description='Day of month for monthly frequency', ge=1.0, le=31.0
+    day_of_month: int | None = Field(
+        None, alias='dayOfMonth', description='Day of month for monthly frequency', ge=1, le=31
     )
     cron_expression: str | None = Field(
         None,
@@ -3123,18 +3331,18 @@ class EvaluationNotificationsDto(BaseModel):
 class EvaluationRunDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     id: str = Field(..., description='Run ID')
-    skill_id: float = Field(..., alias='skillId', description='Scope ID')
+    skill_id: int = Field(..., alias='skillId', description='Scope ID')
     trigger: EvaluationRunTrigger = Field(..., description='How the run was triggered')
     status: EvaluationRunStatus = Field(..., description='Run status')
     started_at: AwareDatetime = Field(..., alias='startedAt', description='When the run started')
     finished_at: AwareDatetime | None = Field(
         None, alias='finishedAt', description='When the run finished'
     )
-    total_cases: float = Field(
+    total_cases: int = Field(
         ..., alias='totalCases', description='Total number of evaluation cases'
     )
-    passed_cases: float = Field(..., alias='passedCases', description='Number of passed cases')
-    failed_cases: float = Field(..., alias='failedCases', description='Number of failed cases')
+    passed_cases: int = Field(..., alias='passedCases', description='Number of passed cases')
+    failed_cases: int = Field(..., alias='failedCases', description='Number of failed cases')
     avg_score: float | None = Field(None, alias='avgScore', description='Average score (0-100)')
     is_regression: bool = Field(
         ..., alias='isRegression', description='Whether this run detected a regression'
@@ -3164,7 +3372,7 @@ class FileUploadResourceDto(BaseModel):
         examples=['reports/2026/Q3'],
     )
     content_type: str | None = Field(None, alias='contentType', examples=['application/pdf'])
-    file_size: float | None = Field(None, alias='fileSize', examples=[1048576])
+    file_size: int | None = Field(None, alias='fileSize', examples=[1048576])
     s3_key: str | None = Field(
         None, alias='s3Key', examples=['context_uploads/7a3f9d2c.../Q3-churn-report.pdf']
     )
@@ -3175,7 +3383,7 @@ class FileUploadResourceDto(BaseModel):
     parsed: bool | None = Field(
         None, description='Whether the file was successfully parsed. Null while pending/processing.'
     )
-    document_count: float | None = Field(None, alias='documentCount', examples=[1])
+    document_count: int | None = Field(None, alias='documentCount', examples=[1])
     error_message: str | None = Field(
         None, alias='errorMessage', description='Populated when `status` is `failed`.'
     )
@@ -3254,7 +3462,7 @@ class ListContextItemsResponseDto(BaseModel):
         description='Opaque token for the next page; `null` when this was the last page. Pass as `pageToken` on the next request. Required-but-nullable — the field is always present on every response.',
         examples=['eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTAxIiwidWlkIjoiYWJjIn0'],
     )
-    total_count: float | None = Field(
+    total_count: int | None = Field(
         None,
         alias='totalCount',
         description='Approximate total count of matching items (when known). Some filter combinations skip this for cost reasons.',
@@ -3272,7 +3480,7 @@ class ListCustomContextItemsResponseDto(BaseModel):
         alias='nextPageToken',
         description='Opaque token for the next page; `null` when this was the last page.',
     )
-    total_count: float | None = Field(
+    total_count: int | None = Field(
         ...,
         alias='totalCount',
         description='Approximate total count of matching custom context items, when known.',
@@ -3381,6 +3589,67 @@ class LookupContextItemResponseDto(BaseModel):
     )
 
 
+class McpExposureCatalogEntryDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    family: McpExposureFamily = Field(
+        ..., description='Kind of tool this row exposes.', examples=['tool']
+    )
+    parent_key: str = Field(
+        ...,
+        alias='parentKey',
+        description='Exposure key for the whole row.',
+        examples=['toolset:web_search'],
+    )
+    toolset_key: str = Field(
+        ...,
+        alias='toolsetKey',
+        description='Toolset entry this row comes from.',
+        examples=['web_search'],
+    )
+    connection_id: str | None = Field(
+        None,
+        alias='connectionId',
+        description='Connection this row belongs to, when the row is one connection.',
+        examples=['c1111111-2222-4333-8444-555555555555'],
+    )
+    label: str = Field(..., description='Name shown for this row.', examples=['Web Search'])
+    children: list[McpExposureCatalogChildDto] = Field(
+        ...,
+        description='Tools under this row. Selecting the parent key exposes all of them, including ones added later.',
+    )
+
+
+class McpExposureCatalogResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    entries: list[McpExposureCatalogEntryDto] = Field(
+        ..., description='Tools this scope can expose. Rows you cannot access are left out.'
+    )
+    selected_keys: list[str] = Field(
+        ...,
+        alias='selectedKeys',
+        description='Exposure keys from the resolved selection that are in the visible catalog. Discovery selects every visible key.',
+        examples=[['toolset:web_search']],
+    )
+    unknown_keys: list[str] = Field(
+        ...,
+        alias='unknownKeys',
+        description='Stored or sent keys that are not in the catalog. They are reported, not dropped.',
+        examples=[['toolset:retired']],
+    )
+    discovery_allowed: bool = Field(
+        ...,
+        alias='discoveryAllowed',
+        description='True when you can manage this scope. Manage is what allows exposing every current and future tool. This call is refused otherwise.',
+        examples=[True],
+    )
+    hidden_selected_count: int = Field(
+        ...,
+        alias='hiddenSelectedCount',
+        description='How many stored keys point at rows you cannot access. Those keys are not listed.',
+        examples=[0],
+    )
+
+
 class McpToolExposureConfigDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     version: McpToolExposureVersion = Field(
@@ -3403,7 +3672,7 @@ class MemberGroupDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     uid: str
     name: str
-    description: str
+    description: str | None
     member_ids: list[str] | None = Field(
         None,
         description='Clerk user ids in this group. Present for native groups (the synthesized Everyone group included). Absent for directory-sourced groups — use `member_count`; membership is directory-managed.',
@@ -3415,7 +3684,7 @@ class MemberGroupDto(BaseModel):
         description='Provenance of the group: org-managed ("native") or backed by an identity-provider directory group ("directory").',
         examples=['native'],
     )
-    member_count: float | None = Field(
+    member_count: int | None = Field(
         None,
         description='Member count for directory-sourced groups. Present (and non-null) only when `source` is "directory".',
         examples=[42],
@@ -3429,8 +3698,8 @@ class ModelSettingsDto(BaseModel):
         alias='reasoningEffort',
         description='Optional reasoning effort for models that support it.',
     )
-    context_window: float | None = Field(
-        None, alias='contextWindow', description='Selected model context window in tokens.', ge=1.0
+    context_window: int | None = Field(
+        None, alias='contextWindow', description='Selected model context window in tokens.', ge=1
     )
 
 
@@ -3453,7 +3722,7 @@ class RecordSuggestionEventDto(BaseModel):
     source: SuggestionEventSource | None = Field(
         None, description='Product surface that emitted the event.', examples=['home']
     )
-    skill_id: float | None = Field(
+    skill_id: int | None = Field(
         None, alias='skillId', description='Selected Home scope id when known.'
     )
     thread_id: str | None = Field(
@@ -3683,11 +3952,30 @@ class AttachmentsDto(BaseModel):
     documents: list[DocumentAttachmentDto] | None = None
 
 
+class RunEventsPollResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    events: list[RunEventsPollEventDto] = Field(
+        ..., description='Events after the request cursor, oldest first.'
+    )
+    cursor: str = Field(
+        ...,
+        description='Stream id of the last event returned. Send it as `Last-Event-ID` on the next poll.',
+    )
+    status: RunEventsPollStatus = Field(
+        ...,
+        description='Current run status. A workflow run reports `pending` until it ends, then its terminal status.',
+    )
+    done: bool = Field(
+        ...,
+        description='True once a terminal event (`done`, `error`, `cancelled` or a `workflow_*` one) is in `events`: stop polling.',
+    )
+
+
 class RunModelSettingsDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     reasoning_effort: RunReasoningEffort | None = Field(None, alias='reasoningEffort')
-    context_window: float | None = Field(
-        None, alias='contextWindow', description='Selected model context window in tokens.', ge=1.0
+    context_window: int | None = Field(
+        None, alias='contextWindow', description='Selected model context window in tokens.', ge=1
     )
 
 
@@ -3900,7 +4188,7 @@ class ConversationDto(BaseModel):
         description='Opaque thread/checkpoint id. It is not owned by a single scope; a conversation can span multiple workflows.',
         examples=['agent_42_abc-xyz'],
     )
-    scope_id: float = Field(
+    scope_id: int = Field(
         ...,
         alias='scopeId',
         description='Numeric scope id returned by the list/detail adapter. This is not conversation ownership.',
@@ -4006,8 +4294,8 @@ class CreateSkillDto(BaseModel):
     )
     toolset: dict[str, Any] | None = Field(
         None,
-        description='Map of tool key to its configuration; unknown keys are rejected. A flat connected-integration entry such as slack binds to the newest workspace connection of that integration (create and update return 422 when there is none); use {"byConnection": {"<connectionId>": config}} to pick one.',
-        examples=[{'slack': {'actions': ['SendMessage'], 'rules': {'allowedChannelIds': ['C1']}}}],
+        description='Map of tool key to configuration; unknown keys are rejected. Integrations require `<platform>.byConnection[connectionUuid] = { actions, rules? }`; actions are catalog action names and SQL platforms grant `query`. Flat entries, action-string arrays and retired keys are rejected with HTTP 422.',
+        examples=[{'slack': {'byConnection': {'11111111-1111-4111-8111-111111111111': {'actions': ['SendMessage'], 'rules': {'allowedChannelIds': ['C1']}}}}}],
     )
     model: str | None = Field(
         None,
@@ -4180,8 +4468,8 @@ class SkillVariationDto(BaseModel):
     )
     toolset: dict[str, Any] = Field(
         ...,
-        description='Builder-managed toolset descriptor. Map of `{toolName: config}`; opaque to the API surface.',
-        examples=[{'web_search': {'enabled': True}, 'calculator': {'enabled': True}}],
+        description='Map of tool key to configuration. Integrations use `<platform>.byConnection[connectionUuid] = { actions, rules? }`; SQL platforms grant `query`. General tools and MCP configurations keep their own formats.',
+        examples=[{'postgresql': {'byConnection': {'11111111-1111-4111-8111-111111111111': {'actions': ['query']}}}, 'web_search': {'enabled': True}}],
     )
     connection_set: list[ConnectionSetItemReadDto] = Field(
         ...,
@@ -4305,8 +4593,8 @@ class UpdateSkillDto(BaseModel):
     )
     toolset: dict[str, Any] | None = Field(
         None,
-        description='Map of tool key to its configuration; unknown keys are rejected. A flat connected-integration entry such as slack binds to the newest workspace connection of that integration (create and update return 422 when there is none); use {"byConnection": {"<connectionId>": config}} to pick one.',
-        examples=[{'slack': {'actions': ['SendMessage'], 'rules': {'allowedChannelIds': ['C1']}}}],
+        description='Map of tool key to configuration; unknown keys are rejected. Integrations require `<platform>.byConnection[connectionUuid] = { actions, rules? }`; actions are catalog action names and SQL platforms grant `query`. Flat entries, action-string arrays and retired keys are rejected with HTTP 422.',
+        examples=[{'slack': {'byConnection': {'11111111-1111-4111-8111-111111111111': {'actions': ['SendMessage'], 'rules': {'allowedChannelIds': ['C1']}}}}}],
     )
     model: str | None = Field(
         None,
@@ -4327,7 +4615,7 @@ class UpdateSkillDto(BaseModel):
     context_selections: list[dict[str, Any]] | None = Field(
         None,
         alias='contextSelections',
-        description="Updated context selections (sources / docs the scope may read). Replaces the whole list, so send every selection to keep, including the scope's own learnings. `null` clears it.",
+        description="Updated context selections (sources / docs the scope may read). Replaces the whole list, so send every selection to keep, including the scope's own learnings. `null` clears it. For an incremental edit, use Apply selection changes to a scope.",
         examples=[[]],
     )
     interfaces: list[ScopeMcpInterfaceInputDto] | None = Field(
@@ -4349,7 +4637,7 @@ class UpdateSkillDto(BaseModel):
         alias='accessConfig',
         description='Updated access configuration. The service rejects changes that would lock the caller out of use + manage.',
     )
-    manager_id: float | None = Field(
+    manager_id: int | None = Field(
         None,
         alias='managerId',
         description='Re-parent the scope under a new manager (or remove its current manager when null). When this field is present, all other fields are ignored.',
@@ -4359,7 +4647,7 @@ class UpdateSkillDto(BaseModel):
 
 class WorkflowDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    id: float = Field(
+    id: int = Field(
         ...,
         description='Numeric workflow id (stable per-org; not reused after delete).',
         examples=[42],
@@ -4480,7 +4768,7 @@ class RunConfigDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     model: str | None = Field(
         None,
-        description='Model id, e.g. claude-sonnet-4.6. API tokens must send one of: default, claude-sonnet-5, claude-sonnet-5.5, claude-sonnet-4.6, claude-opus-4.8, claude-opus-5.5, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-5.6-luna, gpt-6-luna, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, deepseek-v4.1-flash-1017, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, grok-4.3-fast, grok-4.3, grok-4.7, kimi-k3.',
+        description='Model id, e.g. claude-sonnet-4.6. API tokens must send one of: default, claude-sonnet-5, claude-sonnet-5.5, claude-sonnet-4.6, claude-opus-4.8, claude-opus-5.5, claude-haiku-5.5, gpt-5.2, gpt-5.5, gpt-5-mini, gpt-5.6-luna, gpt-6-luna, gpt-oss-120b, gpt-oss-20b, qwen3-235b-a22b-2507, qwen3-coder, qwen3-32b, deepseek-chat-v3.1, deepseek-v4-pro, deepseek-v4-flash-latest, deepseek-v4.1-flash-1017, minimax-m2.7, llama-4-maverick, llama-4-scout, llama-3.3-70b-instruct, gemini-3.1-pro-preview, gemini-3-flash-preview, gemini-3.8-flash, grok-4.3-fast, grok-4.3, grok-4.7, kimi-k3.',
     )
     model_settings: RunModelSettingsDto | None = Field(
         None, alias='modelSettings', description='Model-specific runtime controls.'
@@ -4547,7 +4835,7 @@ class SkillRunDto(BaseModel):
     )
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
     debug: bool | None = None
-    subordinate_skill_ids: list[float] | None = Field(
+    subordinate_skill_ids: list[int] | None = Field(
         None,
         alias='subordinateSkillIds',
         description='Subordinate scope ids for an unsaved supervisor-scope draft test.',
@@ -4600,7 +4888,7 @@ class ListAgentsResponseDto(BaseModel):
 
 class ScopeDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    id: float = Field(
+    id: int = Field(
         ...,
         description='Numeric scope id (stable per-org; not reused after delete).',
         examples=[42],
@@ -4619,6 +4907,12 @@ class ScopeDto(BaseModel):
         None,
         description='Optional one-paragraph description of what this scope does.',
         examples=['Predicts churn risk for a customer given a 90-day usage window.'],
+    )
+    generated_description: str | None = Field(
+        None,
+        alias='generatedDescription',
+        description='Summary written for this scope so a caller can choose it. Null when none has been written.',
+        examples=['Answers questions about warehouse revenue and churn.'],
     )
     status: ResourceLifecycleStatus = Field(
         ...,
@@ -4698,6 +4992,12 @@ class ScopeDto(BaseModel):
         alias='manageDenial',
         description='Why `canManage` is false, for client-facing guidance: `needs_group_manage` (shared, but no group you belong to grants Manage) or `not_owner` (private, and you are not the owner). `null` when `canManage` is true.',
         examples=['needs_group_manage'],
+    )
+    validate_only: bool | None = Field(
+        None,
+        alias='validateOnly',
+        description='Present and `true` only on an `applySelectionOps` preview (`validateOnly: true`): the `variation` below is the selection that **would** be saved, and nothing was written. Absent on every committed response. Without it a preview is indistinguishable from a commit -- the surrounding fields (`updatedAt`, `hasUnpublishedChanges`, `activeVariationId`, `draftVariationId`) all keep their stored values -- so a caller that stops here silently never saves the selection.',
+        examples=[True],
     )
 
 
@@ -4785,7 +5085,7 @@ class FollowUpRunDto(BaseModel):
     )
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
     debug: bool | None = None
-    subordinate_skill_ids: list[float] | None = Field(
+    subordinate_skill_ids: list[int] | None = Field(
         None,
         alias='subordinateSkillIds',
         description='Saved scope ids to subordinate under this Modus run.',
@@ -4852,7 +5152,7 @@ class ModusRunDto(BaseModel):
     )
     experimental_features: bool | None = Field(None, alias='experimentalFeatures')
     debug: bool | None = None
-    subordinate_skill_ids: list[float] | None = Field(
+    subordinate_skill_ids: list[int] | None = Field(
         None, alias='subordinateSkillIds', description='Saved scope ids to scope the Modus run to.'
     )
 

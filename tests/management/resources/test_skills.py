@@ -78,12 +78,16 @@ def test_skills_get_populates_variation_fields(client, skill_detail_row):
     assert skill.variation.model == "gpt-4o"
     assert skill.variation.expected_output == "Structured JSON with data rows"
     assert skill.variation.toolset == {
-        "sql_runner": ["SELECT:conn-snowflake-001:analytics:public"],
+        "snowflake": {
+            "byConnection": {
+                "22222222-2222-4222-8222-222222222222": {"actions": ["query"]}
+            }
+        },
         "memory": {"enabled": True},
     }
     row = skill.variation.connection_set[0]
     assert row.connection_id
-    assert row.connection_id == "conn-snowflake-001"
+    assert row.connection_id == "22222222-2222-4222-8222-222222222222"
     assert row.path == []
 
 

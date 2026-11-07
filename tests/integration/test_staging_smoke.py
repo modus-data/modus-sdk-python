@@ -6,7 +6,7 @@ Env:
   MODUS_BASE_URL    default https://api.staging.getmodus.com when unset in CI
   MODUS_AGENT_HOST  default https://agent.staging.getmodus.com (chat/stream)
   MODUS_SMOKE_MODEL default claude-sonnet-5
-  MODUS_SCOPE_ID    optional stable scope id/slug for get / get_context
+  MODUS_SCOPE_ID    optional numeric scope id for get / get_context (a slug is a 400 BadRequestError)
 
 Run:
   export MODUS_API_KEY=modus_...
@@ -18,10 +18,11 @@ from __future__ import annotations
 import os
 import time
 import uuid
+import warnings
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from modus import AuthenticationError, Modus, NotFoundError
+from modus import AuthenticationError, BadRequestError, Modus, NotFoundError
 from modus.management import ModusManagement
 
 pytestmark = pytest.mark.integration
@@ -57,6 +58,11 @@ def test_staging_journey() -> None:
     scope_id = os.getenv("MODUS_SCOPE_ID")
     if not scope_id and scopes.items:
         scope_id = str(scopes.items[0].id)
+    # Scope compose on the agent host (#9894) serves only a published scope the caller may use;
+    # any other id is its 404 "Scope not found", whatever the first listed scope happens to be.
+    compose_scope_id = os.getenv("MODUS_SCOPE_ID") or next(
+        (str(s.id) for s in scopes.items if s.active_variation_id and s.can_use), None
+    )
 
     # Browse (read client)
     if scope_id:
@@ -127,12 +133,14 @@ def test_staging_journey() -> None:
     composed = client.modus.get_context("sdk staging smoke — list relevant tables", limit=3)
     assert_composition("org-wide get_context", composed, time.monotonic() - started)
 
-    if scope_id:
+    if compose_scope_id:
         started = time.monotonic()
         scope_composed = client.scopes.get_context(
-            scope_id, "sdk staging smoke — brief context", limit=3
+            compose_scope_id, "sdk staging smoke — brief context", limit=3
         )
         assert_composition("scope get_context", scope_composed, time.monotonic() - started)
+    else:
+        warnings.warn("scope get_context SKIPPED: no published scope in the first 5 (set MODUS_SCOPE_ID)", stacklevel=1)
 
     agent_host = client._config.agent_host
     assert compose_urls, "no compose request recorded"
@@ -171,17 +179,27 @@ def test_staging_journey() -> None:
         if uid is not None:
             mgmt.context.items.delete(uid)
 
-    # Errors — scope path param is numeric (ParseIntPipe); a missing id → 404.
-    with pytest.raises(NotFoundError):
-        client.scopes.get(999_999_999)
+    # Errors — an id past int4 is a 404 from the id pipe (#9760) with the parsed envelope
+    # (#9757); a slug is a 400. The full id table is in test_staging_journeys.py.
+    with pytest.raises(NotFoundError) as missing:
+        client.scopes.get(2_147_483_648)
+    assert missing.value.code == "NOT_FOUND"
+    assert missing.value.info == {"id": 2_147_483_648}
+    assert (missing.value.request_id or "").startswith("req_")
+    with pytest.raises(BadRequestError) as slug:
+        client.scopes.get("revenue-analysis")
+    assert slug.value.code == "BAD_REQUEST"
+    assert (slug.value.request_id or "").startswith("req_")
 
     bad = Modus(
         api_key="modus_00000000_dead_beef_invalid_key_for_smoke",
         base_url=_base_url(),
         timeout=30.0,
     )
-    with pytest.raises(AuthenticationError):
+    with pytest.raises(AuthenticationError) as unauthenticated:
         bad.scopes.list(page_size=1)
+    assert unauthenticated.value.code == "UNAUTHORIZED"
+    assert (unauthenticated.value.request_id or "").startswith("req_")
 
 
 @pytest.mark.skipif(not _has_live, reason="MODUS_API_KEY not set")
@@ -231,12 +249,14 @@ def test_staging_chat_and_stream() -> None:
     assert final.content
     assert final.thread_id or final.run_id
 
-    # create_modus must mint sessionId + negotiate SSE (not JSON pending).
+    # create_modus must mint sessionId + negotiate SSE (not JSON pending). A token run
+    # synthesizes the org's full environment (#9693), so pin the cheapest admitted model,
+    # and ask for nothing a write tool could do: a write would stop at approval_required.
     create_tokens = 0
     for event in client.workflows.runs.create_modus(
         {
-            "message": "sdk staging smoke — create_modus one short word",
-            "config": {"model": model},
+            "message": "sdk staging smoke — reply with one short word, use no tools",
+            "config": {"model": "gpt-oss-20b"},
         }
     ):
         content = getattr(event, "content", None)

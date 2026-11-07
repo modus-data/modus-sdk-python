@@ -26,6 +26,7 @@ from modus._generated.models import (
     CreateCustomContextItemDto,
     EditQueuedRunDto,
     InterruptRunDto,
+    McpExposureCatalogRequestDto,
     ModusContextRequestDto,
     ModusRunDto,
     ResumeRunDto,
@@ -134,8 +135,10 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "ScopeInterfacesController_update": {"name", "config"},
     "ScopesController_requestOwnershipTransfer": {"newOwnerUserId"},
     "ScopesController_patchMcpConfig": {"config"},
+    "ScopesController_mcpExposureCatalog": _model_wire_fields(McpExposureCatalogRequestDto),
     # Deploy takes an optional body; the SDK sends none (empty body), which the
     # server accepts. Registered explicitly so the contract guard stays honest.
+    "ScopesController_applySelectionOps": {"ops", "toolset", "validateOnly"},
     "ScopesController_deploy": set(),
     # --- Workflows (/api/v1/workflows; request schemas share the generated *Agent* DTOs) ---
     "WorkflowsController_create": _model_wire_fields(_WorkflowCreateBody),

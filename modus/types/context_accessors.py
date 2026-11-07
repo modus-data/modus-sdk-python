@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Union
 
-from .context import ContextItem
+from .context import ContextItem, ContextItemLookupRow
 
 
-def _content_dict(item: ContextItem) -> dict[str, Any] | None:
+def _content_dict(item: Union[ContextItem, ContextItemLookupRow]) -> dict[str, Any] | None:
     content = item.content
     return content if isinstance(content, dict) else None
 
@@ -70,15 +70,18 @@ def saved_query_sql(item: ContextItem) -> str | None:
     return query if isinstance(query, str) else None
 
 
-def context_item_label(item: ContextItem, *, fallback: str = "(no title)") -> str:
-    """Best-effort human label for any context item."""
+def context_item_label(
+    item: Union[ContextItem, ContextItemLookupRow], *, fallback: str = "(no title)"
+) -> str:
+    """Best-effort human label for any context item, including a ``lookup()`` row."""
     content = _content_dict(item)
     if content is not None:
         for key in ("title", "name"):
             value = content.get(key)
             if isinstance(value, str) and value:
                 return value
-    description = item.description
+    # A lookup row has no description.
+    description = getattr(item, "description", None)
     if isinstance(description, str) and description:
         return description
     return fallback or item.uid[:8]

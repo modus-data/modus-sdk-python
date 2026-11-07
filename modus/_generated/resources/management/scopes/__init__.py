@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Optional, Union
 
 from modus._config import ModusConfig
+from modus._generated.models import McpExposureCatalogRequestDto, McpExposureCatalogResponseDto
 from modus._http import AsyncHttpClient, HttpClient
 from modus._openapi_invoke import invoke_operation, invoke_operation_async
 from modus._pagination import aip_list_params, build_aip_page_mapped, build_async_aip_page_mapped
@@ -44,8 +45,9 @@ class _ScopesResourceBase:
             page_token: Opaque page token from a previous response's ``next_page_token``. Omit for
                 the first page.
             search: Case-insensitive substring filter on scope name.
-            view: Variation view. ``active`` reads deployed; ``draft`` reads the latest builder
-                snapshot.
+            view: Variation view. ``active`` reads the deployed version, or the latest draft when
+                nothing is published. ``draft`` reads the latest builder snapshot. ``published``
+                reads only the published version, and only scopes you can use.
             manager_id: Return only scopes supervised by this manager scope id.
 
         Returns:
@@ -92,14 +94,16 @@ class _ScopesResourceBase:
         """
         Get a scope.
 
-        Returns a scope. ``view=active`` (default) returns the deployed version; ``view=draft``
-        returns the latest unpublished edits. Returns 404 if you cannot access the scope.
+        Returns a scope. ``view=active`` (default) is the deployed version, or the latest draft when
+        nothing is published. ``view=draft`` is the latest edits. ``view=published`` is only the
+        published version, and only if you can use the scope. Returns 404 if you cannot access it.
 
         **Requires:** ``scopes:read``
 
         Args:
             scope_id: Numeric scope id.
-            view: Which variation snapshot to read. Defaults to ``active``.
+            view: Which version to read. Defaults to ``active``. ``published`` is only the published
+                version, and only if you can use the scope.
 
         Example:
             >>> scope = mgmt.scopes.get("PLACEHOLDER_SCOPE_ID")
@@ -145,6 +149,41 @@ class _ScopesResourceBase:
             ),
             self._config.max_retries,
         )
+
+    def mcp_exposure_catalog(
+        self,
+        scope_id: Union[int, str],
+        request: McpExposureCatalogRequestDto,
+    ) -> McpExposureCatalogResponseDto:
+        """
+        Preview MCP exposure catalog.
+
+        Lists tools this scope can expose to MCP clients. A field you send replaces the current
+        draft; a field you omit stays as stored. Nothing is saved. Entries you cannot access are
+        left out, and stored selections on them are counted in hiddenSelectedCount.
+
+        **Requires:** ``scopes:write``
+
+        Args:
+            scope_id: Numeric scope id.
+            request: Request body; see :class:`McpExposureCatalogRequestDto`.
+
+        Example:
+            >>> catalog = mgmt.scopes.mcp_exposure_catalog(42, McpExposureCatalogRequestDto())
+            >>> catalog.discovery_allowed
+        """
+        validate_id(scope_id, name="scope_id")
+        body = request.model_dump(by_alias=True, exclude_none=True)
+        raw = with_retry(
+            lambda: invoke_operation(
+                self._http,
+                "ScopesController_mcpExposureCatalog",
+                path_params={"id": scope_id},
+                json_body=body,
+            ),
+            self._config.max_retries,
+        )
+        return McpExposureCatalogResponseDto.model_validate(raw)
 
     def restore(self, scope_id: Union[int, str]) -> Skill:
         """
@@ -246,8 +285,9 @@ class _AsyncScopesResourceBase:
             page_token: Opaque page token from a previous response's ``next_page_token``. Omit for
                 the first page.
             search: Case-insensitive substring filter on scope name.
-            view: Variation view. ``active`` reads deployed; ``draft`` reads the latest builder
-                snapshot.
+            view: Variation view. ``active`` reads the deployed version, or the latest draft when
+                nothing is published. ``draft`` reads the latest builder snapshot. ``published``
+                reads only the published version, and only scopes you can use.
             manager_id: Return only scopes supervised by this manager scope id.
 
         Returns:
@@ -295,14 +335,16 @@ class _AsyncScopesResourceBase:
         """
         Get a scope.
 
-        Returns a scope. ``view=active`` (default) returns the deployed version; ``view=draft``
-        returns the latest unpublished edits. Returns 404 if you cannot access the scope.
+        Returns a scope. ``view=active`` (default) is the deployed version, or the latest draft when
+        nothing is published. ``view=draft`` is the latest edits. ``view=published`` is only the
+        published version, and only if you can use the scope. Returns 404 if you cannot access it.
 
         **Requires:** ``scopes:read``
 
         Args:
             scope_id: Numeric scope id.
-            view: Which variation snapshot to read. Defaults to ``active``.
+            view: Which version to read. Defaults to ``active``. ``published`` is only the published
+                version, and only if you can use the scope.
         """
         validate_id(scope_id, name="scope_id")
         query: dict = {}
@@ -340,6 +382,37 @@ class _AsyncScopesResourceBase:
             ),
             self._config.max_retries,
         )
+
+    async def mcp_exposure_catalog(
+        self,
+        scope_id: Union[int, str],
+        request: McpExposureCatalogRequestDto,
+    ) -> McpExposureCatalogResponseDto:
+        """
+        Preview MCP exposure catalog.
+
+        Lists tools this scope can expose to MCP clients. A field you send replaces the current
+        draft; a field you omit stays as stored. Nothing is saved. Entries you cannot access are
+        left out, and stored selections on them are counted in hiddenSelectedCount.
+
+        **Requires:** ``scopes:write``
+
+        Args:
+            scope_id: Numeric scope id.
+            request: Request body; see :class:`McpExposureCatalogRequestDto`.
+        """
+        validate_id(scope_id, name="scope_id")
+        body = request.model_dump(by_alias=True, exclude_none=True)
+        raw = await async_with_retry(
+            lambda: invoke_operation_async(
+                self._http,
+                "ScopesController_mcpExposureCatalog",
+                path_params={"id": scope_id},
+                json_body=body,
+            ),
+            self._config.max_retries,
+        )
+        return McpExposureCatalogResponseDto.model_validate(raw)
 
     async def restore(self, scope_id: Union[int, str]) -> Skill:
         """

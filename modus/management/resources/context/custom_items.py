@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Union, cast
+
+from pydantic import BaseModel
 
 from modus._config import ModusConfig
 from modus._exceptions import ModusError
@@ -16,9 +18,16 @@ from modus._pagination import (
 )
 from modus._retry import async_with_retry, with_retry
 from modus._validation import validate_page_size
+from modus.types.context import (
+    ContextItem,
+    ContextItemDeletion,
+    CreateCustomContextItemDto,
+    CreateCustomContextItemRelationDto,
+    CreatedCustomContextItem,
+    UpdateCustomContextItemDto,
+    UpdatedCustomContextItem,
+)
 from modus.types.pagination import AsyncPage, Page
-
-from ...types.context import ContextItem, ContextItemDeletion
 
 _FIELD_ALIASES = {
     "source_id": "sourceId",
@@ -40,7 +49,7 @@ def _omit_none(payload: Dict[str, Any]) -> Dict[str, Any]:
     return {key: value for key, value in payload.items() if value is not None}
 
 
-def _with_created_uid(data: Dict[str, Any]) -> Dict[str, Any]:
+def _with_created_uid(data: Dict[str, Any]) -> CreatedCustomContextItem:
     out = dict(data)
     context_item_id = out.get("contextItemId")
     if not isinstance(context_item_id, str) or not context_item_id:
@@ -48,13 +57,20 @@ def _with_created_uid(data: Dict[str, Any]) -> Dict[str, Any]:
             "Custom context create response missing non-empty string contextItemId"
         )
     out["uid"] = context_item_id
-    return out
+    return cast(CreatedCustomContextItem, out)
 
 
-def _wire_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+def _wire_payload(payload: Union[BaseModel, Mapping[str, Any]]) -> Dict[str, Any]:
+    if isinstance(payload, BaseModel):
+        return payload.model_dump(mode="json", by_alias=True, exclude_none=True)
     return _omit_none(
         {_FIELD_ALIASES.get(key, key): value for key, value in payload.items()}
     )
+
+
+def _item_payload(item: Optional[BaseModel], fields: Dict[str, Any]) -> Dict[str, Any]:
+    """The model's fields, then the keyword fields over them."""
+    return {**(_wire_payload(item) if item is not None else {}), **_wire_payload(fields)}
 
 
 def _custom_list_params(
@@ -155,15 +171,20 @@ class CustomContextItemsResource:
         )
         return ContextItem.model_validate(data)
 
-    def create(self, **payload: Any) -> Dict[str, Any]:
+    def create(
+        self, item: Optional[CreateCustomContextItemDto] = None, **payload: Any
+    ) -> CreatedCustomContextItem:
         """Create a custom context item for an internal system or custom database.
 
         Args:
+            item: The item as a ``CreateCustomContextItemDto``. Optional: pass the
+                fields as keyword arguments instead, or both (the keywords win).
             **payload: Item fields such as ``kind``, ``source_id``, ``name``,
-                ``content``, and optional hierarchy / attribute keys.
+                ``content``, ``access``, and optional hierarchy / attribute keys.
 
         Returns:
-            Create acknowledgement dict including ``uid``.
+            Create acknowledgement dict (``contextItemId``, ``uid``, ``contextType``,
+            ``dataPath``, ``title``).
 
         Example:
             >>> created = mgmt.context.custom_items.create(
@@ -178,18 +199,21 @@ class CustomContextItemsResource:
             lambda: invoke_operation(
                 self._http,
                 "CustomContextItemsController_create",
-                json_body=_wire_payload(payload),
+                json_body=_item_payload(item, payload),
             ),
             self._config.max_retries,
         )
         return _with_created_uid(dict(data))
 
-    def batch_create(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def batch_create(
+        self, items: Sequence[Union[CreateCustomContextItemDto, Mapping[str, Any]]]
+    ) -> List[CreatedCustomContextItem]:
         """Create or update a batch of custom context items by stable hierarchy.
 
         Args:
-            items: Payloads with the same shape as ``create`` (``kind``,
-                ``source_id`` / ``sourceId``, ``name``, ``content``, …).
+            items: ``CreateCustomContextItemDto`` models, or dicts with the same
+                fields as ``create`` (``kind``, ``source_id`` / ``sourceId``,
+                ``name``, ``content``, …).
 
         Returns:
             List of create acknowledgement dicts, each including ``uid``.
@@ -222,12 +246,12 @@ class CustomContextItemsResource:
             else []
         )
 
-    def create_relations(self, relations: List[Dict[str, Any]]) -> int:
+    def create_relations(self, relations: Sequence[Union[CreateCustomContextItemRelationDto, Mapping[str, Any]]]) -> int:
         """Create or update typed relations between context items.
 
         Args:
-            relations: Relations containing ``from_uid``, ``to_uid``,
-                ``relation_type``, and optional structured ``content``.
+            relations: ``CreateCustomContextItemRelationDto`` models, or dicts with
+                ``from_uid``, ``to_uid``, ``relation_type``, and optional ``content``.
 
         Returns:
             Number of relations created or updated.
@@ -257,15 +281,19 @@ class CustomContextItemsResource:
             ).upserted_count
         )
 
-    def update(self, uid: str, **payload: Any) -> Dict[str, Any]:
+    def update(
+        self, uid: str, item: Optional[UpdateCustomContextItemDto] = None, **payload: Any
+    ) -> UpdatedCustomContextItem:
         """Update mutable fields on a custom context item.
 
         Args:
             uid: Custom context item identifier.
+            item: The fields as an ``UpdateCustomContextItemDto``. Optional: pass them
+                as keyword arguments instead, or both (the keywords win).
             **payload: Fields to update, such as description or topics.
 
         Returns:
-            The update acknowledgement payload.
+            The update acknowledgement dict (``uid``).
 
         Example:
             >>> mgmt.context.custom_items.update(
@@ -278,11 +306,11 @@ class CustomContextItemsResource:
                 self._http,
                 "CustomContextItemsController_update",
                 path_params={"uid": uid},
-                json_body=_wire_payload(payload),
+                json_body=_item_payload(item, payload),
             ),
             self._config.max_retries,
         )
-        return dict(data)
+        return cast(UpdatedCustomContextItem, dict(data))
 
     def delete(self, uid: str) -> ContextItemDeletion:
         """Delete a custom context item.
@@ -385,19 +413,23 @@ class AsyncCustomContextItemsResource:
         )
         return ContextItem.model_validate(data)
 
-    async def create(self, **payload: Any) -> Dict[str, Any]:
+    async def create(
+        self, item: Optional[CreateCustomContextItemDto] = None, **payload: Any
+    ) -> CreatedCustomContextItem:
         """Create a custom context item for an internal system or custom database."""
         data = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,
                 "CustomContextItemsController_create",
-                json_body=_wire_payload(payload),
+                json_body=_item_payload(item, payload),
             ),
             self._config.max_retries,
         )
         return _with_created_uid(dict(data))
 
-    async def batch_create(self, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def batch_create(
+        self, items: Sequence[Union[CreateCustomContextItemDto, Mapping[str, Any]]]
+    ) -> List[CreatedCustomContextItem]:
         """Create or update a batch of custom context items by stable hierarchy."""
         data = await async_with_retry(
             lambda: invoke_operation_async(
@@ -414,12 +446,12 @@ class AsyncCustomContextItemsResource:
             else []
         )
 
-    async def create_relations(self, relations: List[Dict[str, Any]]) -> int:
+    async def create_relations(self, relations: Sequence[Union[CreateCustomContextItemRelationDto, Mapping[str, Any]]]) -> int:
         """Create or update typed relations between context items.
 
         Args:
-            relations: Relations containing ``from_uid``, ``to_uid``,
-                ``relation_type``, and optional structured ``content``.
+            relations: ``CreateCustomContextItemRelationDto`` models, or dicts with
+                ``from_uid``, ``to_uid``, ``relation_type``, and optional ``content``.
 
         Returns:
             Number of relations created or updated.
@@ -440,26 +472,30 @@ class AsyncCustomContextItemsResource:
             ).upserted_count
         )
 
-    async def update(self, uid: str, **payload: Any) -> Dict[str, Any]:
+    async def update(
+        self, uid: str, item: Optional[UpdateCustomContextItemDto] = None, **payload: Any
+    ) -> UpdatedCustomContextItem:
         """Update mutable fields on a custom context item.
 
         Args:
             uid: Custom context item identifier.
+            item: The fields as an ``UpdateCustomContextItemDto``. Optional: pass them
+                as keyword arguments instead, or both (the keywords win).
             **payload: Fields to update, such as description or topics.
 
         Returns:
-            The update acknowledgement payload.
+            The update acknowledgement dict (``uid``).
         """
         data = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http,
                 "CustomContextItemsController_update",
                 path_params={"uid": uid},
-                json_body=_wire_payload(payload),
+                json_body=_item_payload(item, payload),
             ),
             self._config.max_retries,
         )
-        return dict(data)
+        return cast(UpdatedCustomContextItem, dict(data))
 
     async def delete(self, uid: str) -> ContextItemDeletion:
         """Delete a custom context item.

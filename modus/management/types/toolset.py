@@ -10,8 +10,13 @@ Build a toolset with the factory methods and combine several with
     from modus.management import Toolset
 
     toolset = Toolset.combine(
-        Toolset.slack(actions=["SendMessage"]),
-        Toolset.sql_runner(["SELECT:conn-123:analytics:public"]),
+        Toolset.slack(
+            connection_id="11111111-1111-4111-8111-111111111111",
+            actions=["SendMessage"],
+        ),
+        Toolset.sql(
+            "postgresql", connection_id="22222222-2222-4222-8222-222222222222"
+        ),
         Toolset.memory(),
     )
     mgmt.scopes.create(name="Analyst", model="gpt-4o", toolset=toolset)
@@ -25,26 +30,68 @@ from pydantic import BaseModel, ConfigDict
 from ..._exceptions import ValidationError
 from ._serialize import dump_optional_model
 
-#: Integrations a skill can use once connected to your workspace.
+#: Integration platform keys supported by the toolset builder.
 INTEGRATIONS = (
+    "airflow",
+    "amplitude",
+    "attio",
+    "bigquery",
+    "clickhouse",
     "clickup",
     "confluence",
+    "confluence_data_center",
+    "databricks",
+    "datadog",
+    "dbt_cloud",
+    "dbt_core",
+    "fellow",
+    "fireflies",
+    "fivetran",
+    "gainsight",
     "github",
+    "gitlab",
+    "gong",
     "google_drive",
+    "hubspot",
+    "intercom",
     "jira",
+    "jira_data_center",
+    "langfuse",
+    "looker",
+    "lookml",
+    "microsoft_entra_id",
+    "mixpanel",
+    "monday",
+    "mongodb",
+    "netsuite",
     "notion",
+    "onedrive",
+    "openmetadata",
+    "postgresql",
+    "posthog",
     "power_bi",
+    "presto",
+    "redshift",
     "salesforce",
+    "sap",
+    "sentry",
+    "sisense",
     "slack",
+    "snowflake",
+    "starburst",
+    "tableau",
     "teams",
+    "trino",
     "zendesk",
+    "zendesk_docs",
 )
+
 
 class Toolset(BaseModel):
     """The tools a skill may use at run time.
 
     Create one with the factory methods (``Toolset.slack(...)``,
-    ``Toolset.sql_runner(...)``, ``Toolset.memory()``, and others) and combine
+    ``Toolset.sql(...)``, ``Toolset.memory()``, and others) and combine
     several with ``Toolset.combine(...)`` or ``.merge(...)``. ``Toolset.empty()``
     is a skill with no tools.
     """
@@ -79,18 +126,24 @@ class Toolset(BaseModel):
         cls,
         name: str,
         *,
+        connection_id: str,
         actions: Iterable[str],
         rules: Optional[Dict[str, Any]] = None,
     ) -> "Toolset":
-        """Enable a connected integration for the given actions.
+        """Enable actions on the integration connection you choose.
 
         Args:
-            name:    Integration name, e.g. ``"slack"`` or ``"clickup"``. See ``INTEGRATIONS``.
-            actions: The action names the skill may call on that integration.
-                     The API binds the entry to the organization's newest workspace
-                     connection of that integration and returns it as ``byConnection``.
-            rules:   Optional per-integration restrictions (for example, a Slack
-                     channel allow-list).
+            name: Integration platform, e.g. ``"slack"`` or ``"clickup"``. See ``INTEGRATIONS``.
+            connection_id: Modus connection UUID. No other connection is substituted;
+                a runner who cannot access it cannot use its tools.
+            actions: Operation names the skill may call, without connection or path suffixes.
+            rules: Optional restrictions for this connection, such as a Slack channel allow-list.
+
+        Examples:
+            Toolset.integration(
+                "slack", connection_id="11111111-1111-4111-8111-111111111111",
+                actions=["SendMessage"],
+            )
 
         Raises:
             ValueError: If ``name`` is not a supported integration or ``actions`` is empty.
@@ -105,80 +158,80 @@ class Toolset(BaseModel):
         entry: Dict[str, Any] = {"actions": action_list}
         if rules is not None:
             entry["rules"] = rules
-        return cls(**{key: entry})
+        return cls(**{key: {"byConnection": {connection_id: entry}}})
 
     @classmethod
     def slack(
-        cls, *, actions: Iterable[str], rules: Optional[Dict[str, Any]] = None
+        cls, *, connection_id: str, actions: Iterable[str], rules: Optional[Dict[str, Any]] = None
     ) -> "Toolset":
-        """Enable Slack for the given actions (e.g. ``["SendMessage"]``)."""
-        return cls.integration("slack", actions=actions, rules=rules)
+        """Enable Slack on the chosen connection for the given actions (e.g. ``["SendMessage"]``)."""
+        return cls.integration("slack", connection_id=connection_id, actions=actions, rules=rules)
 
     @classmethod
-    def clickup(cls, *, actions: Iterable[str]) -> "Toolset":
-        """Enable ClickUp for the given actions."""
-        return cls.integration("clickup", actions=actions)
+    def clickup(cls, *, connection_id: str, actions: Iterable[str]) -> "Toolset":
+        """Enable ClickUp on the chosen connection for the given actions."""
+        return cls.integration("clickup", connection_id=connection_id, actions=actions)
 
     @classmethod
-    def github(cls, *, actions: Iterable[str]) -> "Toolset":
-        """Enable GitHub for the given actions."""
-        return cls.integration("github", actions=actions)
+    def github(cls, *, connection_id: str, actions: Iterable[str]) -> "Toolset":
+        """Enable GitHub on the chosen connection for the given actions."""
+        return cls.integration("github", connection_id=connection_id, actions=actions)
 
     @classmethod
-    def jira(cls, *, actions: Iterable[str]) -> "Toolset":
-        """Enable Jira for the given actions."""
-        return cls.integration("jira", actions=actions)
+    def jira(cls, *, connection_id: str, actions: Iterable[str]) -> "Toolset":
+        """Enable Jira on the chosen connection for the given actions."""
+        return cls.integration("jira", connection_id=connection_id, actions=actions)
 
     @classmethod
-    def confluence(cls, *, actions: Iterable[str]) -> "Toolset":
-        """Enable Confluence for the given actions."""
-        return cls.integration("confluence", actions=actions)
+    def confluence(cls, *, connection_id: str, actions: Iterable[str]) -> "Toolset":
+        """Enable Confluence on the chosen connection for the given actions."""
+        return cls.integration("confluence", connection_id=connection_id, actions=actions)
 
     @classmethod
-    def zendesk(cls, *, actions: Iterable[str]) -> "Toolset":
-        """Enable Zendesk for the given actions."""
-        return cls.integration("zendesk", actions=actions)
+    def zendesk(cls, *, connection_id: str, actions: Iterable[str]) -> "Toolset":
+        """Enable Zendesk on the chosen connection for the given actions."""
+        return cls.integration("zendesk", connection_id=connection_id, actions=actions)
 
     @classmethod
-    def notion(cls, *, actions: Iterable[str]) -> "Toolset":
-        """Enable Notion for the given actions."""
-        return cls.integration("notion", actions=actions)
+    def notion(cls, *, connection_id: str, actions: Iterable[str]) -> "Toolset":
+        """Enable Notion on the chosen connection for the given actions."""
+        return cls.integration("notion", connection_id=connection_id, actions=actions)
 
     @classmethod
-    def salesforce(cls, *, actions: Iterable[str]) -> "Toolset":
-        """Enable Salesforce for the given actions."""
-        return cls.integration("salesforce", actions=actions)
+    def salesforce(cls, *, connection_id: str, actions: Iterable[str]) -> "Toolset":
+        """Enable Salesforce on the chosen connection for the given actions."""
+        return cls.integration("salesforce", connection_id=connection_id, actions=actions)
 
     @classmethod
-    def teams(cls, *, actions: Iterable[str]) -> "Toolset":
-        """Enable Microsoft Teams for the given actions."""
-        return cls.integration("teams", actions=actions)
+    def teams(cls, *, connection_id: str, actions: Iterable[str]) -> "Toolset":
+        """Enable Microsoft Teams on the chosen connection for the given actions."""
+        return cls.integration("teams", connection_id=connection_id, actions=actions)
 
     @classmethod
-    def google_drive(cls, *, actions: Iterable[str]) -> "Toolset":
-        """Enable Google Drive for the given actions."""
-        return cls.integration("google_drive", actions=actions)
+    def google_drive(cls, *, connection_id: str, actions: Iterable[str]) -> "Toolset":
+        """Enable Google Drive on the chosen connection for the given actions."""
+        return cls.integration("google_drive", connection_id=connection_id, actions=actions)
 
     @classmethod
-    def power_bi(cls, *, actions: Iterable[str]) -> "Toolset":
-        """Enable Power BI for the given actions."""
-        return cls.integration("power_bi", actions=actions)
-
-    # ---- built-in tools ----
+    def power_bi(cls, *, connection_id: str, actions: Iterable[str]) -> "Toolset":
+        """Enable Power BI on the chosen connection for the given actions."""
+        return cls.integration("power_bi", connection_id=connection_id, actions=actions)
 
     @classmethod
-    def sql_runner(cls, selectors: Iterable[str]) -> "Toolset":
-        """Allow the skill to run SQL against the given data selectors.
+    def sql(cls, platform: str, *, connection_id: str) -> "Toolset":
+        """Grant SQL queries on the chosen platform connection.
 
         Args:
-            selectors: Selector strings that grant read access to a connection
-                       and schema, e.g. ``"SELECT:conn-123:analytics:public"``.
+            platform: SQL platform key: ``bigquery``, ``clickhouse``, ``databricks``,
+                ``postgresql``, ``presto``, ``redshift``, ``snowflake``, ``starburst``, or ``trino``.
+            connection_id: Modus connection UUID. The scope's selections control data access.
 
-        Raises:
-            ValueError: If ``selectors`` is empty.
+        Examples:
+            Toolset.sql("snowflake", connection_id="11111111-1111-4111-8111-111111111111")
         """
-        selector_list = cls._require_str_list(selectors, field="sql_runner selectors")
-        return cls(**{"sql_runner": selector_list})
+        return cls.integration(platform, connection_id=connection_id, actions=["query"])
+
+    # ---- built-in tools ----
 
     @classmethod
     def memory(cls, enabled: bool = True) -> "Toolset":

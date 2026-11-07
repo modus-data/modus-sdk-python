@@ -321,10 +321,10 @@
     },
     "McpToolExposureVersion": {
       "enum": [
-        1.0
+        1
       ],
       "title": "McpToolExposureVersion",
-      "type": "number"
+      "type": "integer"
     },
     "ModelSettingsDto": {
       "properties": {
@@ -343,8 +343,8 @@
         "contextWindow": {
           "anyOf": [
             {
-              "minimum": 1.0,
-              "type": "number"
+              "minimum": 1,
+              "type": "integer"
             },
             {
               "type": "null"
@@ -641,11 +641,17 @@
         },
         "toolset": {
           "additionalProperties": true,
-          "description": "Builder-managed toolset descriptor. Map of `{toolName: config}`; opaque to the API surface.",
+          "description": "Map of tool key to configuration. Integrations use `<platform>.byConnection[connectionUuid] = { actions, rules? }`; SQL platforms grant `query`. General tools and MCP configurations keep their own formats.",
           "examples": [
             {
-              "calculator": {
-                "enabled": true
+              "postgresql": {
+                "byConnection": {
+                  "11111111-1111-4111-8111-111111111111": {
+                    "actions": [
+                      "query"
+                    ]
+                  }
+                }
               },
               "web_search": {
                 "enabled": true
@@ -748,7 +754,7 @@
         42
       ],
       "title": "Id",
-      "type": "number"
+      "type": "integer"
     },
     "slug": {
       "description": "URL-safe slug used in human-readable links. Unique per org.",
@@ -781,6 +787,22 @@
         "Predicts churn risk for a customer given a 90-day usage window."
       ],
       "title": "Description"
+    },
+    "generatedDescription": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Summary written for this scope so a caller can choose it. Null when none has been written.",
+      "examples": [
+        "Answers questions about warehouse revenue and churn."
+      ],
+      "title": "Generateddescription"
     },
     "status": {
       "$ref": "#/$defs/ResourceLifecycleStatus",
@@ -926,6 +948,22 @@
       "examples": [
         "needs_group_manage"
       ]
+    },
+    "validateOnly": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Present and `true` only on an `applySelectionOps` preview (`validateOnly: true`): the `variation` below is the selection that **would** be saved, and nothing was written. Absent on every committed response. Without it a preview is indistinguishable from a commit -- the surrounding fields (`updatedAt`, `hasUnpublishedChanges`, `activeVariationId`, `draftVariationId`) all keep their stored values -- so a caller that stops here silently never saves the selection.",
+      "examples": [
+        true
+      ],
+      "title": "Validateonly"
     }
   },
   "required": [

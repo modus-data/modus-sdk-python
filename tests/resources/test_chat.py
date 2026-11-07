@@ -82,15 +82,6 @@ def test_buffered_era_thread_id_continues(client: Modus) -> None:
 
 
 @respx.mock
-def test_chat_with_id_from_list_response(client: Modus) -> None:
-    route = respx.post(f"{AGENT}/agent/v1/scopes/42/runs").mock(return_value=sse(ANSWER_FRAMES))
-
-    client.scopes.chat(42.0, "Hi", model=MODEL).result()  # type: ignore[arg-type]
-
-    assert route.called
-
-
-@respx.mock
 def test_approval_and_resume(client: Modus) -> None:
     respx.post(f"{AGENT}/agent/v1/modus/runs").mock(
         return_value=sse(
@@ -112,6 +103,43 @@ def test_approval_and_resume(client: Modus) -> None:
     assert sent(resume) == {"sessionId": "thread-1", "decision": "approve", "streamProtocolVersion": 2}
     assert "message" not in sent(resume)
     assert done.content == "Updated."
+
+
+SCOPE_PAUSED = [
+    {"type": "approval_required", "toolId": "tool-9", "toolName": "post_comment", "args": {"project_id": 0}},
+    {"type": "done", "runId": "run-1", "threadId": "agent_1553_t1", "content": ""},
+]
+
+
+@respx.mock
+def test_scope_chat_resumes_on_the_run_route_with_its_scope_thread(client: Modus) -> None:
+    respx.post(f"{AGENT}/agent/v1/scopes/1553/runs").mock(return_value=sse(SCOPE_PAUSED))
+    resume = respx.post(f"{AGENT}/agent/v1/runs/run-1/resume").mock(
+        return_value=sse([{"type": "done", "runId": "run-2", "threadId": "agent_1553_t1", "content": "Denied."}])
+    )
+
+    chat = client.scopes.chat(1553, "Post the test comment.", model=MODEL)
+    assert chat.result().approval is not None
+    done = chat.resume(decision="deny").result()
+
+    assert sent(resume) == {"sessionId": "agent_1553_t1", "decision": "deny", "streamProtocolVersion": 2}
+    assert done.content == "Denied."
+
+
+@respx.mock
+async def test_async_scope_chat_resumes_on_the_run_route_with_its_scope_thread() -> None:
+    respx.post(f"{AGENT}/agent/v1/scopes/1553/runs").mock(return_value=sse(SCOPE_PAUSED))
+    resume = respx.post(f"{AGENT}/agent/v1/runs/run-1/resume").mock(
+        return_value=sse([{"type": "done", "runId": "run-2", "threadId": "agent_1553_t1", "content": "Approved."}])
+    )
+    client = AsyncModus(api_key="modus_test_key_chat", base_url=API, max_retries=0)
+
+    chat = client.scopes.chat(1553, "Post the test comment.", model=MODEL)
+    await chat
+    done = await chat.resume(decision="approve")
+
+    assert sent(resume) == {"sessionId": "agent_1553_t1", "decision": "approve", "streamProtocolVersion": 2}
+    assert done.content == "Approved."
 
 
 @respx.mock

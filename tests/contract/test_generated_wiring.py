@@ -160,6 +160,28 @@ _SAMPLES: Dict[str, Dict[str, Any]] = {
     'ScopeInterface': {'id': 'if-1', 'scopeId': 1, 'type': 'slack', 'name': 'Slack', 'config': {'accessMode': 'all'}, 'createdAt': '2026-01-01T00:00:00Z', 'updatedAt': '2026-01-01T00:00:00Z'},
     'Supervision': {'supervisorAgentId': 1, 'subordinateAgentIds': [2]},
     'SetSupervisionRequest': {'subordinateAgentIds': [2]},
+    'McpExposureCatalogRequest': {
+        'toolset': {'web_search': ['tavily_search']},
+        'connectionSet': [{'connection_id': 'conn-1', 'path': ['public']}],
+        'mcpToolExposure': {'version': 1, 'mode': 'subset', 'allowedIntegrationKeys': ['toolset:web_search']},
+    },
+    'McpExposureCatalog': {
+        'entries': [{
+            'family': 'tool',
+            'parentKey': 'toolset:web_search',
+            'toolsetKey': 'web_search',
+            'label': 'Web Search',
+            'children': [{
+                'key': 'toolset_action:web_search::tavily_search',
+                'actionKey': 'tavily_search',
+                'label': 'Web Search',
+            }],
+        }],
+        'selectedKeys': ['toolset:web_search'],
+        'unknownKeys': [],
+        'discoveryAllowed': True,
+        'hiddenSelectedCount': 0,
+    },
     'EvaluationConfig': {'enabled': False, 'notifications': {'recipients': [], 'channels': {'email': False}}},
     'UpdateEvaluationConfig': {'enabled': True},
     'TriggerEvaluationRunResponse': {'runId': 'run-1'},
@@ -316,7 +338,7 @@ def test_every_query_scalar_the_emitter_accepts_has_a_wire_sample() -> None:
 
 def test_a_query_argument_is_sampled_from_the_spec_scalar() -> None:
     assert _query_sample("ConnectionsController_list", "type") == "q"
-    assert _query_sample("ConnectionsController_list", "pageSize") == 1.5
+    assert _query_sample("ConnectionsController_list", "pageSize") == 7
     # A $ref parameter schema resolves before the scalar is read.
     assert _query_sample("DashboardsController_list", "view") == "q"
 

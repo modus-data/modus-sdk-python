@@ -55,7 +55,7 @@ class WorkflowsResource(_WorkflowsResourceBase):
     """
     Read and run access to Modus workflows.
 
-    - ``list`` / ``get`` — browse workflows (``view="active"`` or ``"draft"``)
+    - ``list`` / ``get`` — browse workflows (``view="active"``, ``"draft"``, or ``"published"``)
     - ``chat`` — stream a chat turn against one workflow
     - ``runs`` — start runs, follow history, cancel / resume
 
@@ -92,7 +92,7 @@ class WorkflowsResource(_WorkflowsResourceBase):
 
         Args:
             workflow_id: Numeric workflow id.
-            view: Variation view — ``"active"`` (deployed) or ``"draft"``.
+            view: Variation view — ``"active"`` (deployed), ``"draft"``, or ``"published"``.
 
         Returns:
             Workflow record (``id``, ``name``, ``status``, …).
@@ -194,7 +194,7 @@ class AsyncWorkflowsResource(_AsyncWorkflowsResourceBase):
         Retrieve a workflow by its numeric id.
 
         Args:
-            view: Variation view — ``"active"`` (deployed) or ``"draft"``.
+            view: Variation view — ``"active"`` (deployed), ``"draft"``, or ``"published"``.
 
         Raises:
             NotFoundError: if no workflow with this id exists.

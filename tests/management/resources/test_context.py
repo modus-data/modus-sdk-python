@@ -448,3 +448,26 @@ def test_context_update_saved_query_merges_content(client):
     assert body["content"]["query"] == "SELECT 1"
     assert body["content"]["connectionId"] == "conn-002"
     assert body["content"]["queryId"] == SAVED_QUERY_CONTENT["queryId"]
+
+
+@respx.mock
+def test_custom_context_items_create_accepts_the_request_model(client):
+    from modus.types.context import CreateCustomContextItemDto, CustomContextItemKind
+
+    route = respx.post(f"{BASE}/api/v1/context/custom-items").mock(
+        return_value=httpx.Response(
+            201,
+            json={
+                "contextItemId": "custom-1",
+                "contextType": "custom_source_metadata",
+                "dataPath": ["custom", "billing-db"],
+                "title": None,
+            },
+        )
+    )
+    item = CreateCustomContextItemDto(kind=CustomContextItemKind.source, source_id="billing-db")
+
+    result = client.context.custom_items.create(item)
+
+    assert result["uid"] == "custom-1"
+    assert json.loads(route.calls[0].request.read()) == {"kind": "source", "sourceId": "billing-db"}

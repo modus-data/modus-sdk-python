@@ -1,8 +1,9 @@
 """Execute workflow actions through the agents resource."""
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, Dict, Iterator, Mapping, Optional
+from typing import Any, AsyncIterator, Dict, Iterator, Mapping, Union
 
+from ..._agent_run_request import request_dict
 from ..._config import ModusConfig
 from ..._http import AsyncHttpClient, HttpClient
 from ..._openapi_invoke import (
@@ -14,15 +15,12 @@ from ..._openapi_invoke import (
 from ..._retry import async_with_retry, with_retry
 from ..._streaming import parse_sse_stream, parse_sse_stream_async
 from ..._validation import validate_id
+from ...types.agent_runs import CancelRunRequest, WorkflowActionRequest
 from ...types.runs import RunEvent
 
 
-def _request_body(body: Mapping[str, Any]) -> Dict[str, Any]:
-    return dict(body)
-
-
-def _optional_body(body: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
-    return dict(body or {})
+def _optional_body(body: Union[CancelRunRequest, Mapping[str, Any], None]) -> Dict[str, Any]:
+    return request_dict(body) if body is not None else {}
 
 
 def _parse_events(lines: Iterator[str]) -> Iterator[RunEvent]:
@@ -39,7 +37,7 @@ class AgentWorkflowActionsResource:
         self._http = http
         self._config = config
 
-    def execute(self, body: Mapping[str, Any]) -> Iterator[RunEvent]:
+    def execute(self, body: Union[WorkflowActionRequest, Mapping[str, Any]]) -> Iterator[RunEvent]:
         """
         Execute a workflow action and stream its events.
 
@@ -51,11 +49,11 @@ class AgentWorkflowActionsResource:
             invoke_operation_stream(
                 self._http,
                 "WorkflowActionsController_execute",
-                json_body=_request_body(body),
+                json_body=request_dict(body),
             )
         )
 
-    def cancel(self, run_id: str, body: Optional[Mapping[str, Any]] = None) -> None:
+    def cancel(self, run_id: str, body: Union[CancelRunRequest, Mapping[str, Any], None] = None) -> None:
         """
         Cancel a workflow action run.
 
@@ -80,7 +78,7 @@ class AsyncAgentWorkflowActionsResource:
         self._http = http
         self._config = config
 
-    async def execute(self, body: Mapping[str, Any]) -> AsyncIterator[RunEvent]:
+    async def execute(self, body: Union[WorkflowActionRequest, Mapping[str, Any]]) -> AsyncIterator[RunEvent]:
         """
         Execute a workflow action and stream its events.
 
@@ -92,7 +90,7 @@ class AsyncAgentWorkflowActionsResource:
             invoke_operation_stream_async(
                 self._http,
                 "WorkflowActionsController_execute",
-                json_body=_request_body(body),
+                json_body=request_dict(body),
             )
         ):
             yield event
@@ -100,7 +98,7 @@ class AsyncAgentWorkflowActionsResource:
     async def cancel(
         self,
         run_id: str,
-        body: Optional[Mapping[str, Any]] = None,
+        body: Union[CancelRunRequest, Mapping[str, Any], None] = None,
     ) -> None:
         """
         Cancel a workflow action run.

@@ -293,6 +293,59 @@ class ScopesResource(_ScopesResourceBase):
         )
         return _parse_deploy_scope(raw)
 
+    def apply_selection_ops(
+        self,
+        scope_id: Union[int, str],
+        ops: List[Dict[str, Any]],
+        *,
+        toolset: Optional[Dict[str, Any]] = None,
+        validate_only: bool = False,
+    ) -> Skill:
+        """Apply selection changes to a scope.
+
+        Preview with ``validate_only=True``: the same checks run and the scope that
+        would be saved is returned, and nothing is written. ``selectRoot``,
+        ``deselectRoot``, and ``setRootDeepRules`` are deprecated; send
+        ``setConnectionPreferences``.
+
+        Args:
+            scope_id: Scope to edit.
+            ops: Selection changes, applied in order.
+            toolset: The scope toolset after the edit, when the edit changed it.
+            validate_only: When true, check and return the planned scope without writing.
+
+        Returns:
+            The scope, or the scope that would be saved when ``validate_only`` is true.
+
+        Example:
+            >>> scope = mgmt.scopes.apply_selection_ops(
+            ...     42,
+            ...     [{
+            ...         "op": "setConnectionPreferences",
+            ...         "connectionId": "11111111-1111-4111-8111-111111111111",
+            ...         "preferences": {"schemaVersion": 2, "mode": "all", "include": [], "exclude": []},
+            ...     }],
+            ...     validate_only=True,
+            ... )
+            >>> scope.id
+        """
+        validate_id(scope_id, name="scope_id")
+        body: Dict[str, Any] = {"ops": ops}
+        if toolset is not None:
+            body["toolset"] = toolset
+        if validate_only:
+            body["validateOnly"] = True
+        raw = with_retry(
+            lambda: invoke_operation(
+                self._http,
+                "ScopesController_applySelectionOps",
+                path_params={"id": scope_id},
+                json_body=body,
+            ),
+            self._config.max_retries,
+        )
+        return _parse_scope(raw)
+
     def request_ownership_transfer(
         self, scope_id: Union[int, str], *, new_owner_user_id: str,
     ) -> Skill:
@@ -503,6 +556,44 @@ class AsyncScopesResource(_AsyncScopesResourceBase):
             retry_not_found_on_deploy=True,
         )
         return _parse_deploy_scope(raw)
+
+    async def apply_selection_ops(
+        self,
+        scope_id: Union[int, str],
+        ops: List[Dict[str, Any]],
+        *,
+        toolset: Optional[Dict[str, Any]] = None,
+        validate_only: bool = False,
+    ) -> Skill:
+        """Apply selection changes to a scope. See the sync ``apply_selection_ops`` for argument details.
+
+        Example:
+            >>> scope = await mgmt.scopes.apply_selection_ops(
+            ...     42,
+            ...     [{
+            ...         "op": "setConnectionPreferences",
+            ...         "connectionId": "11111111-1111-4111-8111-111111111111",
+            ...         "preferences": {"schemaVersion": 2, "mode": "all", "include": [], "exclude": []},
+            ...     }],
+            ... )
+            >>> scope.id
+        """
+        validate_id(scope_id, name="scope_id")
+        body: Dict[str, Any] = {"ops": ops}
+        if toolset is not None:
+            body["toolset"] = toolset
+        if validate_only:
+            body["validateOnly"] = True
+        raw = await async_with_retry(
+            lambda: invoke_operation_async(
+                self._http,
+                "ScopesController_applySelectionOps",
+                path_params={"id": scope_id},
+                json_body=body,
+            ),
+            self._config.max_retries,
+        )
+        return _parse_scope(raw)
 
     async def request_ownership_transfer(
         self, scope_id: Union[int, str], *, new_owner_user_id: str,

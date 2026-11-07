@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from .._generated.models import (
     AccessConfigDto,
+    McpExposureCatalogEntryDto,
+    McpExposureCatalogRequestDto,
+    McpExposureCatalogResponseDto,
     ResourceLifecycleStatus,
     ScopeDto,
     SkillVariationDto,
@@ -17,6 +20,9 @@ Skill = ScopeDto
 
 __all__ = [
     "AccessConfigDto",
+    "McpExposureCatalogEntryDto",
+    "McpExposureCatalogRequestDto",
+    "McpExposureCatalogResponseDto",
     "Scope",
     "ScopeDto",
     "ScopeStatus",
