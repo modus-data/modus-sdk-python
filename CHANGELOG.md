@@ -9,6 +9,8 @@ release, including pre-1.0 (`0.x`) releases.
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-11-08
+
 ### Added
 
 - **`context_suggestions` conversation source.** Filter conversation lists to discussions started from context suggestions.
