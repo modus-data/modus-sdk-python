@@ -2512,6 +2512,7 @@ class SupplementalContextSource(str, Enum):
     __str__ = str.__str__
     slack = 'slack'
     teams = 'teams'
+    mcp = 'mcp'
 
 
 class UserContextDto(BaseModel):
@@ -3983,12 +3984,12 @@ class SupplementalContextDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     text: str = Field(
         ...,
-        description='Background context (e.g. Slack/Teams thread + channel history) for a conversation with no saved history yet.',
+        description="Background context in full (e.g. Slack/Teams thread + channel history, or an MCP client's note on its conversation), not only what is new. Stored with the turn until the conversation has stored one; after that, `followUpText` is stored instead when it is sent.",
     )
     follow_up_text: str | None = Field(
         None,
         alias='followUpText',
-        description='Only the background that is new since the previous turn, used once the conversation has saved history. Empty when nothing is new.',
+        description='Only the background that is new since the previous turn, stored instead of `text` once the conversation has stored a background. Empty when nothing is new.',
     )
     source: SupplementalContextSource = Field(
         ..., description='Producer that supplied the supplemental context.'
