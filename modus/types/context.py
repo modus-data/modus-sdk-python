@@ -21,12 +21,16 @@ from .._generated.models import (
     DeleteContextItemResponseDto,
     LookupContextItemRowDto,
     MoveContextItemResponseDto,
+    QueryContextItemsRequestDto,
+    QueryContextItemsResponseDto,
     UpdateCustomContextItemDto,
 )
 
 ContextItem = ContextItemDto
 ContextItemAncestor = ContextItemAncestorDto
 ContextItemLookupRow = LookupContextItemRowDto
+ContextItemsQuery = QueryContextItemsRequestDto
+ContextItemsQueryResult = QueryContextItemsResponseDto
 ContextItemDeletion = DeleteContextItemResponseDto
 ContextItemMove = MoveContextItemResponseDto
 ContextItemAccess = ContextItemAccessDto
@@ -78,6 +82,8 @@ __all__ = [
     "ContextItemMove",
     "ContextItemDto",
     "ContextItemLookupRow",
+    "ContextItemsQuery",
+    "ContextItemsQueryResult",
     "ContextType",
     "CreateCustomContextItemDto",
     "CreateCustomContextItemRelationDto",

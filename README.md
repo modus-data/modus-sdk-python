@@ -159,6 +159,15 @@ Async: `await client.modus.chat(...)` returns the result; `async with` / `async 
 ```python
 for item in client.context.items.list().auto_paging_iter():
     print(item.uid, modus.context_item_label(item))
+
+# One read-only SQL statement over the items you can read (at most 1,000 rows; `truncated` says when cut).
+# Off by default for an organization; ask Modus to enable it.
+from modus.types.context import ContextItemsQuery
+
+result = client.context.items.query(
+    ContextItemsQuery(sql="SELECT context_type, count(*) AS items FROM context_items GROUP BY context_type ORDER BY items DESC")
+)
+print(result.rows, result.truncated)
 ```
 
 ### Connections

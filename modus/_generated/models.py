@@ -1589,6 +1589,41 @@ class PublishDashboardDto(BaseModel):
     )
 
 
+class QueryContextItemsRequestDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    sql: str = Field(
+        ...,
+        description='One read-only SQL statement (SELECT, WITH, UNION or VALUES) over the `context_items` table, whose columns are `uid`, `context_type`, `content`, `description`, `user_feedback`, `topics`, `connection_id`, `selection_id`, `data_path`, `created_at` and `updated_at`. Only the items you can read are visible to it.',
+        examples=['SELECT context_type, count(*) AS items FROM context_items GROUP BY context_type ORDER BY items DESC'],
+        max_length=20000,
+        min_length=1,
+    )
+    max_rows: int | None = Field(
+        None,
+        alias='maxRows',
+        description='The most rows to return, 1,000 when omitted. A query with more returns this many and sets `truncated`.',
+        ge=1,
+        le=1000,
+    )
+
+
+class QueryContextItemsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    rows: list[dict[str, Any]] = Field(
+        ...,
+        description='Result rows, one object per row keyed by column name.',
+        examples=[[{'context_type': 'table_metadata', 'items': '412'}]],
+    )
+    row_count: int = Field(
+        ..., alias='rowCount', description='Number of rows returned.', examples=[1]
+    )
+    truncated: bool = Field(
+        ...,
+        description='True when rows were left out: the query had more than `maxRows`, or the rows passed 6 MB of JSON.',
+        examples=[False],
+    )
+
+
 class ReasoningEffort(str, Enum):
     __str__ = str.__str__
     none = 'none'
