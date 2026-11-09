@@ -83,6 +83,7 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "WorkflowActionsController_execute": _model_wire_fields(WorkflowActionDto),
     "WorkflowActionsController_cancel": _model_wire_fields(CancelRunDto),
     "ContextItemsController_lookup": {"contextType", "dataPath", "contentProjection"},
+    "ContextItemsQueryController_query": {"sql", "maxRows"},
     "ContextCreatorsController_createNote": {"title", "content"},
     "ContextCreatorsController_createSavedQuery": {
         "name",

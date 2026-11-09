@@ -207,6 +207,8 @@ _SAMPLES: Dict[str, Dict[str, Any]] = {
      'manageDenial': None},
     "Memory": {"id": "mem_01", "memory": "User prefers bullet points."},
     "MemorySearchRequest": {"query": "revenue preferences"},
+    "ContextItemsQuery": {"sql": "SELECT count(*) AS n FROM context_items"},
+    "ContextItemsQueryResult": {"rows": [{"n": "3"}], "rowCount": 1, "truncated": False},
     "MemorySearchResult": {"memories": []},
     "MemoryUpdate": {"memory": "Updated text."},
     "UsageUsersReport": {"users": []},

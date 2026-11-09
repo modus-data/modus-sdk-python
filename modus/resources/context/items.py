@@ -4,14 +4,16 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Sequence
 
-from ..._config import ModusConfig
 from ..._exceptions import NotFoundError
 from ..._generated.models import (
     ContentProjectionDto,
     LookupContextItemDto,
     LookupContextItemResponseDto,
 )
-from ..._http import AsyncHttpClient, HttpClient
+from ..._generated.resources.consumption.context.items import (
+    _AsyncContextItemsResourceBase,
+    _ContextItemsResourceBase,
+)
 from ..._openapi_invoke import invoke_operation, invoke_operation_async
 from ..._pagination import (
     aip_list_params,
@@ -58,7 +60,7 @@ def _parse_lookup_response(raw: Dict[str, Any]) -> Optional[ContextItemLookupRow
     return parsed.item
 
 
-class ContextItemsResource:
+class ContextItemsResource(_ContextItemsResourceBase):
     """
     Read the org knowledge base (notes, metrics, saved queries, integration items).
 
@@ -72,10 +74,6 @@ class ContextItemsResource:
         >>> for item in client.context.items.list(page_size=25).auto_paging_iter():
         ...     print(item.context_type, modus.context_item_label(item), item.uid)
     """
-
-    def __init__(self, http: HttpClient, config: ModusConfig) -> None:
-        self._http = http
-        self._config = config
 
     def list(
         self,
@@ -362,11 +360,7 @@ class ContextItemsResource:
         )
 
 
-class AsyncContextItemsResource:
-    def __init__(self, http: AsyncHttpClient, config: ModusConfig) -> None:
-        self._http = http
-        self._config = config
-
+class AsyncContextItemsResource(_AsyncContextItemsResourceBase):
     async def list(
         self,
         *,

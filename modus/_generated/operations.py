@@ -250,6 +250,17 @@ OPERATIONS: dict[str, OperationSpec] = {
         "response_schema": None,
         "idempotent": False,
     },
+    "ContextItemsQueryController_query": {
+        "method": "POST",
+        "path": '/api/v1/context/items/query',
+        "service": 'modus-api',
+        "server_url": 'https://api.getmodus.com',
+        "path_params": (),
+        "query_params": (),
+        "request_schema": 'QueryContextItemsRequestDto',
+        "response_schema": 'QueryContextItemsResponseDto',
+        "idempotent": True,
+    },
     "CustomContextItemsController_batchCreate": {
         "method": "POST",
         "path": '/api/v1/context/custom-items/batch',
