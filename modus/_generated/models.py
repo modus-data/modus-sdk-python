@@ -382,14 +382,8 @@ class ConnectionSetItemDto(BaseModel):
     connection_id: str = Field(
         ..., description='Id of the connection.', examples=['11111111-1111-4111-8111-111111111111']
     )
-    path: list[str] | None = Field(
-        None,
-        deprecated=True,
-        description='Deprecated. Use `preferences`. Path of one selected unit; an empty array selects the whole connection. Ignored when `preferences` is sent, required otherwise.',
-        examples=[[]],
-    )
-    preferences: dict[str, Any] | None = Field(
-        None,
+    preferences: dict[str, Any] = Field(
+        ...,
         description='What the scope reads under this connection. `mode` `all` reads the whole connection; `manual` reads only the units its `include` rules select. `exclude` rules remove units in either mode. Each rule\'s `path` lists id steps `{type, by: "id", id}` from the connection down.',
         examples=[{'mode': 'manual', 'include': [{'path': [{'type': 'database', 'by': 'id', 'id': 'analytics'}]}], 'exclude': [{'path': [{'type': 'database', 'by': 'id', 'id': 'analytics'}, {'type': 'schema', 'by': 'id', 'id': 'staging'}]}]}],
     )
@@ -1704,10 +1698,8 @@ class SelectionModelRootDto(BaseModel):
 
 class Op(str, Enum):
     __str__ = str.__str__
-    select_root = 'selectRoot'
-    deselect_root = 'deselectRoot'
-    set_root_deep_rules = 'setRootDeepRules'
     set_connection_preferences = 'setConnectionPreferences'
+    remove_connection = 'removeConnection'
     pin_item = 'pinItem'
     unpin_item = 'unpinItem'
     clear_pinned_items = 'clearPinnedItems'
@@ -1718,23 +1710,12 @@ class SelectionOpDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     op: Op = Field(
         ...,
-        description='Which selection edit this op makes. selectRoot, deselectRoot, and setRootDeepRules are deprecated and will be removed; use setConnectionPreferences.',
+        description="Which selection edit this op makes. setConnectionPreferences sets a connection's whole data selection; removeConnection removes the connection from the scope.",
     )
     connection_id: str | None = Field(
         None,
         alias='connectionId',
-        description='Connection of the data-asset root, or whose preferences are set.',
-    )
-    path: list[str] | None = Field(
-        None, description='Path of the data-asset root within its connection.'
-    )
-    includes: list[list[str]] | None = Field(
-        None,
-        description='Fully-selected subtree paths strictly beneath the root. Each path is an array of strings.',
-    )
-    excludes: list[list[str]] | None = Field(
-        None,
-        description='Unselected subtree paths beneath the root. Each path is an array of strings.',
+        description='Connection whose preferences are set, or which is removed.',
     )
     preferences: dict[str, Any] | None = Field(
         None, description='The connection’s whole data selection, as workspace access preferences.'
@@ -4311,7 +4292,7 @@ class CreateSkillDto(BaseModel):
     connection_set: list[ConnectionSetItemDto] | None = Field(
         None,
         alias='connectionSet',
-        description='Connections this scope can use. Each entry names a connection and what the scope reads under it in `preferences`; `path` is deprecated.',
+        description='Connections this scope can use. Each entry names a connection and what the scope reads under it in `preferences`; an entry without `preferences`, or with `path`, is refused with 400 `legacy_entry`.',
         examples=[[{'connection_id': '11111111-1111-4111-8111-111111111111', 'preferences': {'mode': 'manual', 'include': [{'path': [{'type': 'database', 'by': 'id', 'id': 'analytics'}]}], 'exclude': []}}]],
     )
     context_selections: list[dict[str, Any]] | None = Field(
@@ -4610,7 +4591,7 @@ class UpdateSkillDto(BaseModel):
     connection_set: list[ConnectionSetItemDto] | None = Field(
         None,
         alias='connectionSet',
-        description='Replacement connection list. Each entry names a connection and what the scope reads under it in `preferences`; `path` is deprecated. `null` clears it.',
+        description='Replacement connection list. Each entry names a connection and what the scope reads under it in `preferences`; an entry without `preferences`, or with `path`, is refused with 400 `legacy_entry`. `null` clears it.',
         examples=[[{'connection_id': '11111111-1111-4111-8111-111111111111', 'preferences': {'mode': 'manual', 'include': [{'path': [{'type': 'database', 'by': 'id', 'id': 'analytics'}]}], 'exclude': []}}]],
     )
     context_selections: list[dict[str, Any]] | None = Field(

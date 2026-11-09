@@ -16,7 +16,7 @@ release, including pre-1.0 (`0.x`) releases.
 - **`generated_description` on a scope.** Scope reads include `generated_description` (`str | None`), the summary written for the scope so a caller can choose it, sync and async. Null when none has been written.
 - **Breaking (pre-1.0): `SupervisionView`.** `mgmt.scopes.supervision(id).get(view=...)` takes `SupervisionView` (`"active"` or `"draft"`), sync and async. `"published"` is not a supervision view. `VariationView` now also allows `"published"`, so a value typed as `VariationView` no longer type-checks there. Migration: type it as `SupervisionView`. Runtime values are unchanged.
 - **`view="published"` on scope and workflow list and get.** Returns the published version you can use, sync and async. A scope or workflow that is only a draft, deleted, or that you can manage but not use is left out. For workflows it is also type workflow only; a task is left out. `active` and `draft` are unchanged.
-- **`mgmt.scopes.apply_selection_ops()`.** Apply selection changes to a scope (sync and async). Pass `validate_only=True` to run the same checks and return the scope that would be saved, without writing. A preview result carries `validate_only=True`; a committed one does not, and every other field keeps its stored value, so a preview still needs a second call to save. Send `setConnectionPreferences`. `selectRoot`, `deselectRoot`, and `setRootDeepRules` are deprecated.
+- **`mgmt.scopes.apply_selection_ops()`.** Apply selection changes to a scope (sync and async). Pass `validate_only=True` to run the same checks and return the scope that would be saved, without writing. A preview result carries `validate_only=True`; a committed one does not, and every other field keeps its stored value, so a preview still needs a second call to save. Set a connection with `setConnectionPreferences` and remove it with `removeConnection`.
 - **`claude-haiku-5.5` model.** Anthropic's Claude Haiku 5.5 is an accepted chat model id.
 - **`gemini-3.8-flash` model.** Google's generally available Gemini 3.8 Flash is an accepted chat
   model id.
@@ -48,6 +48,7 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Removed
 
+- **Breaking (pre-1.0): scope writes send a connection's selection only as `preferences`.** Each `connectionSet` entry `mgmt.scopes.create()` and `mgmt.scopes.update()` (sync and async) send is `{ connection_id, preferences, context_enabled? }`: `path` is removed from the request and `preferences` is required. An entry with `path` or without `preferences` is rejected with 400 and `info.reason` `legacy_entry`. `apply_selection_ops()` no longer takes `selectRoot`, `deselectRoot` or `setRootDeepRules`, nor their `path`, `includes` and `excludes` fields: set a connection with `setConnectionPreferences` and remove it with the new `removeConnection`. Reads still return one row per included path, with `path`, so turn a read into one entry per connection before you write it back.
 - **Breaking MAJOR (CU-z93r0b8wwz): `Toolset.sql_runner` and SQL selectors.** Use
   `Toolset.sql("postgresql", connection_id="<Modus connection UUID>")` (or your SQL platform)
   to grant `query`; scope selections still control data access. Flat integration entries,

@@ -304,9 +304,8 @@ class ScopesResource(_ScopesResourceBase):
         """Apply selection changes to a scope.
 
         Preview with ``validate_only=True``: the same checks run and the scope that
-        would be saved is returned, and nothing is written. ``selectRoot``,
-        ``deselectRoot``, and ``setRootDeepRules`` are deprecated; send
-        ``setConnectionPreferences``.
+        would be saved is returned, and nothing is written. Set a connection with
+        ``setConnectionPreferences`` and remove it with ``removeConnection``.
 
         Args:
             scope_id: Scope to edit.
