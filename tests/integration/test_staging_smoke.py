@@ -66,7 +66,10 @@ def _delete_stale_upload_fixtures(mgmt: ModusManagement) -> int:
         and datetime.fromisoformat(str(item.created_at).replace("Z", "+00:00")) < cutoff
     ]
     for uid in stale:
-        mgmt.context.items.delete(uid)
+        try:
+            mgmt.context.items.delete(uid)
+        except NotFoundError:
+            pass  # another smoke run (the other SDK's publish) deleted it first
     return len(stale)
 
 
