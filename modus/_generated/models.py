@@ -4219,6 +4219,11 @@ class ConversationDto(BaseModel):
         alias='messageWindow',
         description='Present only when a bounded message window was requested and honored.',
     )
+    model: str | None = Field(
+        None,
+        description='Identifier of the model the most recent turn ran on. Null when no turn recorded one. Absent when it could not be read, or on responses that predate the field.',
+        examples=['claude-sonnet-5.5'],
+    )
     created_at: str = Field(
         ...,
         alias='createdAt',
