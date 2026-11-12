@@ -1517,10 +1517,16 @@ class ModusContextResponseDto(BaseModel):
 class MoveContextItemDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     destination_folder_uid: str | None = Field(
-        ...,
+        None,
         alias='destinationFolderUid',
-        description='Stored context-item uid of an existing Files folder, or null to move to the Files root. The destination must already exist. Move does not rename or merge folders.',
+        description='Stored context-item uid of an existing Files folder, or null to move to the Files root. Send this or destinationFolderPath, not both.',
         examples=[None],
+    )
+    destination_folder_path: str | None = Field(
+        None,
+        alias='destinationFolderPath',
+        description='Root-relative destination folder path (for example `reports/2026`). Folders missing on the path are created; existing ones are reused. Send this or destinationFolderUid, not both.',
+        examples=['reports/2026'],
     )
 
 

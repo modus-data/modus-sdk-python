@@ -5,6 +5,7 @@ import json
 import httpx
 import pytest
 import respx
+from modus._exceptions import ValidationError
 from modus.management import ModusManagement
 from modus.management.types.context import (
     ContextItem,
@@ -183,6 +184,22 @@ def test_context_items_move_root_sends_json_null(client):
     assert result.moved_items == 0
     body = json.loads(route.calls[0].request.read())
     assert body == {"destinationFolderUid": None}
+
+
+@respx.mock
+def test_context_items_move_to_path_sends_only_the_path(client):
+    uid = "7a3f9d2c-1111-4000-a000-000000000abc"
+    route = respx.post(f"{BASE}/api/v1/context/items/{uid}/move").mock(
+        return_value=httpx.Response(200, json={"movedItems": 1})
+    )
+    client.context.items.move(uid, destination_folder_path="reports/2026")
+    body = json.loads(route.calls[0].request.read())
+    assert body == {"destinationFolderPath": "reports/2026"}
+
+
+def test_context_items_move_rejects_both_destinations(client):
+    with pytest.raises(ValidationError):
+        client.context.items.move("uid", destination_folder_uid="f", destination_folder_path="reports")
 
 
 @respx.mock
