@@ -43,6 +43,36 @@ def _mgmt() -> ModusManagement:
     return ModusManagement(base_url=_base_url(), timeout=120.0)
 
 
+# The designated smoke org's mined context is its Slack workspace (STAGING-SMOKE.md).
+ORG_WIDE_COMPOSE_QUERY = "sdk staging smoke — which Slack channels does this workspace have"
+
+# The server stores "[SDK Staging Smoke]-files-…" as "_SDK_Staging_Smoke_-files-…".
+_UPLOAD_FIXTURE_PREFIX = "_SDK_Staging_Smoke_-"
+
+
+def _delete_stale_upload_fixtures(mgmt: ModusManagement) -> int:
+    """Delete the context files earlier smoke runs uploaded (Python, TypeScript and CLI).
+
+    Left in place they pile up in the org this smoke composes against (~95 had,
+    a third of its items). Files under an hour old may belong to a run still in
+    flight, so they stay.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=1)
+    # Collect first: deleting mid-iteration shifts later pages and skips items.
+    stale = [
+        item.uid
+        for item in mgmt.context.items.list(context_type="file_upload", page_size=200).auto_paging_iter()
+        if str((item.content or {}).get("fileName") or "").startswith(_UPLOAD_FIXTURE_PREFIX)
+        and datetime.fromisoformat(str(item.created_at).replace("Z", "+00:00")) < cutoff
+    ]
+    for uid in stale:
+        try:
+            mgmt.context.items.delete(uid)
+        except NotFoundError:
+            pass  # another smoke run (the other SDK's publish) deleted it first
+    return len(stale)
+
+
 @pytest.mark.skipif(not _has_live, reason="MODUS_API_KEY not set")
 def test_staging_journey() -> None:
     """Auth → browse → pagination → compose → mgmt reads → note write → errors."""
@@ -109,15 +139,6 @@ def test_staging_journey() -> None:
         assert isinstance(composed.selected_count, (int, float)), f"{label}: selected_count"
         assert composed.session_id, f"{label}: session_id"
 
-        # Deliberately not asserting original_count > 0: whether this org has
-        # mined context is an environment fact, and failing on it would make the
-        # check red for a data reason. Coherence is still assertable — having
-        # found items and rendered nothing is a composer bug in any org.
-        if composed.original_count > 0:
-            assert composed.context, (
-                f"{label}: found {composed.original_count} items but rendered no context"
-            )
-
         # Compose runs on the agent host, which has no 30 s edge limit; the
         # server stops a compose at 90 s with a 504, so a 200 is always under it.
         assert elapsed_s < 95, f"{label}: took {elapsed_s:.1f}s; the server deadline is 90s"
@@ -129,9 +150,15 @@ def test_staging_journey() -> None:
         lambda request: compose_urls.append(str(request.url)) if "/context" in request.url.path else None
     )
 
+    _delete_stale_upload_fixtures(mgmt)
     started = time.monotonic()
-    composed = client.modus.get_context("sdk staging smoke — list relevant tables", limit=3)
+    composed = client.modus.get_context(ORG_WIDE_COMPOSE_QUERY, limit=3)
     assert_composition("org-wide get_context", composed, time.monotonic() - started)
+    # The composer renders nothing, as a success, when it judges every candidate
+    # irrelevant; this query is one the org can answer, so empty context is a failure.
+    assert composed.context, (
+        f"org-wide get_context: rendered no context (original_count={composed.original_count})"
+    )
 
     if compose_scope_id:
         started = time.monotonic()
@@ -211,7 +238,7 @@ def test_staging_context_files_upload(tmp_path) -> None:
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     run_id = uuid.uuid4().hex[:8]
     file_path = Path(tmp_path) / f"[SDK Staging Smoke]-files-{stamp}-{run_id}.txt"
-    file_path.write_text("sdk staging smoke context file — safe to leave\n", encoding="utf-8")
+    file_path.write_text("sdk staging smoke context file — deleted by the next run\n", encoding="utf-8")
 
     uploaded = mgmt.context.files.upload(file_path, wait_until="processing")
     assert uploaded.upload_id
@@ -220,7 +247,6 @@ def test_staging_context_files_upload(tmp_path) -> None:
     got = mgmt.context.files.get(uploaded.upload_id)
     assert got.upload_id == uploaded.upload_id
     assert got.status in ("processing", "ready")
-    # Orphan prefix documented in STAGING-SMOKE.md — no public delete for file uploads.
 
 
 @pytest.mark.skipif(not _has_live, reason="MODUS_API_KEY not set")
