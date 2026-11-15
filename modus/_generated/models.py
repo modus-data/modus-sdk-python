@@ -1099,87 +1099,6 @@ class FileUploadResourceStatus(str, Enum):
     failed = 'failed'
 
 
-class GetAutomationRunResponseDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    id: str = Field(
-        ...,
-        description='Composite run identifier (`workflowId:temporalRunId`).',
-        examples=['wf_42_run_1:11111111-2222-3333-4444-555555555555'],
-    )
-    workflow_id: str = Field(
-        ..., alias='workflowId', description='Workflow run identifier.', examples=['wf_42_run_1']
-    )
-    temporal_run_id: str | None = Field(
-        None,
-        alias='temporalRunId',
-        description='Run identifier; a workflow may have multiple runs after a retry.',
-    )
-    agent_id: int = Field(..., alias='agentId', description='Parent workflow id.', examples=[42])
-    agent_name: str = Field(
-        ...,
-        alias='agentName',
-        description='Snapshot of the workflow name at the time the run was indexed.',
-        examples=['Daily Sales Report'],
-    )
-    agent_type: AgentType = Field(
-        ..., alias='agentType', description='Workflow type.', examples=['task']
-    )
-    status: str = Field(
-        ...,
-        description='Run status (running / awaiting_human / completed / error / cancelled).',
-        examples=['completed'],
-    )
-    status_reason: StatusReason | None = Field(
-        None,
-        alias='statusReason',
-        description='Display-only annotation of a completed run: `approval_timeout` when a human approval timed out, `agent_reported_issue` when a workflow step said it could not finish part of its task.',
-    )
-    trigger_type: str | None = Field(
-        None,
-        alias='triggerType',
-        description='Trigger type for the run (schedule / webhook / api / slack / manual).',
-    )
-    started_at: str | None = Field(None, alias='startedAt', description='ISO-8601 start timestamp.')
-    ended_at: str | None = Field(
-        None, alias='endedAt', description='ISO-8601 end timestamp; absent for in-flight runs.'
-    )
-    duration_ms: int | None = Field(
-        None,
-        alias='durationMs',
-        description='Duration in milliseconds (when end timestamp is known).',
-    )
-    summary: str | None = Field(
-        None, description='Short human-readable summary of the run outcome.'
-    )
-    pending_approval: dict[str, Any] | None = Field(
-        None,
-        alias='pendingApproval',
-        description='Pending approval payload (only present when status is awaiting_human).',
-    )
-    source: AutomationRunSource = Field(
-        ...,
-        description='Where the payload was read from. `live-query` = the run is still in progress; `history` = a completed run.',
-    )
-    task_result: dict[str, Any] | None = Field(
-        None,
-        alias='taskResult',
-        description='Final result of a `task`-typed workflow run. Free-form (depends on the workflow).',
-    )
-    task_error: str | None = Field(
-        None, alias='taskError', description='Error message for a failed `task`-typed workflow run.'
-    )
-    workflow_nodes: list[dict[str, Any]] | None = Field(
-        None,
-        alias='workflowNodes',
-        description='Per-node state for a `workflow`-typed workflow run.',
-    )
-    history_unavailable_reason: (
-        str | None
-    ) = (
-        Field(None, alias='historyUnavailableReason', description='Set when history was unavailable; `source` will be `live-query` in that case.')
-    )
-
-
 class GroupPermissionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     use: bool = Field(
@@ -2314,6 +2233,36 @@ class WorkflowNodeType(str, Enum):
     condition = 'condition'
     agent = 'agent'
     human_approval = 'humanApproval'
+
+
+class WorkflowRunOriginDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    source: str = Field(
+        ...,
+        description='Where the run came from, for example `api`, `schedule` or `email`. `unknown` for a run that did not record it. New values may be added.',
+        examples=['schedule'],
+    )
+    from_: str | None = Field(
+        None,
+        alias='from',
+        description='Email runs: the sender address.',
+        examples=['dana@acme.com'],
+    )
+    from_name: str | None = Field(
+        None,
+        alias='fromName',
+        description='Email runs: the sender display name, when the email has one.',
+        examples=['Dana Cohen'],
+    )
+    subject: str | None = Field(
+        None, description='Email runs: the subject line.', examples=['Invoice 4471 for October']
+    )
+
+
+class WorkflowRunSkippedAttachmentReason(str, Enum):
+    __str__ = str.__str__
+    too_large = 'too_large'
+    too_many = 'too_many'
 
 
 class WorkflowTriggerScheduleResponseDto(BaseModel):
@@ -3887,6 +3836,14 @@ class WorkflowNodeDto(BaseModel):
     )
 
 
+class WorkflowRunSkippedAttachmentDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    reason: WorkflowRunSkippedAttachmentReason = Field(
+        ...,
+        description='Why the file was left out: `too_large` = over the per-file size limit; `too_many` = over the file count limit.',
+    )
+
+
 class WorkflowStructureDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     nodes: list[WorkflowNodeDto] | None = Field(
@@ -4776,6 +4733,25 @@ class WorkflowDto(BaseModel):
     )
 
 
+class WorkflowRunAttachmentDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    file_name: str = Field(
+        ...,
+        alias='fileName',
+        description='File name as it was sent.',
+        examples=['invoice-4471.pdf'],
+    )
+    mime_type: str | None = Field(
+        None, alias='mimeType', description='MIME type, when known.', examples=['application/pdf']
+    )
+    size_bytes: int | None = Field(
+        None, alias='sizeBytes', description='Size in bytes, when known.', examples=[182000]
+    )
+    skipped: WorkflowRunSkippedAttachmentDto | None = Field(
+        None, description='Set when the trigger received the file but did not give it to the run.'
+    )
+
+
 class RunConfigDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     model: str | None = Field(
@@ -4885,6 +4861,92 @@ class CreateDashboardDto(BaseModel):
     access: DashboardAccessDto | None = Field(
         None, description='Who can use and manage the dashboard.'
     )
+
+
+class GetAutomationRunResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(
+        ...,
+        description='Composite run identifier (`workflowId:temporalRunId`).',
+        examples=['wf_42_run_1:11111111-2222-3333-4444-555555555555'],
+    )
+    workflow_id: str = Field(
+        ..., alias='workflowId', description='Workflow run identifier.', examples=['wf_42_run_1']
+    )
+    temporal_run_id: str | None = Field(
+        None,
+        alias='temporalRunId',
+        description='Run identifier; a workflow may have multiple runs after a retry.',
+    )
+    agent_id: int = Field(..., alias='agentId', description='Parent workflow id.', examples=[42])
+    agent_name: str = Field(
+        ...,
+        alias='agentName',
+        description='Snapshot of the workflow name at the time the run was indexed.',
+        examples=['Daily Sales Report'],
+    )
+    agent_type: AgentType = Field(
+        ..., alias='agentType', description='Workflow type.', examples=['task']
+    )
+    status: str = Field(
+        ...,
+        description='Run status (running / awaiting_human / completed / error / cancelled).',
+        examples=['completed'],
+    )
+    status_reason: StatusReason | None = Field(
+        None,
+        alias='statusReason',
+        description='Display-only annotation of a completed run: `approval_timeout` when a human approval timed out, `agent_reported_issue` when a workflow step said it could not finish part of its task.',
+    )
+    trigger_type: str | None = Field(
+        None,
+        alias='triggerType',
+        description='Trigger type for the run (schedule / webhook / api / slack / manual).',
+    )
+    started_at: str | None = Field(None, alias='startedAt', description='ISO-8601 start timestamp.')
+    ended_at: str | None = Field(
+        None, alias='endedAt', description='ISO-8601 end timestamp; absent for in-flight runs.'
+    )
+    duration_ms: int | None = Field(
+        None,
+        alias='durationMs',
+        description='Duration in milliseconds (when end timestamp is known).',
+    )
+    summary: str | None = Field(
+        None, description='Short human-readable summary of the run outcome.'
+    )
+    pending_approval: dict[str, Any] | None = Field(
+        None,
+        alias='pendingApproval',
+        description='Pending approval payload (only present when status is awaiting_human).',
+    )
+    source: AutomationRunSource = Field(
+        ...,
+        description='Where the payload was read from. `live-query` = the run is still in progress; `history` = a completed run.',
+    )
+    task_result: dict[str, Any] | None = Field(
+        None,
+        alias='taskResult',
+        description='Final result of a `task`-typed workflow run. Free-form (depends on the workflow).',
+    )
+    task_error: str | None = Field(
+        None, alias='taskError', description='Error message for a failed `task`-typed workflow run.'
+    )
+    workflow_nodes: list[dict[str, Any]] | None = Field(
+        None,
+        alias='workflowNodes',
+        description='Per-node state for a `workflow`-typed workflow run.',
+    )
+    history_unavailable_reason: (
+        str | None
+    ) = (
+        Field(None, alias='historyUnavailableReason', description='Set when history was unavailable; `source` will be `live-query` in that case.')
+    )
+    attachments: list[WorkflowRunAttachmentDto] | None = Field(
+        None,
+        description='Files the run was started with, and files its trigger left out. Empty when there were none.',
+    )
+    origin: WorkflowRunOriginDto | None = Field(None, description='Where the run came from.')
 
 
 class ListAgentsResponseDto(BaseModel):

@@ -9,6 +9,10 @@ release, including pre-1.0 (`0.x`) releases.
 
 ## [Unreleased]
 
+### Added
+
+- **`attachments` and `origin` on a workflow run.** `workflows.runs.get()` (the run detail) includes `attachments`, the files the run was started with: each a `WorkflowRunAttachmentDto` with `.file_name`, and `.mime_type` and `.size_bytes` when known (a file the trigger left out carries `.skipped.reason`, `too_large` or `too_many`). It also includes `origin`, a `WorkflowRunOriginDto` saying where the run came from (`.source`, such as `api` or `schedule`; `unknown` for a run that did not record it). An email-started run will also carry `.from_`, `.from_name` and `.subject` when the email has them. Both fields are `None` on responses from older servers. File contents are not returned.
+
 ### Removed
 
 - **Breaking (pre-1.0): a scope read returns one `connection_set` entry per connection.** Each `variation.connection_set` entry is a `ConnectionSetItemReadDto` with `.connection_id` and `.preferences`: `.path` (one row per included path) and `.context_enabled` are removed, so a connection appears once, with its preferences. `.preferences` is `None` only on the entry of a deleted connection, whose `connection_id` is a placeholder and which grants nothing. An entry with `.preferences` can be sent back unchanged in `scopes.update()`; drop one whose `.preferences` is `None` first, or the write fails with 400 `legacy_entry`. Migration: read what a connection selects from `.preferences` instead of `.path`.
