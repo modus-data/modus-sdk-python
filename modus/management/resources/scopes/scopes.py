@@ -102,6 +102,7 @@ class ScopesResource(_ScopesResourceBase):
         connection_set: Optional[JsonObjectListInput] = None,
         context_selections: Optional[JsonObjectListInput] = None,
         include_own_learnings: Optional[bool] = None,
+        include_org_learnings: Optional[bool] = None,
         interfaces: Optional[JsonObjectListInput] = None,
         guardrails: Optional[List[str]] = None,
     ) -> Skill:
@@ -122,6 +123,12 @@ class ScopesResource(_ScopesResourceBase):
             context_selections: Optional context selection payload.
             include_own_learnings: Whether the scope reads what is taught while
                 using it. Defaults to ``True`` on the server.
+            include_org_learnings: Whether create adds the org-wide learnings
+                path (``auto_generated:org``) to the scope's selections. Defaults
+                to ``True`` on the server; not applied when ``context_selections``
+                already mention learnings or are context filters without a
+                rule-based query. ``False`` only skips that addition: selections
+                that already name the path still read org-wide learnings.
             interfaces: Optional MCP interface configuration. Only entries with
                 ``type: "mcp"`` are accepted; any other type makes the call raise
                 ``ModusError`` (HTTP 400).
@@ -151,6 +158,7 @@ class ScopesResource(_ScopesResourceBase):
                 context_selections, field_name="context_selections"
             ),
             include_own_learnings=include_own_learnings,
+            include_org_learnings=include_org_learnings,
             interfaces=dump_json_object_list(interfaces, field_name="interfaces"),
             access_config=access_config_body_for_create(guardrails),
         ).model_dump(by_alias=True, exclude_none=True)
@@ -441,6 +449,7 @@ class AsyncScopesResource(_AsyncScopesResourceBase):
         connection_set: Optional[JsonObjectListInput] = None,
         context_selections: Optional[JsonObjectListInput] = None,
         include_own_learnings: Optional[bool] = None,
+        include_org_learnings: Optional[bool] = None,
         interfaces: Optional[JsonObjectListInput] = None,
         guardrails: Optional[List[str]] = None,
     ) -> Skill:
@@ -449,6 +458,12 @@ class AsyncScopesResource(_AsyncScopesResourceBase):
         Args:
             include_own_learnings: Whether the scope reads what is taught while
                 using it. Defaults to ``True`` on the server.
+            include_org_learnings: Whether create adds the org-wide learnings
+                path (``auto_generated:org``) to the scope's selections. Defaults
+                to ``True`` on the server; not applied when ``context_selections``
+                already mention learnings or are context filters without a
+                rule-based query. ``False`` only skips that addition: selections
+                that already name the path still read org-wide learnings.
             guardrails: Runtime guardrail labels (for example ``\"no-pii\"``).
                 When set, the scope is created with these labels under the
                 organisation default sharing rules. Omit (``None``) to create
@@ -464,6 +479,7 @@ class AsyncScopesResource(_AsyncScopesResourceBase):
                 context_selections, field_name="context_selections"
             ),
             include_own_learnings=include_own_learnings,
+            include_org_learnings=include_org_learnings,
             interfaces=dump_json_object_list(interfaces, field_name="interfaces"),
             access_config=access_config_body_for_create(guardrails),
         ).model_dump(by_alias=True, exclude_none=True)

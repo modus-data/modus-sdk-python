@@ -4323,13 +4323,18 @@ class CreateSkillDto(BaseModel):
     context_selections: list[dict[str, Any]] | None = Field(
         None,
         alias='contextSelections',
-        description="Selected context items (sources / docs) the scope may read. The scope's own learnings are added unless `includeOwnLearnings` is false or these selections already mention learnings.",
+        description="Selected context items (sources / docs) the scope may read. The scope's own learnings and the org-wide learnings are added, each unless its include flag is false, when these selections neither mention learnings already nor are context filters without a rule-based query.",
         examples=[[]],
     )
     include_own_learnings: bool | None = Field(
         True,
         alias='includeOwnLearnings',
         description="Whether the scope reads what is taught while using it: learnings, facts, glossary terms and preferences. Defaults to true. Set false to create the scope without them; it can be included later in the scope's context selections.",
+    )
+    include_org_learnings: bool | None = Field(
+        True,
+        alias='includeOrgLearnings',
+        description="Whether create adds the org-wide learnings path (`auto_generated:org`, what the organization taught Modus) to the scope's selections. Defaults to true, skipped when `contextSelections` already mention learnings or are context filters without a rule-based query; false only skips the addition, so selections naming the path still read it.",
     )
     interfaces: list[ScopeMcpInterfaceInputDto] | None = Field(
         None,
