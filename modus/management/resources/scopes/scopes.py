@@ -114,10 +114,11 @@ class ScopesResource(_ScopesResourceBase):
             instructions: Optional instruction strings.
             toolset: Optional tool configuration payload.
             model: Optional model id (for example ``\"claude-sonnet-5\"``).
-            connection_set: Optional data connections for the scope. Each row is
-                ``{connection_id, path}`` with optional ``preferences`` and
-                ``context_enabled``. A row from ``variation.connection_set``
-                can be sent back.
+            connection_set: Optional data connections for the scope, one entry
+                per connection: ``{connection_id, preferences}``. An entry from
+                ``variation.connection_set`` can be sent back as it is, except
+                one whose ``preferences`` is ``None`` (a deleted connection):
+                drop it first, or the server rejects the write.
             context_selections: Optional context selection payload.
             include_own_learnings: Whether the scope reads what is taught while
                 using it. Defaults to ``True`` on the server.
@@ -195,10 +196,11 @@ class ScopesResource(_ScopesResourceBase):
             instructions: Optional instruction strings.
             toolset: Optional tool configuration payload.
             model: Optional model id.
-            connection_set: Optional data connections for the scope. Each row is
-                ``{connection_id, path}`` with optional ``preferences`` and
-                ``context_enabled``. A row from ``variation.connection_set``
-                can be sent back.
+            connection_set: Optional data connections for the scope, one entry
+                per connection: ``{connection_id, preferences}``. An entry from
+                ``variation.connection_set`` can be sent back as it is, except
+                one whose ``preferences`` is ``None`` (a deleted connection):
+                drop it first, or the server rejects the write.
             context_selections: Optional context selection payload.
             interfaces: Optional MCP interface configuration. Only entries with
                 ``type: "mcp"`` are accepted; any other type makes the call raise

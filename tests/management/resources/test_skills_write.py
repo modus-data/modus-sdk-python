@@ -232,7 +232,7 @@ def test_skills_update_resends_connection_set_from_get(client, skill_detail_row)
     assert rows
     client.scopes.update(10, connection_set=rows)
     body = json.loads(route.calls[0].request.read())
-    assert body["connectionSet"] == [{"connection_id": "22222222-2222-4222-8222-222222222222", "path": []}]
+    assert body["connectionSet"] == [{"connection_id": "22222222-2222-4222-8222-222222222222", "preferences": {"mode": "all", "include": [], "exclude": []}}]
 
 
 @respx.mock
@@ -240,31 +240,8 @@ def test_skills_update_accepts_a_read_only_mapping_row():
     route = respx.patch(f"{BASE}/api/v1/scopes/10").mock(
         return_value=httpx.Response(200, json={**SKILL_RESP, "id": 10})
     )
-    row = {"connection_id": "22222222-2222-4222-8222-222222222222", "path": []}
+    row = {"connection_id": "22222222-2222-4222-8222-222222222222", "preferences": {"mode": "all", "include": [], "exclude": []}}
     _client().scopes.update(10, connection_set=[MappingProxyType(row)])
-    body = json.loads(route.calls[0].request.read())
-    assert body["connectionSet"] == [row]
-
-
-@respx.mock
-def test_skills_update_resends_preferences_and_context_enabled_from_get(client, skill_detail_row):
-    row = {
-        "connection_id": "22222222-2222-4222-8222-222222222222",
-        "path": ["SALES_DB", "PUBLIC"],
-        "preferences": {"mode": "manual", "include": [], "exclude": []},
-        "context_enabled": False,
-    }
-    skill_detail_row["variation"]["connectionSet"] = [row]
-    respx.get(f"{BASE}/api/v1/scopes/10").mock(
-        return_value=httpx.Response(200, json=skill_detail_row)
-    )
-    route = respx.patch(f"{BASE}/api/v1/scopes/10").mock(
-        return_value=httpx.Response(200, json=skill_detail_row)
-    )
-    scope = client.scopes.get(10)
-    assert scope.variation is not None
-    assert scope.variation.connection_set[0].context_enabled is False
-    client.scopes.update(10, connection_set=scope.variation.connection_set)
     body = json.loads(route.calls[0].request.read())
     assert body["connectionSet"] == [row]
 

@@ -387,11 +387,6 @@ class ConnectionSetItemDto(BaseModel):
         description='What the scope reads under this connection. `mode` `all` reads the whole connection; `manual` reads only the units its `include` rules select. `exclude` rules remove units in either mode. Each rule\'s `path` lists id steps `{type, by: "id", id}` from the connection down.',
         examples=[{'mode': 'manual', 'include': [{'path': [{'type': 'database', 'by': 'id', 'id': 'analytics'}]}], 'exclude': [{'path': [{'type': 'database', 'by': 'id', 'id': 'analytics'}, {'type': 'schema', 'by': 'id', 'id': 'staging'}]}]}],
     )
-    context_enabled: bool | None = Field(
-        None,
-        deprecated=True,
-        description='Deprecated. Use `preferences` alone: the scope always reads context from its connections. Omit it; `false` is accepted only when the connection is already stored with `false`.',
-    )
 
 
 class ConnectionSetItemReadDto(BaseModel):
@@ -399,21 +394,10 @@ class ConnectionSetItemReadDto(BaseModel):
     connection_id: str = Field(
         ..., description='Id of the connection.', examples=['11111111-1111-4111-8111-111111111111']
     )
-    path: list[str] = Field(
-        ...,
-        deprecated=True,
-        description='Deprecated. Use `preferences`. One stored row per included path, derived from `preferences`; an empty array is the whole connection.',
-        examples=[[]],
-    )
     preferences: dict[str, Any] | None = Field(
         None,
-        description='What the scope reads under this connection. `mode` `all` reads the whole connection; `manual` reads only the units its `include` rules select. `exclude` rules remove units in either mode. Each rule\'s `path` lists id steps `{type, by: "id", id}` from the connection down. Present on the connection\'s first row. Absent on every row of a connection last saved without `preferences`, until the server converts it.',
+        description='What the scope reads under this connection. `mode` `all` reads the whole connection; `manual` reads only the units its `include` rules select. `exclude` rules remove units in either mode. Each rule\'s `path` lists id steps `{type, by: "id", id}` from the connection down. Absent only on the entry of a deleted connection, whose `connection_id` is a placeholder (`00000000-0000-0000-0000-…`) and which grants nothing.',
         examples=[{'mode': 'manual', 'include': [{'path': [{'type': 'database', 'by': 'id', 'id': 'analytics'}]}], 'exclude': [{'path': [{'type': 'database', 'by': 'id', 'id': 'analytics'}, {'type': 'schema', 'by': 'id', 'id': 'staging'}]}]}],
-    )
-    context_enabled: bool | None = Field(
-        None,
-        deprecated=True,
-        description='Deprecated. Use `preferences`. Whether the scope reads context from this connection: true, except on a few older entries kept for their tools only.',
     )
 
 
@@ -1760,11 +1744,6 @@ class SelectionOpDto(BaseModel):
     )
     preferences: dict[str, Any] | None = Field(
         None, description='The connection’s whole data selection, as workspace access preferences.'
-    )
-    context_enabled: bool | None = Field(
-        None,
-        alias='contextEnabled',
-        description='Deprecated. Use `preferences` alone: the scope always reads context from its connections. Omit it; `false` is accepted only when the connection is already stored with `false`.',
     )
     item: SelectedContextItemDto | None = Field(None, description='The pinned context item.')
     uid: str | None = Field(None, description='Uid of the pinned item to remove.')
@@ -4502,7 +4481,7 @@ class SkillVariationDto(BaseModel):
     connection_set: list[ConnectionSetItemReadDto] = Field(
         ...,
         alias='connectionSet',
-        description="Connections attached to this variation. A connection's `preferences` say what the scope reads under it; its rows list the derived paths.",
+        description='Connections attached to this variation, one entry per connection. Its `preferences` say what the scope reads under it; an entry with `preferences` can be sent back as it is on update. Drop an entry without them (a deleted connection) first.',
     )
     context_selections: list[dict[str, Any]] = Field(
         ...,
@@ -4812,7 +4791,7 @@ class RunConfigDto(BaseModel):
     connection_set: list[dict[str, Any]] | None = Field(
         None,
         alias='connectionSet',
-        description="Connection-set entries (runtime-owned shape): `connection_id`, and optionally `preferences` (the connection's workspace-access preferences), `context_enabled` and `path` (a row the preferences compile to).",
+        description="Connection-set entries (runtime-owned shape): `connection_id`, and optionally `preferences` (the connection's workspace-access preferences) and `path` (a row the preferences compile to).",
     )
     connection_all_mode_ids: list[str] | None = Field(None, alias='connectionAllModeIds')
     guardrails: list[str] | None = Field(None, description='Guardrail ids applied to the run.')

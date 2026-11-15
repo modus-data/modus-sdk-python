@@ -9,6 +9,11 @@ release, including pre-1.0 (`0.x`) releases.
 
 ## [Unreleased]
 
+### Removed
+
+- **Breaking (pre-1.0): a scope read returns one `connection_set` entry per connection.** Each `variation.connection_set` entry is a `ConnectionSetItemReadDto` with `.connection_id` and `.preferences`: `.path` (one row per included path) and `.context_enabled` are removed, so a connection appears once, with its preferences. `.preferences` is `None` only on the entry of a deleted connection, whose `connection_id` is a placeholder and which grants nothing. An entry with `.preferences` can be sent back unchanged in `scopes.update()`; drop one whose `.preferences` is `None` first, or the write fails with 400 `legacy_entry`. Migration: read what a connection selects from `.preferences` instead of `.path`.
+- **Breaking (pre-1.0): `context_enabled` and `contextEnabled` are removed from scope writes.** A `connection_set` entry in `scopes.create()` and `scopes.update()` is `{connection_id, preferences}`, and a `setConnectionPreferences` op in `apply_selection_ops()` is `{op, connectionId, preferences}`. A scope reads context from every connection it lists. Sending `False` fails with 400 (`info.reason` `legacy_entry` on a `connection_set` entry); `True` is ignored.
+
 ## [0.11.0] — 2026-11-14
 
 ### Added
