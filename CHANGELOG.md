@@ -9,6 +9,8 @@ release, including pre-1.0 (`0.x`) releases.
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-11-14
+
 ### Added
 
 - **Move into a folder path.** `mgmt.context.items.move(uid, destination_folder_path=...)` moves a file or folder to a root-relative path such as `"reports/2026"`, sync and async; missing folders on the path are created with the move, and existing ones are reused. Passing both destinations raises `ValueError`. `destination_folder_uid` now defaults to `None` (the Files root).
