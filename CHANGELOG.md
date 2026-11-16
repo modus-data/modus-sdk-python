@@ -11,6 +11,7 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Added
 
+- **`email` run source.** `RunSource.email` and `SupplementalContextSource.email` mark runs started by an email sent to a workflow's address; the conversation list's `source` filter accepts `email`. Only the email trigger records it: an API-token run asking for it still records its server-owned source (`api`, or `modus_api` for Modus runs), and a `supplemental_context` with source `email` is refused with 400.
 - **`attachments` and `origin` on a workflow run.** `workflows.runs.get()` (the run detail) includes `attachments`, the files the run was started with: each a `WorkflowRunAttachmentDto` with `.file_name`, and `.mime_type` and `.size_bytes` when known (a file the trigger left out carries `.skipped.reason`, `too_large` or `too_many`). It also includes `origin`, a `WorkflowRunOriginDto` saying where the run came from (`.source`, such as `api` or `schedule`; `unknown` for a run that did not record it). An email-started run will also carry `.from_`, `.from_name` and `.subject` when the email has them. Both fields are `None` on responses from older servers. File contents are not returned.
 
 ### Removed

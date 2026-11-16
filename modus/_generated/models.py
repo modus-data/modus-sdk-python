@@ -2455,6 +2455,7 @@ class RunSource(str, Enum):
     context_suggestions = 'context_suggestions'
     dashboard_copilot = 'dashboard_copilot'
     dashboard_assistant = 'dashboard_assistant'
+    email = 'email'
     other = 'other'
 
 
@@ -2463,6 +2464,7 @@ class SupplementalContextSource(str, Enum):
     slack = 'slack'
     teams = 'teams'
     mcp = 'mcp'
+    email = 'email'
 
 
 class UserContextDto(BaseModel):
