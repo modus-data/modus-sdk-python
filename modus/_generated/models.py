@@ -1836,6 +1836,27 @@ class TriggerType(str, Enum):
     api = 'api'
     slack = 'slack'
     manual = 'manual'
+    email = 'email'
+
+
+class SenderPolicy(str, Enum):
+    __str__ = str.__str__
+    allowlist = 'allowlist'
+    any = 'any'
+
+
+class TriggerEmailDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    sender_policy: SenderPolicy = Field(
+        ...,
+        description='`allowlist` starts runs only for email from `allowed_senders` (an empty list rejects every email); `any` accepts every authenticated sender.',
+        examples=['allowlist'],
+    )
+    allowed_senders: list[str] = Field(
+        ...,
+        description='Exact addresses or `@domain` entries (that domain only). Stored lowercase; at most 100. Kept when `sender_policy` is `any`.',
+        examples=[['@acme.com', 'billing@supplier.com']],
+    )
 
 
 class TriggerEvaluationRunResponseDto(BaseModel):
@@ -3783,12 +3804,16 @@ class TriggerDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     trigger_type: TriggerType = Field(
         ...,
-        description='Trigger kind. Only `schedule` validates its nested payload here; the rest are opaque.',
+        description='Trigger kind. `schedule` and `email` carry a nested payload; the rest are opaque.',
         examples=['schedule'],
     )
     schedule: TriggerScheduleDto | None = Field(
         None,
         description='Schedule details. Required when trigger_type=schedule. Null for every other trigger.',
+    )
+    email: TriggerEmailDto | None = Field(
+        None,
+        description='Sender policy. Required when trigger_type=email. Null for every other trigger.',
     )
 
 
@@ -3870,12 +3895,16 @@ class WorkflowTriggerResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     trigger_type: TriggerType = Field(
         ...,
-        description='Trigger kind. Only `schedule` validates its nested payload here; the rest are opaque.',
+        description='Trigger kind. `schedule` and `email` carry a nested payload; the rest are opaque.',
         examples=['schedule'],
     )
     schedule: WorkflowTriggerScheduleResponseDto | None = Field(
         None,
         description='Schedule details. Required when trigger_type=schedule. Null for every other trigger.',
+    )
+    email: TriggerEmailDto | None = Field(
+        None,
+        description='Sender policy. Present when trigger_type=email. Null for every other trigger.',
     )
 
 

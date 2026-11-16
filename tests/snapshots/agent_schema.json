@@ -486,13 +486,53 @@
       "title": "ResourceLifecycleStatus",
       "type": "string"
     },
+    "SenderPolicy": {
+      "enum": [
+        "allowlist",
+        "any"
+      ],
+      "title": "SenderPolicy",
+      "type": "string"
+    },
+    "TriggerEmailDto": {
+      "properties": {
+        "senderPolicy": {
+          "$ref": "#/$defs/SenderPolicy",
+          "description": "`allowlist` starts runs only for email from `allowed_senders` (an empty list rejects every email); `any` accepts every authenticated sender.",
+          "examples": [
+            "allowlist"
+          ]
+        },
+        "allowedSenders": {
+          "description": "Exact addresses or `@domain` entries (that domain only). Stored lowercase; at most 100. Kept when `sender_policy` is `any`.",
+          "examples": [
+            [
+              "@acme.com",
+              "billing@supplier.com"
+            ]
+          ],
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowedsenders",
+          "type": "array"
+        }
+      },
+      "required": [
+        "senderPolicy",
+        "allowedSenders"
+      ],
+      "title": "TriggerEmailDto",
+      "type": "object"
+    },
     "TriggerType": {
       "enum": [
         "schedule",
         "webhook",
         "api",
         "slack",
-        "manual"
+        "manual",
+        "email"
       ],
       "title": "TriggerType",
       "type": "string"
@@ -700,7 +740,7 @@
       "properties": {
         "triggerType": {
           "$ref": "#/$defs/TriggerType",
-          "description": "Trigger kind. Only `schedule` validates its nested payload here; the rest are opaque.",
+          "description": "Trigger kind. `schedule` and `email` carry a nested payload; the rest are opaque.",
           "examples": [
             "schedule"
           ]
@@ -716,6 +756,18 @@
           ],
           "default": null,
           "description": "Schedule details. Required when trigger_type=schedule. Null for every other trigger."
+        },
+        "email": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TriggerEmailDto"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Sender policy. Present when trigger_type=email. Null for every other trigger."
         }
       },
       "required": [
