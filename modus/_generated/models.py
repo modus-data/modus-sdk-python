@@ -4096,7 +4096,7 @@ class AgentVariationDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     trigger: WorkflowTriggerResponseDto | None = Field(
         None,
-        description='`trigger_type` is `schedule`, `webhook`, `api`, `slack`, or `manual`. `schedule` is present only for a schedule trigger. Null until a trigger is saved.',
+        description='`trigger_type` is `schedule`, `webhook`, `api`, `slack`, `email`, or `manual`. `schedule` is present only for a schedule trigger. Null until a trigger is saved.',
     )
     workflow_structure: WorkflowStructureResponseDto | None = Field(
         None,
