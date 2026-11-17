@@ -594,7 +594,7 @@ class CreateCustomContextItemRelationDto(BaseModel):
     relation_type: str = Field(
         ...,
         alias='relationType',
-        description='Snake_case relation type describing how the source relates to the target.',
+        description='Snake_case relation type describing how the source relates to the target. Reserved system types cannot be used: contains, reads, joins_with, has_context, has_feedback, filters_by, context_relation. Dotted names are also reserved.',
         examples=['depends_on'],
     )
     content: dict[str, Any] | None = Field(
