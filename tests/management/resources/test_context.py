@@ -319,7 +319,7 @@ def test_custom_context_item_relations_create(client):
                 "from_uid": "source-1",
                 "to_uid": "target-1",
                 "relation_type": "depends_on",
-                "content": {"source": "go.mod"},
+                "edge_properties": {"source": "go.mod", "custom_key": ["a", "b"]},
             }
         ]
     )
@@ -331,7 +331,7 @@ def test_custom_context_item_relations_create(client):
                 "fromUid": "source-1",
                 "toUid": "target-1",
                 "relationType": "depends_on",
-                "content": {"source": "go.mod"},
+                "edgeProperties": {"source": "go.mod", "custom_key": ["a", "b"]},
             }
         ]
     }

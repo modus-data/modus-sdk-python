@@ -597,8 +597,12 @@ class CreateCustomContextItemRelationDto(BaseModel):
         description='Snake_case relation type describing how the source relates to the target. Reserved system types cannot be used: contains, reads, joins_with, has_context, has_feedback, filters_by, context_relation. Dotted names are also reserved.',
         examples=['depends_on'],
     )
-    content: dict[str, Any] | None = Field(
-        None, description='Optional structured payload stored on the relation edge.'
+    edge_properties: dict[str, str | float | bool | list[str | float | bool]] | None = Field(
+        None,
+        alias='edgeProperties',
+        description='Edge properties, replacing the previous map. Up to 100 keys matching ^[A-Za-z_][A-Za-z0-9_]{0,63}$ and 65536 UTF-8 JSON bytes; fromContextItemUid, toContextItemUid, relationType, createdAt and updatedAt are reserved. Values are strings, finite numbers, booleans, or arrays of those. Omission writes an empty map.',
+        examples=[{'version': 'v1.1.8', 'source': 'go.mod'}],
+        max_length=100,
     )
 
 
@@ -2632,7 +2636,7 @@ class BatchCreateCustomContextItemRelationsDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     relations: list[CreateCustomContextItemRelationDto] = Field(
         ...,
-        description='Relations to upsert. Idempotent by (fromUid, toUid, relationType); re-sending updates content.',
+        description='Relations to upsert. Idempotent by (fromUid, toUid, relationType); re-sending replaces edgeProperties.',
     )
 
 

@@ -9,6 +9,10 @@ release, including pre-1.0 (`0.x`) releases.
 
 ## [Unreleased]
 
+### Removed
+
+- **MAJOR:** Custom context item relations no longer accept `content`. Use `edgeProperties` (`edge_properties` in Python) for a flat map of primitives or primitive arrays; omitting it replaces the map with `{}`.
+
 ### Added
 
 - **Email triggers.** A workflow read can carry `trigger_type="email"` with `email.sender_policy` (`"allowlist"` or `"any"`) and `email.allowed_senders` (exact addresses or `@domain` entries), sync and async. `AgentTrigger.email(allowed_senders=[...])` builds one for `workflows.create` and `update`; an empty list rejects every email, and `any_sender=True` accepts every authenticated sender. Off by default per organization; ask Modus to enable it.

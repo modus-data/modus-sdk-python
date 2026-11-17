@@ -30,6 +30,7 @@ from modus.types.context import (
 from modus.types.pagination import AsyncPage, Page
 
 _FIELD_ALIASES = {
+    "edge_properties": "edgeProperties",
     "source_id": "sourceId",
     "source_name": "sourceName",
     "collection_id": "collectionId",
@@ -251,7 +252,7 @@ class CustomContextItemsResource:
 
         Args:
             relations: ``CreateCustomContextItemRelationDto`` models, or dicts with
-                ``from_uid``, ``to_uid``, ``relation_type``, and optional ``content``.
+                ``from_uid``, ``to_uid``, ``relation_type``, and optional flat ``edge_properties`` (primitives or primitive arrays). Omitting ``edge_properties`` replaces the stored map with ``{}``.
 
         Returns:
             Number of relations created or updated.
@@ -262,6 +263,7 @@ class CustomContextItemsResource:
             ...         "from_uid": "SOURCE_UID",
             ...         "to_uid": "TARGET_UID",
             ...         "relation_type": "depends_on",
+            ...         "edge_properties": {"source_file": "go.mod"},
             ...     }]
             ... )
         """
@@ -451,7 +453,7 @@ class AsyncCustomContextItemsResource:
 
         Args:
             relations: ``CreateCustomContextItemRelationDto`` models, or dicts with
-                ``from_uid``, ``to_uid``, ``relation_type``, and optional ``content``.
+                ``from_uid``, ``to_uid``, ``relation_type``, and optional flat ``edge_properties`` (primitives or primitive arrays). Omitting ``edge_properties`` replaces the stored map with ``{}``.
 
         Returns:
             Number of relations created or updated.
