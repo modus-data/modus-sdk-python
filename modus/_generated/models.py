@@ -5121,16 +5121,6 @@ class ScopeDto(BaseModel):
 
 class AgentRunDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    message: str = Field(
-        ...,
-        description='The user message to send. API tokens are held to the 32,000-character limit; a longer message is refused before the run starts.',
-        max_length=32000,
-    )
-    session_id: str = Field(
-        ...,
-        alias='sessionId',
-        description='Opaque client-generated conversation token for continuity. The server NEVER derives the run target identity (scope/workflow/modus) from this string — target identity comes only from the request path and DTO (see RunTarget). It is used solely to thread successive turns of the same conversation together.',
-    )
     organization_id: str | None = Field(
         None,
         alias='organizationId',
@@ -5140,10 +5130,6 @@ class AgentRunDto(BaseModel):
         None,
         description='Saved version to run (scope/workflow; ignored for Modus). API tokens may not run a scope draft.',
     )
-    file_thread_id: str | None = Field(
-        None, alias='fileThreadId', description='Document-scoped conversation thread id.'
-    )
-    config: RunConfigDto | None = None
     attachments: AttachmentsDto | None = None
     user_context: UserContextDto | None = Field(None, alias='userContext')
     supplemental_context: SupplementalContextDto | None = Field(None, alias='supplementalContext')
@@ -5153,13 +5139,44 @@ class AgentRunDto(BaseModel):
     run_id: str | None = Field(
         None, alias='runId', description='Client-supplied run id (Idempotency-Key header wins).'
     )
+    message: str | None = Field(
+        None,
+        description="The run's input, which the workflow's first step receives. Omit it, or send an empty string, to trigger a run with no input. API tokens are held to the 32,000-character limit.",
+        max_length=32000,
+    )
+    session_id: str | None = Field(
+        None,
+        alias='sessionId',
+        description='A token you choose that threads runs into one conversation: send the same value on each run. Omit it for a one-off run; the server then assigns an id it does not return, so that run cannot be continued.',
+    )
+    config: RunConfigDto | None = Field(
+        None,
+        deprecated=True,
+        description='Deprecated: ignored for workflow runs, whose steps use the model and tools set in the workflow. Omit it.',
+    )
+    file_thread_id: str | None = Field(
+        None,
+        alias='fileThreadId',
+        deprecated=True,
+        description='Deprecated and ignored: a workflow run takes its settings from the workflow. Omit it; see `message` and `sessionId` for what a run accepts.',
+    )
     stream_protocol_version: StreamProtocolVersion | None = Field(
         None,
         alias='streamProtocolVersion',
-        description='Streaming protocol version. Version 2 supports assistant-content replacement events.',
+        deprecated=True,
+        description='Deprecated and ignored: a workflow run takes its settings from the workflow. Omit it; see `message` and `sessionId` for what a run accepts.',
     )
-    experimental_features: bool | None = Field(None, alias='experimentalFeatures')
-    debug: bool | None = None
+    experimental_features: bool | None = Field(
+        None,
+        alias='experimentalFeatures',
+        deprecated=True,
+        description='Deprecated and ignored: a workflow run takes its settings from the workflow. Omit it; see `message` and `sessionId` for what a run accepts.',
+    )
+    debug: bool | None = Field(
+        None,
+        deprecated=True,
+        description='Deprecated and ignored: a workflow run takes its settings from the workflow. Omit it; see `message` and `sessionId` for what a run accepts.',
+    )
 
 
 class FollowUpRunDto(BaseModel):

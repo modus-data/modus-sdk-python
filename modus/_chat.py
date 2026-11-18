@@ -381,12 +381,15 @@ def _chat_request(
     target_id: Optional[Union[int, str]],
     message: str,
     *,
-    model: str,
+    model: Optional[str],
     thread_id: Optional[str],
 ) -> _ChatRequest:
     if kind != "modus":
         validate_id(target_id, name=f"{kind[:-1]}_id")  # type: ignore[arg-type]
-    validate_chat_model(model)
+    # A workflow's steps run with the models set in the workflow, so a workflow run takes none.
+    runs_with_own_models = kind == "workflows"
+    if not runs_with_own_models:
+        validate_chat_model(model)
     require_agent_host(config)
     path = (
         "/agent/v1/modus/runs"
@@ -394,7 +397,9 @@ def _chat_request(
         else format_operation_path(_RUN_OPERATIONS[kind], {"id": target_id})
     )
     session_id = resolve_agent_run_session_id(_effective_thread_id(thread_id))
-    body: Dict[str, Any] = {"message": message, "config": {"model": model}, "sessionId": session_id}
+    body: Dict[str, Any] = {"message": message, "sessionId": session_id}
+    if not runs_with_own_models:
+        body["config"] = {"model": model}
     if config.organization_id is not None:
         body["organizationId"] = config.organization_id
     return _ChatRequest(path=path, body=body, session_id=session_id)
@@ -407,7 +412,7 @@ def start_chat(
     target_id: Optional[Union[int, str]],
     message: str,
     *,
-    model: str,
+    model: Optional[str],
     thread_id: Optional[str] = None,
 ) -> ChatSession:
     return ChatSession(
@@ -422,7 +427,7 @@ def start_chat_async(
     target_id: Optional[Union[int, str]],
     message: str,
     *,
-    model: str,
+    model: Optional[str],
     thread_id: Optional[str] = None,
 ) -> AsyncChatSession:
     return AsyncChatSession(

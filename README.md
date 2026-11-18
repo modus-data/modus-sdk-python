@@ -209,7 +209,7 @@ for run in client.workflows.runs.list(workflow_id, page_size=20):
     print(run.id, run.status)
 
 # Chat with a published workflow; result() returns its final output.
-digest = client.workflows.chat(workflow_id, "Run this week's digest", model="claude-sonnet-5").result()
+digest = client.workflows.chat(workflow_id, "Run this week's digest").result()
 print(digest.content)
 ```
 

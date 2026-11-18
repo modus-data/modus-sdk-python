@@ -311,10 +311,10 @@
   "modus.resources.scopes.scopes.ScopesResource.get": "(self, scope_id: 'Union[int, str]', *, view: 'Optional[VariationView]' = None) -> 'Skill'",
   "modus.resources.scopes.scopes.ScopesResource.get_context": "(self, scope_id: 'Union[int, str]', message: 'str', *, limit: 'Optional[int]' = None) -> 'SkillContextComposition'",
   "modus.resources.scopes.scopes.ScopesResource.list": "(self, *, page_size: 'int' = 25, page_token: 'Optional[str]' = None, search: 'Optional[str]' = None, view: 'Optional[VariationView]' = None, manager_id: 'Optional[int]' = None) -> 'Page[Skill]'",
-  "modus.resources.workflows.workflows.AsyncWorkflowsResource.chat": "(self, workflow_id: 'Union[int, str]', message: 'str', *, model: 'str', thread_id: 'Optional[str]' = None) -> 'AsyncChatSession'",
+  "modus.resources.workflows.workflows.AsyncWorkflowsResource.chat": "(self, workflow_id: 'Union[int, str]', message: 'str' = '', *, thread_id: 'Optional[str]' = None, model: 'Optional[str]' = None) -> 'AsyncChatSession'",
   "modus.resources.workflows.workflows.AsyncWorkflowsResource.get": "(self, workflow_id: 'Union[int, str]', *, view: 'Optional[VariationView]' = None) -> 'Agent'",
   "modus.resources.workflows.workflows.AsyncWorkflowsResource.list": "(self, *, page_size: 'int' = 25, page_token: 'Optional[str]' = None, search: 'Optional[str]' = None, type: 'Optional[AgentType]' = None, view: 'Optional[VariationView]' = None, include_variation: 'Optional[bool]' = None) -> 'AsyncPage[Agent]'",
-  "modus.resources.workflows.workflows.WorkflowsResource.chat": "(self, workflow_id: 'Union[int, str]', message: 'str', *, model: 'str', thread_id: 'Optional[str]' = None) -> 'ChatSession'",
+  "modus.resources.workflows.workflows.WorkflowsResource.chat": "(self, workflow_id: 'Union[int, str]', message: 'str' = '', *, thread_id: 'Optional[str]' = None, model: 'Optional[str]' = None) -> 'ChatSession'",
   "modus.resources.workflows.workflows.WorkflowsResource.get": "(self, workflow_id: 'Union[int, str]', *, view: 'Optional[VariationView]' = None) -> 'Agent'",
   "modus.resources.workflows.workflows.WorkflowsResource.list": "(self, *, page_size: 'int' = 25, page_token: 'Optional[str]' = None, search: 'Optional[str]' = None, type: 'Optional[AgentType]' = None, view: 'Optional[VariationView]' = None, include_variation: 'Optional[bool]' = None) -> 'Page[Agent]'"
 }
