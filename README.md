@@ -324,6 +324,11 @@ integration platform keys. Action names have no connection/path suffixes. SQL gr
 `query`; scope selections control which data it can query. `combine` and `merge`
 replace an earlier entry for the same platform with the later entry.
 
+On a platform people connect personally (Gmail, Google Calendar,
+Google Drive and others), `Toolset.integration(name, personal=True, actions=...)` grants the
+actions on the personal connection of whoever runs the skill instead of a named connection;
+nobody else's connection is used. Pass exactly one of `connection_id` and `personal=True`.
+
 `scopes.update` replaces whole lists such as `connection_set`, `context_selections`, and `evaluations`. Add or change one evaluation case with `scopes.evaluations(id).add_case`, `update_case`, or `delete_case`. Change one connection's selection with `apply_selection_ops` (`validate_only=True` previews and does not write). Each `connectionSet` entry is `{ connection_id, preferences }`; remove a connection with the `removeConnection` op.
 
 ## Pagination

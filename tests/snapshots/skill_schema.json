@@ -614,7 +614,7 @@
         },
         "toolset": {
           "additionalProperties": true,
-          "description": "Map of tool key to configuration. Integrations use `<platform>.byConnection[connectionUuid] = { actions, rules? }`; SQL platforms grant `query`. General tools and MCP configurations keep their own formats.",
+          "description": "Map of tool key to configuration. Integrations use `<platform>.byConnection[connectionUuid] = { actions, rules? }`, plus `<platform>.personal = { actions, rules? }` for actions run on each runner\u2019s own personal connection; SQL platforms grant `query`. General tools and MCP configurations keep their own formats.",
           "examples": [
             {
               "postgresql": {

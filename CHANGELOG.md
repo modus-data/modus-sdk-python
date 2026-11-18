@@ -15,6 +15,7 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Added
 
+- **Personal tools in a toolset.** `Toolset.integration(name, personal=True, actions=[...])` grants actions on the personal connection of whoever runs the skill, as `<platform>.personal` beside `byConnection`. A runner who has not connected the platform is asked to connect it in chat, or gets a tool error elsewhere; nobody else's connection is used. The API accepts it only on platforms people connect personally (Gmail, Google Calendar, Google Drive and others); pass exactly one of `connection_id` and `personal=True`. `INTEGRATIONS` now lists those platforms too.
 - **`personal` MCP exposure family.** `McpExposureFamily` includes `personal`: the MCP exposure catalog lists a platform's personal grant as one row (`toolset_personal:<platform>`, with `toolset_action:<platform>:personal:<action>` per tool) that runs on the own personal connection of whoever calls it.
 - **Email triggers.** A workflow read can carry `trigger_type="email"` with `email.sender_policy` (`"allowlist"` or `"any"`) and `email.allowed_senders` (exact addresses or `@domain` entries), sync and async. `AgentTrigger.email(allowed_senders=[...])` builds one for `workflows.create` and `update`; an empty list rejects every email, and `any_sender=True` accepts every authenticated sender. Off by default per organization; ask Modus to enable it.
 - **`email` run source.** `RunSource.email` and `SupplementalContextSource.email` mark runs started by an email sent to a workflow's address; the conversation list's `source` filter accepts `email`. Only the email trigger records it: an API-token run asking for it still records its server-owned source (`api`, or `modus_api` for Modus runs), and a `supplemental_context` with source `email` is refused with 400.
@@ -22,9 +23,10 @@ release, including pre-1.0 (`0.x`) releases.
 
 ### Changed
 
+- A scope save that adds a personal connection's UUID to `<platform>.byConnection`, or adds actions to one stored there, is refused with 422 (`UnprocessableError`, rule `toolset.personal_connection`); grant it with `personal=True` instead. Sending a stored entry back unchanged, or with fewer actions, still saves.
+- `Toolset.integration(...)` called with neither `connection_id` nor `personal=True` now raises `ValidationError` (a `ValueError`) instead of `TypeError`. Catch `ValueError` if you relied on the `TypeError`.
 - **Changed:** a workflow created without `access_config` (`workflows.create()`, sync and async) is now private, with no group grants and no invitees; its creator can share it later. Pass an `access_config` with `visibility="shared"` for the previous behaviour. A service account token that omits it still creates the workflow shared with the whole organization. Existing workflows are unchanged.
 - **Changed:** an unfiltered scope conversation list (or one filtered by user or timeframe) now includes conversations you did not take part in, but such a conversation carries only who took part and when: an empty first message, a null title and source, a message count of 0 and no tools. Each item has a new optional `owned_by_caller` that says whether you took part. Getting such a conversation, its files, or renaming it now fails with 404, whatever your role. A `toolName` or `source` filter matches only conversations you took part in, and combining either with another member's user id fails with 400.
-
 - Custom context relation documentation lists reserved system names (`contains`, `reads`, `joins_with`, `has_context`, `has_feedback`, `filters_by`, `context_relation`) and explains that dotted names are reserved.
 
 ### Removed

@@ -2,7 +2,11 @@
 
 import pytest
 from modus.management import Toolset
-from modus.management.types.toolset import INTEGRATIONS, dump_toolset, parse_toolset
+from modus.management.types.toolset import (
+    INTEGRATIONS,
+    dump_toolset,
+    parse_toolset,
+)
 
 CONNECTION_ID = "11111111-1111-4111-8111-111111111111"
 SQL_CONNECTION_ID = "22222222-2222-4222-8222-222222222222"
@@ -61,9 +65,29 @@ def test_shortcuts_require_and_preserve_connection_id(name):
     }
 
 
-def test_integration_requires_connection_id():
-    with pytest.raises(TypeError, match="connection_id"):
+def test_integration_requires_connection_id_or_personal():
+    with pytest.raises(ValueError, match="exactly one of connection_id and personal"):
         Toolset.integration("slack", actions=["SendMessage"])
+
+
+def test_personal_emits_the_personal_slot_beside_an_empty_by_connection():
+    ts = Toolset.integration(
+        "gmail", personal=True, actions=["search-threads"], rules={"allowedChannelIds": []}
+    )
+    assert ts.tools() == {
+        "gmail": {
+            "byConnection": {},
+            "personal": {"actions": ["search-threads"], "rules": {"allowedChannelIds": []}},
+        }
+    }
+    assert parse_toolset(dump_toolset(ts)).tools() == ts.tools()
+
+
+def test_personal_and_connection_id_together_are_refused():
+    with pytest.raises(ValueError, match="exactly one of connection_id and personal"):
+        Toolset.integration(
+            "google_drive", connection_id=CONNECTION_ID, personal=True, actions=["find-file"]
+        )
 
 
 @pytest.mark.parametrize(
@@ -183,3 +207,9 @@ def test_parse_toolset_round_trips_surface_map():
 
 def test_parse_toolset_none():
     assert parse_toolset(None) is None
+
+
+def test_personal_is_left_to_the_api_on_any_integration():
+    assert Toolset.integration("slack", personal=True, actions=["SendMessage"]).tools() == {
+        "slack": {"byConnection": {}, "personal": {"actions": ["SendMessage"]}}
+    }
