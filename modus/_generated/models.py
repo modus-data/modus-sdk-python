@@ -4257,7 +4257,7 @@ class CreateAgentDto(BaseModel):
     access_config: AgentAccessConfigDto | None = Field(
         None,
         alias='accessConfig',
-        description='Access configuration. Omit to use the default (full-org shared with use + manage).',
+        description='Access configuration. Omit to create the workflow private, with no group grants and no invitees; its creator can share it later. A service account token that omits it creates the workflow shared with the whole organization (use + manage), since it has no owner.',
     )
 
 
