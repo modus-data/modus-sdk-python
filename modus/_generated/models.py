@@ -489,23 +489,23 @@ class ConversationListItemDto(BaseModel):
     first_message: str = Field(
         ...,
         alias='firstMessage',
-        description='Preview of the first user turn, used as a list-row caption. Falls back to a stable placeholder when the thread has no human turn yet.',
+        description='Preview of the first user turn, used as a list-row caption. Falls back to a stable placeholder when the thread has no human turn yet. Empty when the caller did not take part in the conversation.',
         examples=['Run the churn analysis for last 30 days.'],
     )
     title: str | None = Field(
         ...,
-        description='User-managed display title. Null until the user renames the conversation.',
+        description='User-managed display title. Null until the user renames the conversation, and null when the caller did not take part in it.',
         examples=['Q3 Revenue Analysis'],
     )
     source: str | None = Field(
         None,
-        description='UI surface the conversation was started from (e.g. `context_chat`, `home`). Not constrained to the `RunSource` enum: historical rows carry legacy values. Null when unknown, absent on responses that predate the field.',
+        description='UI surface the conversation was started from (e.g. `context_chat`, `home`). Not constrained to the `RunSource` enum: historical rows carry legacy values. Null when unknown or when the caller did not take part in the conversation, absent on responses that predate the field.',
         examples=['context_chat'],
     )
     message_count: int = Field(
         ...,
         alias='messageCount',
-        description='Total number of message turns in the (post-collapse) conversation.',
+        description='Total number of message turns in the (post-collapse) conversation. 0 when the caller did not take part in it.',
         examples=[12],
     )
     created_at: str = Field(
@@ -523,7 +523,7 @@ class ConversationListItemDto(BaseModel):
     tools_used: list[str] | None = Field(
         None,
         alias='toolsUsed',
-        description='Distinct tool names invoked across this conversation. Present only when `includeTools=true` is requested.',
+        description='Distinct tool names invoked across this conversation. Present only when `includeTools=true` is requested and the caller took part in the conversation.',
         examples=[['sql_runner']],
     )
     user_ids: list[str] = Field(
@@ -531,6 +531,12 @@ class ConversationListItemDto(BaseModel):
         alias='userIds',
         description='Distinct user ids that participated in this thread.',
         examples=[['user_abc']],
+    )
+    owned_by_caller: bool | None = Field(
+        None,
+        alias='ownedByCaller',
+        description='Whether the caller took part in this conversation. Only a participant can open, rename or download files from a conversation; for any other row the list carries only who took part and when.',
+        examples=[True],
     )
 
 
