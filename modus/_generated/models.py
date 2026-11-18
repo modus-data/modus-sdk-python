@@ -198,7 +198,7 @@ class AutomationRunListItemDto(BaseModel):
     trigger_type: str | None = Field(
         None,
         alias='triggerType',
-        description='Trigger type for the run (schedule / webhook / api / slack / manual).',
+        description="The Workflow's current trigger type, which can differ from what started this run.",
     )
     started_at: str | None = Field(None, alias='startedAt', description='ISO-8601 start timestamp.')
     ended_at: str | None = Field(
@@ -4936,7 +4936,7 @@ class GetAutomationRunResponseDto(BaseModel):
     trigger_type: str | None = Field(
         None,
         alias='triggerType',
-        description='Trigger type for the run (schedule / webhook / api / slack / manual).',
+        description='What started this run: `schedule`, `email`, `api`, `manual`, or the chat channel it came from.',
     )
     started_at: str | None = Field(None, alias='startedAt', description='ISO-8601 start timestamp.')
     ended_at: str | None = Field(
