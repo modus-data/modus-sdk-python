@@ -198,7 +198,7 @@ class AutomationRunListItemDto(BaseModel):
     trigger_type: str | None = Field(
         None,
         alias='triggerType',
-        description="The Workflow's current trigger type, which can differ from what started this run.",
+        description="What started this run: `schedule`, `email`, `api`, `manual`, or the chat channel it came from. A run that did not record it shows the Workflow's current trigger type.",
     )
     started_at: str | None = Field(None, alias='startedAt', description='ISO-8601 start timestamp.')
     ended_at: str | None = Field(
