@@ -1334,6 +1334,7 @@ class McpExposureFamily(str, Enum):
     custom_mcp = 'custom_mcp'
     mcp_server = 'mcp_server'
     tool = 'tool'
+    personal = 'personal'
 
 
 class McpToolExposureMode(str, Enum):
