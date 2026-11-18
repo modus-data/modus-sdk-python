@@ -235,6 +235,27 @@ class BatchCreateCustomContextItemRelationsResponseDto(BaseModel):
     )
 
 
+class BatchDeleteCustomContextItemsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    deleted_count: int = Field(
+        ...,
+        alias='deletedCount',
+        description='Number of custom context items soft-deleted by this request.',
+        examples=[8],
+    )
+    truncated: bool = Field(
+        ...,
+        description='True when more matching items were ahead of this batch; call again with `nextCursor` to continue the sweep.',
+        examples=[False],
+    )
+    next_cursor: str | None = Field(
+        ...,
+        alias='nextCursor',
+        description='Continuation cursor; pass as `cursor` to delete the next batch. `null` means no more matching items were ahead of the cursor at scan time. This is a forward pass, not a snapshot: items added, or recreated with a lower id, during the sweep are not guaranteed to be included — run a fresh pass (no cursor) to catch them.',
+        examples=[None],
+    )
+
+
 class BulkUploadUrlItemDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     file_name: str | None = Field(
@@ -2653,6 +2674,41 @@ class BatchCreateCustomContextItemsResponseDto(BaseModel):
         ...,
         alias='contextItems',
         description='Custom context items created or updated by the batch.',
+    )
+
+
+class BatchDeleteCustomContextItemsDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    source_id: str = Field(
+        ...,
+        alias='sourceId',
+        description='Customer-defined source to delete from. Required — a batch delete is always scoped to one source.',
+        examples=['billing-db'],
+    )
+    collection_id: str | None = Field(
+        None,
+        alias='collectionId',
+        description='Narrow to one collection inside the source. Omit to target the whole source.',
+        examples=['contracts'],
+    )
+    external_id: str | None = Field(
+        None,
+        alias='externalId',
+        description='Narrow to one entity inside the collection. Requires `collectionId`.',
+        examples=['contract-123'],
+    )
+    kind: CustomContextItemKind | None = Field(
+        None,
+        description='Which kind of item to delete at the selected path, for a non-cascade delete. An entity and its `entity_samples` share a path, so this disambiguates them. Defaults to the metadata item at the selected level (`source`/`collection`/`entity`). Must match the selector depth. Ignored when `cascade` is true.',
+        examples=['entity'],
+    )
+    cascade: bool | None = Field(
+        False,
+        description='When `true`, also delete everything beneath the targeted node (its descendants). When `false` (default), delete only the targeted node itself, leaving descendants in place.',
+    )
+    cursor: str | None = Field(
+        None,
+        description='Continuation cursor from a previous response `nextCursor`. Pass it to delete the next batch when a prior call was truncated.',
     )
 
 

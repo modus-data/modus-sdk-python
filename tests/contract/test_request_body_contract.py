@@ -21,6 +21,7 @@ from modus._generated.models import (
     AgentRunDto,
     BatchCreateCustomContextItemRelationsDto,
     BatchCreateCustomContextItemsDto,
+    BatchDeleteCustomContextItemsDto,
     CancelRunDto,
     ComposeSkillContextRequestDto,
     CreateCustomContextItemDto,
@@ -98,6 +99,9 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     ),
     "CustomContextItemsController_batchCreate": _model_wire_fields(
         BatchCreateCustomContextItemsDto
+    ),
+    "CustomContextItemsController_batchDelete": _model_wire_fields(
+        BatchDeleteCustomContextItemsDto
     ),
     "CustomContextItemsController_createRelations": _model_wire_fields(
         BatchCreateCustomContextItemRelationsDto

@@ -386,6 +386,42 @@ def test_custom_context_items_update_and_delete(client):
 
 
 @respx.mock
+def test_custom_context_items_batch_delete(client):
+    route = respx.post(f"{BASE}/api/v1/context/custom-items/batchDelete").mock(
+        return_value=httpx.Response(
+            200, json={"deletedCount": 3, "truncated": True, "nextCursor": "uid-9"}
+        )
+    )
+
+    result = client.context.custom_items.batch_delete(
+        source_id="billing-db", collection_id="contracts", external_id="c-1", kind="entity_samples"
+    )
+
+    assert result.deleted_count == 3
+    assert result.truncated is True
+    assert result.next_cursor == "uid-9"
+    assert json.loads(route.calls[0].request.read()) == {
+        "sourceId": "billing-db",
+        "collectionId": "contracts",
+        "externalId": "c-1",
+        "kind": "entity_samples",
+    }
+
+
+@respx.mock
+def test_custom_context_items_list_by_source(client):
+    route = respx.get(f"{BASE}/api/v1/context/custom-items").mock(
+        return_value=httpx.Response(200, json={"contextItems": [], "nextPageToken": None})
+    )
+
+    client.context.custom_items.list(source_id="billing-db", collection_id="contracts")
+
+    params = route.calls[0].request.url.params
+    assert params["sourceId"] == "billing-db"
+    assert params["collectionId"] == "contracts"
+
+
+@respx.mock
 def test_context_update_note_merges_content(client):
     uid = "note-id-001"
     wire = _context_item_wire(uid, "note", NOTE_CONTENT)
