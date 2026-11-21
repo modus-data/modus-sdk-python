@@ -8,7 +8,10 @@ from pydantic import BaseModel
 
 from modus._config import ModusConfig
 from modus._exceptions import ModusError
-from modus._generated.models import BatchCreateCustomContextItemRelationsResponseDto
+from modus._generated.models import (
+    BatchCreateCustomContextItemRelationsResponseDto,
+    BatchDeleteCustomContextItemsResponseDto,
+)
 from modus._http import AsyncHttpClient, HttpClient
 from modus._openapi_invoke import invoke_operation, invoke_operation_async
 from modus._pagination import (
@@ -30,6 +33,7 @@ from modus.types.context import (
 from modus.types.pagination import AsyncPage, Page
 
 _FIELD_ALIASES = {
+    "edge_properties": "edgeProperties",
     "source_id": "sourceId",
     "source_name": "sourceName",
     "collection_id": "collectionId",
@@ -73,16 +77,47 @@ def _item_payload(item: Optional[BaseModel], fields: Dict[str, Any]) -> Dict[str
     return {**(_wire_payload(item) if item is not None else {}), **_wire_payload(fields)}
 
 
+def _batch_delete_body(
+    source_id: str,
+    collection_id: Optional[str],
+    external_id: Optional[str],
+    kind: Optional[str],
+    cascade: Optional[bool],
+    cursor: Optional[str],
+) -> Dict[str, Any]:
+    return _omit_none(
+        {
+            "sourceId": source_id,
+            "collectionId": collection_id,
+            "externalId": external_id,
+            "kind": kind,
+            "cascade": cascade,
+            "cursor": cursor,
+        }
+    )
+
+
 def _custom_list_params(
     page_size: int,
     page_token: Optional[str],
     search_query: Optional[str],
     topics: Optional[List[str]],
+    source_id: Optional[str] = None,
+    collection_id: Optional[str] = None,
+    external_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     return aip_list_params(
         page_size,
         page_token,
-        **_omit_none({"searchQuery": search_query, "topics": topics}),
+        **_omit_none(
+            {
+                "searchQuery": search_query,
+                "topics": topics,
+                "sourceId": source_id,
+                "collectionId": collection_id,
+                "externalId": external_id,
+            }
+        ),
     )
 
 
@@ -107,6 +142,9 @@ class CustomContextItemsResource:
         page_token: Optional[str] = None,
         search_query: Optional[str] = None,
         topics: Optional[List[str]] = None,
+        source_id: Optional[str] = None,
+        collection_id: Optional[str] = None,
+        external_id: Optional[str] = None,
     ) -> Page[ContextItem]:
         """List custom context items in the organization.
 
@@ -116,16 +154,22 @@ class CustomContextItemsResource:
             search_query: Word search: returns rows that contain every word of
                 the query, case-insensitive.
             topics: Optional topic filters.
+            source_id: Restrict to one customer-defined source and everything beneath it.
+            collection_id: Restrict to one collection inside the source. Requires ``source_id``.
+            external_id: Restrict to one entity inside the collection. Requires
+                ``source_id`` and ``collection_id``.
 
         Returns:
             A page of custom context items.
 
         Example:
-            >>> for item in mgmt.context.custom_items.list(page_size=25).auto_paging_iter():
+            >>> for item in mgmt.context.custom_items.list(source_id="billing-db").auto_paging_iter():
             ...     print(item.uid, item.context_type)
         """
         validate_page_size(page_size)
-        return self._list_page(page_size, page_token, search_query, topics)
+        return self._list_page(
+            page_size, page_token, search_query, topics, source_id, collection_id, external_id
+        )
 
     def _list_page(
         self,
@@ -133,8 +177,13 @@ class CustomContextItemsResource:
         page_token: Optional[str],
         search_query: Optional[str],
         topics: Optional[List[str]],
+        source_id: Optional[str] = None,
+        collection_id: Optional[str] = None,
+        external_id: Optional[str] = None,
     ) -> Page[ContextItem]:
-        params = _custom_list_params(page_size, page_token, search_query, topics)
+        params = _custom_list_params(
+            page_size, page_token, search_query, topics, source_id, collection_id, external_id
+        )
         data = with_retry(
             lambda: invoke_operation(
                 self._http, "CustomContextItemsController_list", query=params
@@ -145,7 +194,9 @@ class CustomContextItemsResource:
             data,
             "contextItems",
             ContextItem,
-            lambda cur: self._list_page(page_size, cur, search_query, topics),
+            lambda cur: self._list_page(
+                page_size, cur, search_query, topics, source_id, collection_id, external_id
+            ),
         )
 
     def get(self, uid: str) -> ContextItem:
@@ -251,7 +302,7 @@ class CustomContextItemsResource:
 
         Args:
             relations: ``CreateCustomContextItemRelationDto`` models, or dicts with
-                ``from_uid``, ``to_uid``, ``relation_type``, and optional ``content``.
+                ``from_uid``, ``to_uid``, ``relation_type``, and optional flat ``edge_properties`` (primitives or primitive arrays). Omitting ``edge_properties`` replaces the stored map with ``{}``.
 
         Returns:
             Number of relations created or updated.
@@ -262,6 +313,7 @@ class CustomContextItemsResource:
             ...         "from_uid": "SOURCE_UID",
             ...         "to_uid": "TARGET_UID",
             ...         "relation_type": "depends_on",
+            ...         "edge_properties": {"source_file": "go.mod"},
             ...     }]
             ... )
         """
@@ -335,6 +387,54 @@ class CustomContextItemsResource:
         )
         return ContextItemDeletion.model_validate(raw)
 
+    def batch_delete(
+        self,
+        *,
+        source_id: str,
+        collection_id: Optional[str] = None,
+        external_id: Optional[str] = None,
+        kind: Optional[str] = None,
+        cascade: Optional[bool] = None,
+        cursor: Optional[str] = None,
+    ) -> BatchDeleteCustomContextItemsResponseDto:
+        """Delete custom context items selected by source key.
+
+        Only items you can manage are deleted, and integration-derived context
+        items are never affected. By default only the targeted node is removed;
+        set ``cascade`` to also remove everything beneath it. Processes up to
+        1000 items per call — when ``truncated`` is true, call again with
+        ``cursor=next_cursor``. This is a forward pass, not a snapshot: items
+        added (or recreated with a lower id) during the sweep may be missed, so
+        run a fresh pass to remove anything created while it ran.
+
+        Args:
+            source_id: Source to delete from. Required.
+            collection_id: Narrow to one collection inside the source.
+            external_id: Narrow to one entity inside the collection. Requires ``collection_id``.
+            kind: Which kind to delete at the selected path for a non-cascade delete; disambiguates
+                an entity from its samples at the same path. Defaults to the metadata item.
+            cascade: Also delete everything beneath the targeted node.
+            cursor: Continuation cursor from a previous response ``next_cursor``.
+
+        Returns:
+            Counts of deleted and skipped items, and whether more remain.
+
+        Example:
+            >>> result = mgmt.context.custom_items.batch_delete(
+            ...     source_id="billing-db", collection_id="contracts", cascade=True
+            ... )
+            >>> result.deleted_count, result.truncated
+        """
+        data = with_retry(
+            lambda: invoke_operation(
+                self._http,
+                "CustomContextItemsController_batchDelete",
+                json_body=_batch_delete_body(source_id, collection_id, external_id, kind, cascade, cursor),
+            ),
+            self._config.max_retries,
+        )
+        return BatchDeleteCustomContextItemsResponseDto.model_validate(data)
+
 
 class AsyncCustomContextItemsResource:
     """Customer-owned context items for internal systems and custom databases.
@@ -357,6 +457,9 @@ class AsyncCustomContextItemsResource:
         page_token: Optional[str] = None,
         search_query: Optional[str] = None,
         topics: Optional[List[str]] = None,
+        source_id: Optional[str] = None,
+        collection_id: Optional[str] = None,
+        external_id: Optional[str] = None,
     ) -> AsyncPage[ContextItem]:
         """List custom context items in the organization.
 
@@ -366,12 +469,18 @@ class AsyncCustomContextItemsResource:
             search_query: Word search: returns rows that contain every word of
                 the query, case-insensitive.
             topics: Optional topic filters.
+            source_id: Restrict to one customer-defined source and everything beneath it.
+            collection_id: Restrict to one collection inside the source. Requires ``source_id``.
+            external_id: Restrict to one entity inside the collection. Requires
+                ``source_id`` and ``collection_id``.
 
         Returns:
             A page of custom context items.
         """
         validate_page_size(page_size)
-        return await self._list_page(page_size, page_token, search_query, topics)
+        return await self._list_page(
+            page_size, page_token, search_query, topics, source_id, collection_id, external_id
+        )
 
     async def _list_page(
         self,
@@ -379,8 +488,13 @@ class AsyncCustomContextItemsResource:
         page_token: Optional[str],
         search_query: Optional[str],
         topics: Optional[List[str]],
+        source_id: Optional[str] = None,
+        collection_id: Optional[str] = None,
+        external_id: Optional[str] = None,
     ) -> AsyncPage[ContextItem]:
-        params = _custom_list_params(page_size, page_token, search_query, topics)
+        params = _custom_list_params(
+            page_size, page_token, search_query, topics, source_id, collection_id, external_id
+        )
         data = await async_with_retry(
             lambda: invoke_operation_async(
                 self._http, "CustomContextItemsController_list", query=params
@@ -391,7 +505,9 @@ class AsyncCustomContextItemsResource:
             data,
             "contextItems",
             ContextItem,
-            lambda cur: self._list_page(page_size, cur, search_query, topics),
+            lambda cur: self._list_page(
+                page_size, cur, search_query, topics, source_id, collection_id, external_id
+            ),
         )
 
     async def get(self, uid: str) -> ContextItem:
@@ -451,7 +567,7 @@ class AsyncCustomContextItemsResource:
 
         Args:
             relations: ``CreateCustomContextItemRelationDto`` models, or dicts with
-                ``from_uid``, ``to_uid``, ``relation_type``, and optional ``content``.
+                ``from_uid``, ``to_uid``, ``relation_type``, and optional flat ``edge_properties`` (primitives or primitive arrays). Omitting ``edge_properties`` replaces the stored map with ``{}``.
 
         Returns:
             Number of relations created or updated.
@@ -515,3 +631,45 @@ class AsyncCustomContextItemsResource:
             self._config.max_retries,
         )
         return ContextItemDeletion.model_validate(raw)
+
+    async def batch_delete(
+        self,
+        *,
+        source_id: str,
+        collection_id: Optional[str] = None,
+        external_id: Optional[str] = None,
+        kind: Optional[str] = None,
+        cascade: Optional[bool] = None,
+        cursor: Optional[str] = None,
+    ) -> BatchDeleteCustomContextItemsResponseDto:
+        """Delete custom context items selected by source key.
+
+        Only items you can manage are deleted, and integration-derived context
+        items are never affected. By default only the targeted node is removed;
+        set ``cascade`` to also remove everything beneath it. Processes up to
+        1000 items per call — when ``truncated`` is true, call again with
+        ``cursor=next_cursor``. This is a forward pass, not a snapshot: items
+        added (or recreated with a lower id) during the sweep may be missed, so
+        run a fresh pass to remove anything created while it ran.
+
+        Args:
+            source_id: Source to delete from. Required.
+            collection_id: Narrow to one collection inside the source.
+            external_id: Narrow to one entity inside the collection. Requires ``collection_id``.
+            kind: Which kind to delete at the selected path for a non-cascade delete; disambiguates
+                an entity from its samples at the same path. Defaults to the metadata item.
+            cascade: Also delete everything beneath the targeted node.
+            cursor: Continuation cursor from a previous response ``next_cursor``.
+
+        Returns:
+            Counts of deleted and skipped items, and whether more remain.
+        """
+        data = await async_with_retry(
+            lambda: invoke_operation_async(
+                self._http,
+                "CustomContextItemsController_batchDelete",
+                json_body=_batch_delete_body(source_id, collection_id, external_id, kind, cascade, cursor),
+            ),
+            self._config.max_retries,
+        )
+        return BatchDeleteCustomContextItemsResponseDto.model_validate(data)

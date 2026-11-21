@@ -99,18 +99,6 @@
           "title": "Connection Id",
           "type": "string"
         },
-        "path": {
-          "deprecated": true,
-          "description": "Deprecated. Use `preferences`. One stored row per included path, derived from `preferences`; an empty array is the whole connection.",
-          "examples": [
-            []
-          ],
-          "items": {
-            "type": "string"
-          },
-          "title": "Path",
-          "type": "array"
-        },
         "preferences": {
           "anyOf": [
             {
@@ -122,7 +110,7 @@
             }
           ],
           "default": null,
-          "description": "What the scope reads under this connection. `mode` `all` reads the whole connection; `manual` reads only the units its `include` rules select. `exclude` rules remove units in either mode. Each rule's `path` lists id steps `{type, by: \"id\", id}` from the connection down. Present on the connection's first row. Absent on every row of a connection last saved without `preferences`, until the server converts it.",
+          "description": "What the scope reads under this connection. `mode` `all` reads the whole connection; `manual` reads only the units its `include` rules select. `exclude` rules remove units in either mode. Each rule's `path` lists id steps `{type, by: \"id\", id}` from the connection down. Absent only on the entry of a deleted connection, whose `connection_id` is a placeholder (`00000000-0000-0000-0000-\u2026`) and which grants nothing.",
           "examples": [
             {
               "exclude": [
@@ -156,25 +144,10 @@
             }
           ],
           "title": "Preferences"
-        },
-        "context_enabled": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "deprecated": true,
-          "description": "Deprecated. Use `preferences`. Whether the scope reads context from this connection: true, except on a few older entries kept for their tools only.",
-          "title": "Context Enabled"
         }
       },
       "required": [
-        "connection_id",
-        "path"
+        "connection_id"
       ],
       "title": "ConnectionSetItemReadDto",
       "type": "object"
@@ -641,7 +614,7 @@
         },
         "toolset": {
           "additionalProperties": true,
-          "description": "Map of tool key to configuration. Integrations use `<platform>.byConnection[connectionUuid] = { actions, rules? }`; SQL platforms grant `query`. General tools and MCP configurations keep their own formats.",
+          "description": "Map of tool key to configuration. Integrations use `<platform>.byConnection[connectionUuid] = { actions, rules? }`, plus `<platform>.personal = { actions, rules? }` for actions run on each runner\u2019s own personal connection; SQL platforms grant `query`. General tools and MCP configurations keep their own formats.",
           "examples": [
             {
               "postgresql": {
@@ -662,7 +635,7 @@
           "type": "object"
         },
         "connectionSet": {
-          "description": "Connections attached to this variation. A connection's `preferences` say what the scope reads under it; its rows list the derived paths.",
+          "description": "Connections attached to this variation, one entry per connection. Its `preferences` say what the scope reads under it; an entry with `preferences` can be sent back as it is on update. Drop an entry without them (a deleted connection) first.",
           "items": {
             "$ref": "#/$defs/ConnectionSetItemReadDto"
           },

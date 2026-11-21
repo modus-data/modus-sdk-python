@@ -12,6 +12,7 @@ from modus._generated.resources.consumption.workflows import (
 
 from ..._chat import AsyncChatSession, ChatSession, start_chat, start_chat_async
 from ..._config import ModusConfig
+from ..._deprecation import warn_deprecated
 from ..._generated.models import WorkflowDto
 from ..._http import AsyncHttpClient, HttpClient
 from ..._openapi_invoke import invoke_operation, invoke_operation_async
@@ -49,6 +50,15 @@ WORKFLOW_OPERATIONS = WorkflowsOperations(
 
 def _parse_workflow(raw: dict) -> Agent:
     return WorkflowDto.model_validate(raw)
+
+
+def _warn_if_model(model: Optional[str]) -> None:
+    if model is not None:
+        warn_deprecated(
+            old="workflows.chat(model=...)",
+            new="workflows.chat() without a model (each step uses the model set in the workflow)",
+            stacklevel=4,
+        )
 
 
 class WorkflowsResource(_WorkflowsResourceBase):
@@ -121,24 +131,25 @@ class WorkflowsResource(_WorkflowsResourceBase):
     def chat(
         self,
         workflow_id: Union[int, str],
-        message: str,
+        message: str = "",
         *,
-        model: str,
         thread_id: Optional[str] = None,
+        model: Optional[str] = None,
     ) -> ChatSession:
         """
-        Chat with a published workflow. Node output streams live from the agent
+        Run a published workflow. Node output streams live from the agent
         host: iterate ``text_stream`` for tokens, or call ``result()`` for the
-        workflow's final output.
+        workflow's final output. Call it with no message to trigger a run with
+        no input.
 
         Prefer ``client.workflows.runs.create`` when you need run lifecycle
         events (cancel / resume).
 
         Args:
             workflow_id: Numeric workflow id.
-            message:   The message to send.
-            model:     Model id, e.g. ``"claude-sonnet-5.5"``.
+            message:   The run's input; omit it for a run with no input.
             thread_id: Continue an existing conversation; omit to start a new one.
+            model:     Deprecated and ignored: each step uses the model set in the workflow.
 
         Returns:
             ``ChatSession``; ``result()`` gives ``content``, ``thread_id`` and ``run_id``.
@@ -147,15 +158,13 @@ class WorkflowsResource(_WorkflowsResourceBase):
             ModusError: No agent host is known for a custom ``base_url``.
 
         Example:
-            >>> result = client.workflows.chat(
-            ...     workflow_id,
-            ...     "Run the weekly digest summary.",
-            ...     model="claude-sonnet-5.5",
-            ... ).result()
+            >>> client.workflows.chat(workflow_id).result()
+            >>> result = client.workflows.chat(workflow_id, "Run the weekly digest summary.").result()
             >>> print(result.content)
         """
+        _warn_if_model(model)
         return start_chat(
-            self._agent_http, self._config, "workflows", workflow_id, message, model=model, thread_id=thread_id
+            self._agent_http, self._config, "workflows", workflow_id, message, model=None, thread_id=thread_id
         )
 
 
@@ -215,12 +224,13 @@ class AsyncWorkflowsResource(_AsyncWorkflowsResourceBase):
     def chat(
         self,
         workflow_id: Union[int, str],
-        message: str,
+        message: str = "",
         *,
-        model: str,
         thread_id: Optional[str] = None,
+        model: Optional[str] = None,
     ) -> AsyncChatSession:
-        """Chat with a workflow; ``await`` the session for the final output. See the sync ``chat``."""
+        """Run a workflow; ``await`` the session for the final output. See the sync ``chat``."""
+        _warn_if_model(model)
         return start_chat_async(
-            self._agent_http, self._config, "workflows", workflow_id, message, model=model, thread_id=thread_id
+            self._agent_http, self._config, "workflows", workflow_id, message, model=None, thread_id=thread_id
         )

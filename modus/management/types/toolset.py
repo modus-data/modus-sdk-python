@@ -17,6 +17,7 @@ Build a toolset with the factory methods and combine several with
         Toolset.sql(
             "postgresql", connection_id="22222222-2222-4222-8222-222222222222"
         ),
+        Toolset.integration("gmail", personal=True, actions=["search-threads"]),
         Toolset.memory(),
     )
     mgmt.scopes.create(name="Analyst", model="gpt-4o", toolset=toolset)
@@ -44,13 +45,18 @@ INTEGRATIONS = (
     "datadog",
     "dbt_cloud",
     "dbt_core",
+    "dropbox",
+    "fathom",
     "fellow",
     "fireflies",
     "fivetran",
     "gainsight",
+    "gemini_notebook",
     "github",
     "gitlab",
+    "gmail",
     "gong",
+    "google_calendar",
     "google_drive",
     "hubspot",
     "intercom",
@@ -85,6 +91,7 @@ INTEGRATIONS = (
     "zendesk",
     "zendesk_docs",
 )
+
 
 
 class Toolset(BaseModel):
@@ -126,16 +133,25 @@ class Toolset(BaseModel):
         cls,
         name: str,
         *,
-        connection_id: str,
+        connection_id: Optional[str] = None,
+        personal: bool = False,
         actions: Iterable[str],
         rules: Optional[Dict[str, Any]] = None,
     ) -> "Toolset":
-        """Enable actions on the integration connection you choose.
+        """Enable actions on the integration connection you choose, or on each runner's own one.
+
+        Pass exactly one of ``connection_id`` and ``personal=True``.
 
         Args:
             name: Integration platform, e.g. ``"slack"`` or ``"clickup"``. See ``INTEGRATIONS``.
-            connection_id: Modus connection UUID. No other connection is substituted;
-                a runner who cannot access it cannot use its tools.
+            connection_id: Modus connection UUID of a shared connection. No other connection
+                is substituted; a runner who cannot access it cannot use its tools. The API
+                refuses a save that adds a personal connection's UUID here, or adds actions to one
+                already stored; use ``personal=True`` for those.
+            personal: Grant the actions on the personal connection of whoever runs the skill.
+                A runner who has not connected the platform is asked to connect it (or gets a
+                tool error outside chat); nobody else's connection is used. The API accepts it
+                only on platforms people connect personally, such as Gmail or Google Drive.
             actions: Operation names the skill may call, without connection or path suffixes.
             rules: Optional restrictions for this connection, such as a Slack channel allow-list.
 
@@ -144,9 +160,11 @@ class Toolset(BaseModel):
                 "slack", connection_id="11111111-1111-4111-8111-111111111111",
                 actions=["SendMessage"],
             )
+            Toolset.integration("gmail", personal=True, actions=["search-threads"])
 
         Raises:
-            ValueError: If ``name`` is not a supported integration or ``actions`` is empty.
+            ValueError: If ``name`` is not a supported integration, ``actions`` is empty,
+                or both or neither of ``connection_id`` and ``personal`` are given.
         """
         key = name.strip().lower()
         if key not in INTEGRATIONS:
@@ -154,10 +172,16 @@ class Toolset(BaseModel):
             raise ValidationError(
                 f"Unknown integration {name!r}. Supported integrations: {allowed}."
             )
+        if personal == (connection_id is not None):
+            raise ValidationError(
+                f"{key}: pass exactly one of connection_id and personal=True."
+            )
         action_list = cls._require_str_list(actions, field=f"{key} actions")
         entry: Dict[str, Any] = {"actions": action_list}
         if rules is not None:
             entry["rules"] = rules
+        if personal:
+            return cls(**{key: {"byConnection": {}, "personal": entry}})
         return cls(**{key: {"byConnection": {connection_id: entry}}})
 
     @classmethod

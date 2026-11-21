@@ -46,8 +46,8 @@ class _ScopesConversationsResourceBase:
         List scope conversations.
 
         Returns a page of conversation summaries (most recently updated first) for a scope. Use
-        ``id=0`` for your cross-scope recent history. Pass ``next_page_token`` as ``page_token`` to
-        fetch the next page.
+        ``id=0`` for your cross-scope recent history. A conversation you took no part in shows only
+        who took part and when. Pass ``next_page_token`` as ``page_token`` for the next page.
 
         **Requires:** ``scopes:read``
 
@@ -55,7 +55,8 @@ class _ScopesConversationsResourceBase:
             page_size: Items per page. Defaults to 25.
             page_token: Opaque page token from a previous response's ``next_page_token``. Omit for
                 the first page.
-            source: Return only conversations started from this UI surface.
+            source: Return only conversations started from this UI surface. Matches only
+                conversations you took part in.
             source_ref: Narrow ``source`` to one instance of that surface — for
                 ``dashboard_copilot`` or ``dashboard_assistant``, a dashboard id (both scope
                 conversation history per dashboard). Requires ``source``; sent alone it is a 422.
@@ -127,8 +128,8 @@ class _AsyncScopesConversationsResourceBase:
         List scope conversations.
 
         Returns a page of conversation summaries (most recently updated first) for a scope. Use
-        ``id=0`` for your cross-scope recent history. Pass ``next_page_token`` as ``page_token`` to
-        fetch the next page.
+        ``id=0`` for your cross-scope recent history. A conversation you took no part in shows only
+        who took part and when. Pass ``next_page_token`` as ``page_token`` for the next page.
 
         **Requires:** ``scopes:read``
 
@@ -136,7 +137,8 @@ class _AsyncScopesConversationsResourceBase:
             page_size: Items per page. Defaults to 25.
             page_token: Opaque page token from a previous response's ``next_page_token``. Omit for
                 the first page.
-            source: Return only conversations started from this UI surface.
+            source: Return only conversations started from this UI surface. Matches only
+                conversations you took part in.
             source_ref: Narrow ``source`` to one instance of that surface — for
                 ``dashboard_copilot`` or ``dashboard_assistant``, a dashboard id (both scope
                 conversation history per dashboard). Requires ``source``; sent alone it is a 422.

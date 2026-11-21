@@ -188,7 +188,7 @@ def test_workflow_chat_streams_node_tokens(client: Modus) -> None:
         )
     )
 
-    chat = client.workflows.chat(7, "Run it", model=MODEL, thread_id="wf-thread")
+    chat = client.workflows.chat(7, "Run it", thread_id="wf-thread")
     tokens = list(chat.text_stream)
     result = chat.result()
 
@@ -219,12 +219,38 @@ def test_workflow_chat_ignores_a_node_terminal_frame(client: Modus, inner: dict)
         )
     )
 
-    chat = client.workflows.chat(7, "Run it", model=MODEL)
+    chat = client.workflows.chat(7, "Run it")
     tokens = list(chat.text_stream)
     result = chat.result()
 
     assert tokens == ["one ", "two"]
     assert (result.content, result.run_id) == ("final", "wf-1")
+
+
+@respx.mock
+def test_workflow_chat_triggers_a_run_with_no_input_or_model(client: Modus) -> None:
+    route = respx.post(f"{AGENT}/agent/v1/workflows/7/runs").mock(
+        return_value=sse([{"type": "workflow_done", "runId": "wf-1", "finalOutput": "done"}])
+    )
+
+    client.workflows.chat(7).result()
+
+    body = sent(route)
+    assert body["message"] == ""
+    assert "config" not in body
+
+
+@respx.mock
+def test_workflow_chat_model_is_deprecated_and_not_sent(client: Modus) -> None:
+    route = respx.post(f"{AGENT}/agent/v1/workflows/7/runs").mock(
+        return_value=sse([{"type": "workflow_done", "runId": "wf-1", "finalOutput": "done"}])
+    )
+
+    with pytest.warns(DeprecationWarning, match="model") as caught:
+        client.workflows.chat(7, "Run it", model="not-a-model").result()
+
+    assert caught[0].filename == __file__
+    assert "config" not in sent(route)
 
 
 @respx.mock
@@ -234,7 +260,7 @@ def test_workflow_error_raises(client: Modus) -> None:
     )
 
     with pytest.raises(ModusError, match="quota"):
-        client.workflows.chat(7, "Run it", model=MODEL).result()
+        client.workflows.chat(7, "Run it").result()
 
 
 def test_local_base_url_refuses_chat(monkeypatch: pytest.MonkeyPatch) -> None:

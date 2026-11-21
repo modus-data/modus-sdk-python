@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Union
 
 from modus._config import ModusConfig
+from modus._exceptions import ValidationError
 from modus._http import AsyncHttpClient, HttpClient
 from modus._openapi_invoke import invoke_operation, invoke_operation_async
 from modus._pagination import (
@@ -53,6 +54,16 @@ def _context_list_params(
     if connection_ids is not None:
         extra["connectionIds"] = list(connection_ids) if len(connection_ids) > 0 else ""
     return aip_list_params(page_size, page_token, **extra)
+
+
+def _move_body(
+    destination_folder_uid: Optional[str], destination_folder_path: Optional[str]
+) -> Dict[str, Any]:
+    if destination_folder_path is None:
+        return {"destinationFolderUid": destination_folder_uid}
+    if destination_folder_uid is not None:
+        raise ValidationError("Pass destination_folder_uid or destination_folder_path, not both")
+    return {"destinationFolderPath": destination_folder_path}
 
 
 class ContextItemsResource:
@@ -258,18 +269,26 @@ class ContextItemsResource:
         )
         return ContextItemDeletion.model_validate(raw)
 
-    def move(self, uid: str, *, destination_folder_uid: Optional[str]) -> ContextItemMove:
+    def move(
+        self,
+        uid: str,
+        *,
+        destination_folder_uid: Optional[str] = None,
+        destination_folder_path: Optional[str] = None,
+    ) -> ContextItemMove:
         """
         Move a live file or Files folder.
 
-        Pass ``destination_folder_uid=None`` to move to the Files root. The
-        destination folder must already exist. Same-parent moves succeed as a
-        no-op. Does not rename or merge folders.
+        Pass ``destination_folder_uid`` (an existing folder; ``None`` is the
+        Files root) or ``destination_folder_path`` (a root-relative path such as
+        ``"reports/2026"``; missing folders on it are created with the move), not
+        both. Same-parent moves succeed as a no-op. Does not rename or merge folders.
 
         Args:
             uid: Stored context-item uid of the file or folder to move.
             destination_folder_uid: Stored context-item uid of the destination
                 folder, or ``None`` for the Files root.
+            destination_folder_path: Root-relative destination folder path.
 
         Returns:
             How many items changed parent (``0`` is a successful no-op).
@@ -281,6 +300,7 @@ class ContextItemsResource:
             PermissionDeniedError: The destination exists but is not writable
                 for this caller.
             ConflictError: A sibling with the same name already exists.
+            ValidationError: Both destinations were given.
 
         Example:
             >>> moved = mgmt.context.items.move(
@@ -294,7 +314,7 @@ class ContextItemsResource:
                 self._http,
                 "ContextItemsController_move",
                 path_params={"uid": uid},
-                json_body={"destinationFolderUid": destination_folder_uid},
+                json_body=_move_body(destination_folder_uid, destination_folder_path),
             ),
             self._config.max_retries,
         )
@@ -475,13 +495,22 @@ class AsyncContextItemsResource:
         )
         return ContextItemDeletion.model_validate(raw)
 
-    async def move(self, uid: str, *, destination_folder_uid: Optional[str]) -> ContextItemMove:
+    async def move(
+        self,
+        uid: str,
+        *,
+        destination_folder_uid: Optional[str] = None,
+        destination_folder_path: Optional[str] = None,
+    ) -> ContextItemMove:
         """Move a live file or Files folder asynchronously.
 
         Args:
             uid: Stored context-item uid of the file or folder to move.
             destination_folder_uid: Existing destination folder uid, or ``None``
                 for the Files root.
+            destination_folder_path: Root-relative destination folder path; missing
+                folders on it are created with the move. Not with
+                ``destination_folder_uid``.
 
         Returns:
             How many items changed parent; ``0`` is a same-parent no-op.
@@ -497,7 +526,7 @@ class AsyncContextItemsResource:
                 self._http,
                 "ContextItemsController_move",
                 path_params={"uid": uid},
-                json_body={"destinationFolderUid": destination_folder_uid},
+                json_body=_move_body(destination_folder_uid, destination_folder_path),
             ),
             self._config.max_retries,
         )

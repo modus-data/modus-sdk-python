@@ -62,7 +62,7 @@ def skill_detail_row(skill_list_row) -> dict:
                 },
                 "memory": {"enabled": True},
             },
-            "connectionSet": [{"connection_id": "22222222-2222-4222-8222-222222222222", "path": []}],
+            "connectionSet": [{"connection_id": "22222222-2222-4222-8222-222222222222", "preferences": {"mode": "all", "include": [], "exclude": []}}],
             "contextSelections": [],
             "interfaces": [],
             "evaluations": [],

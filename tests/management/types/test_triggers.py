@@ -112,3 +112,18 @@ def test_parse_trigger_round_trip() -> None:
     dumped = dump_trigger(trigger)
     assert dumped["trigger_type"] == "schedule"
     assert dumped["schedule"]["time_of_day"] == "09:00"
+
+
+# Reading a Workflow that starts on email must not raise "unsupported trigger_type".
+def test_parse_email_trigger_and_dump_it_back() -> None:
+    raw = {
+        "trigger_type": "email",
+        "schedule": None,
+        "email": {"sender_policy": "allowlist", "allowed_senders": ["@acme.com"]},
+    }
+    parsed = parse_trigger(raw)
+    assert parsed == AgentTrigger.email(allowed_senders=["@acme.com"])
+    assert dump_trigger(parsed) == {
+        "trigger_type": "email",
+        "email": {"sender_policy": "allowlist", "allowed_senders": ["@acme.com"]},
+    }

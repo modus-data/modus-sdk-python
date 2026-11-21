@@ -21,6 +21,7 @@ from modus._generated.models import (
     AgentRunDto,
     BatchCreateCustomContextItemRelationsDto,
     BatchCreateCustomContextItemsDto,
+    BatchDeleteCustomContextItemsDto,
     CancelRunDto,
     ComposeSkillContextRequestDto,
     CreateCustomContextItemDto,
@@ -61,7 +62,7 @@ def _model_wire_fields(model: Type[BaseModel]) -> Set[str]:
 SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     "IngestedDataController_upload": {"integration_type", "request", "response"},
     "ContextItemsController_update": _model_wire_fields(ContextItemUpdate),
-    "ContextItemsController_move": {"destinationFolderUid"},
+    "ContextItemsController_move": {"destinationFolderUid", "destinationFolderPath"},
     "ContextItemAccessController_updateAccess": {"visibility", "groupPermissions", "sharedWith"},
     "ModusContextComposeController_compose": _model_wire_fields(ModusContextRequestDto),
     "ModusContextController_compose": _model_wire_fields(ModusContextRequestDto),
@@ -98,6 +99,9 @@ SDK_REQUEST_BODY_FIELDS: Dict[str, Set[str]] = {
     ),
     "CustomContextItemsController_batchCreate": _model_wire_fields(
         BatchCreateCustomContextItemsDto
+    ),
+    "CustomContextItemsController_batchDelete": _model_wire_fields(
+        BatchDeleteCustomContextItemsDto
     ),
     "CustomContextItemsController_createRelations": _model_wire_fields(
         BatchCreateCustomContextItemRelationsDto

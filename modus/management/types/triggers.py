@@ -11,7 +11,8 @@ from modus._generated.models import TriggerDto
 from ..._exceptions import ValidationError
 
 ScheduleFrequency = Literal["hourly", "daily", "weekly", "monthly", "custom"]
-TriggerType = Literal["schedule", "webhook", "api", "slack", "manual"]
+TriggerType = Literal["schedule", "webhook", "api", "slack", "manual", "email"]
+SenderPolicy = Literal["allowlist", "any"]
 Weekday = Literal[
     "monday",
     "tuesday",
@@ -135,12 +136,47 @@ class SlackTrigger(BaseModel):
     trigger_type: Literal["slack"] = "slack"
 
 
+class TriggerEmail(BaseModel):
+    """Who may start an email-triggered workflow."""
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        extra="forbid",
+    )
+
+    sender_policy: SenderPolicy = Field(
+        description=(
+            "allowlist starts runs only for email from allowed_senders (an empty list "
+            "rejects every email); any accepts every authenticated sender."
+        ),
+    )
+    allowed_senders: List[str] = Field(
+        default_factory=list,
+        description="Exact addresses or @domain entries (that domain only). At most 100.",
+    )
+
+
+class EmailTrigger(BaseModel):
+    """Workflow runs when an email reaches its address."""
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+        extra="forbid",
+    )
+
+    trigger_type: Literal["email"] = "email"
+    email: TriggerEmail
+
+
 AgentTriggerValue = Union[
     ScheduleTrigger,
     ManualTrigger,
     WebhookTrigger,
     ApiTrigger,
     SlackTrigger,
+    EmailTrigger,
 ]
 
 TriggerInput = AgentTriggerValue
@@ -191,6 +227,13 @@ def parse_trigger(raw: object) -> Optional[AgentTriggerValue]:
         return ApiTrigger()
     if trigger_type == "slack":
         return SlackTrigger()
+    if trigger_type == "email":
+        if dto.email is None:
+            raise ValidationError("email is required when trigger_type is 'email'")
+        return EmailTrigger.model_construct(
+            trigger_type="email",
+            email=TriggerEmail.model_construct(**dto.email.model_dump(by_alias=False)),
+        )
     raise ValidationError(f"unsupported trigger_type: {trigger_type!r}")
 
 
@@ -222,6 +265,26 @@ class AgentTrigger:
     def slack(cls) -> SlackTrigger:
         """Run the workflow when triggered from Slack."""
         return SlackTrigger()
+
+    @classmethod
+    def email(
+        cls,
+        *,
+        allowed_senders: Optional[List[str]] = None,
+        any_sender: bool = False,
+    ) -> EmailTrigger:
+        """Run the workflow when an email reaches its address.
+
+        Args:
+            allowed_senders: Exact addresses or ``@domain`` entries allowed to start a run.
+            any_sender:      Accept every authenticated sender instead of the list.
+        """
+        return EmailTrigger(
+            email=TriggerEmail(
+                sender_policy="any" if any_sender else "allowlist",
+                allowed_senders=list(allowed_senders or []),
+            )
+        )
 
     @classmethod
     def schedule_daily(cls, *, time: str, timezone: str) -> ScheduleTrigger:

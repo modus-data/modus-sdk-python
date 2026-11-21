@@ -198,7 +198,7 @@ class AutomationRunListItemDto(BaseModel):
     trigger_type: str | None = Field(
         None,
         alias='triggerType',
-        description='Trigger type for the run (schedule / webhook / api / slack / manual).',
+        description="What started this run: `schedule`, `email`, `api`, `manual`, or the chat channel it came from. A run that did not record it shows the Workflow's current trigger type.",
     )
     started_at: str | None = Field(None, alias='startedAt', description='ISO-8601 start timestamp.')
     ended_at: str | None = Field(
@@ -232,6 +232,27 @@ class BatchCreateCustomContextItemRelationsResponseDto(BaseModel):
         alias='upsertedCount',
         description='Number of relations created or updated by the batch.',
         examples=[12],
+    )
+
+
+class BatchDeleteCustomContextItemsResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    deleted_count: int = Field(
+        ...,
+        alias='deletedCount',
+        description='Number of custom context items soft-deleted by this request.',
+        examples=[8],
+    )
+    truncated: bool = Field(
+        ...,
+        description='True when more matching items were ahead of this batch; call again with `nextCursor` to continue the sweep.',
+        examples=[False],
+    )
+    next_cursor: str | None = Field(
+        ...,
+        alias='nextCursor',
+        description='Continuation cursor; pass as `cursor` to delete the next batch. `null` means no more matching items were ahead of the cursor at scan time. This is a forward pass, not a snapshot: items added, or recreated with a lower id, during the sweep are not guaranteed to be included — run a fresh pass (no cursor) to catch them.',
+        examples=[None],
     )
 
 
@@ -387,11 +408,6 @@ class ConnectionSetItemDto(BaseModel):
         description='What the scope reads under this connection. `mode` `all` reads the whole connection; `manual` reads only the units its `include` rules select. `exclude` rules remove units in either mode. Each rule\'s `path` lists id steps `{type, by: "id", id}` from the connection down.',
         examples=[{'mode': 'manual', 'include': [{'path': [{'type': 'database', 'by': 'id', 'id': 'analytics'}]}], 'exclude': [{'path': [{'type': 'database', 'by': 'id', 'id': 'analytics'}, {'type': 'schema', 'by': 'id', 'id': 'staging'}]}]}],
     )
-    context_enabled: bool | None = Field(
-        None,
-        deprecated=True,
-        description='Deprecated. Use `preferences` alone: the scope always reads context from its connections. Omit it; `false` is accepted only when the connection is already stored with `false`.',
-    )
 
 
 class ConnectionSetItemReadDto(BaseModel):
@@ -399,21 +415,10 @@ class ConnectionSetItemReadDto(BaseModel):
     connection_id: str = Field(
         ..., description='Id of the connection.', examples=['11111111-1111-4111-8111-111111111111']
     )
-    path: list[str] = Field(
-        ...,
-        deprecated=True,
-        description='Deprecated. Use `preferences`. One stored row per included path, derived from `preferences`; an empty array is the whole connection.',
-        examples=[[]],
-    )
     preferences: dict[str, Any] | None = Field(
         None,
-        description='What the scope reads under this connection. `mode` `all` reads the whole connection; `manual` reads only the units its `include` rules select. `exclude` rules remove units in either mode. Each rule\'s `path` lists id steps `{type, by: "id", id}` from the connection down. Present on the connection\'s first row. Absent on every row of a connection last saved without `preferences`, until the server converts it.',
+        description='What the scope reads under this connection. `mode` `all` reads the whole connection; `manual` reads only the units its `include` rules select. `exclude` rules remove units in either mode. Each rule\'s `path` lists id steps `{type, by: "id", id}` from the connection down. Absent only on the entry of a deleted connection, whose `connection_id` is a placeholder (`00000000-0000-0000-0000-…`) and which grants nothing.',
         examples=[{'mode': 'manual', 'include': [{'path': [{'type': 'database', 'by': 'id', 'id': 'analytics'}]}], 'exclude': [{'path': [{'type': 'database', 'by': 'id', 'id': 'analytics'}, {'type': 'schema', 'by': 'id', 'id': 'staging'}]}]}],
-    )
-    context_enabled: bool | None = Field(
-        None,
-        deprecated=True,
-        description='Deprecated. Use `preferences`. Whether the scope reads context from this connection: true, except on a few older entries kept for their tools only.',
     )
 
 
@@ -505,23 +510,23 @@ class ConversationListItemDto(BaseModel):
     first_message: str = Field(
         ...,
         alias='firstMessage',
-        description='Preview of the first user turn, used as a list-row caption. Falls back to a stable placeholder when the thread has no human turn yet.',
+        description='Preview of the first user turn, used as a list-row caption. Falls back to a stable placeholder when the thread has no human turn yet. Empty when the caller did not take part in the conversation.',
         examples=['Run the churn analysis for last 30 days.'],
     )
     title: str | None = Field(
         ...,
-        description='User-managed display title. Null until the user renames the conversation.',
+        description='User-managed display title. Null until the user renames the conversation, and null when the caller did not take part in it.',
         examples=['Q3 Revenue Analysis'],
     )
     source: str | None = Field(
         None,
-        description='UI surface the conversation was started from (e.g. `context_chat`, `home`). Not constrained to the `RunSource` enum: historical rows carry legacy values. Null when unknown, absent on responses that predate the field.',
+        description='UI surface the conversation was started from (e.g. `context_chat`, `home`). Not constrained to the `RunSource` enum: historical rows carry legacy values. Null when unknown or when the caller did not take part in the conversation, absent on responses that predate the field.',
         examples=['context_chat'],
     )
     message_count: int = Field(
         ...,
         alias='messageCount',
-        description='Total number of message turns in the (post-collapse) conversation.',
+        description='Total number of message turns in the (post-collapse) conversation. 0 when the caller did not take part in it.',
         examples=[12],
     )
     created_at: str = Field(
@@ -539,7 +544,7 @@ class ConversationListItemDto(BaseModel):
     tools_used: list[str] | None = Field(
         None,
         alias='toolsUsed',
-        description='Distinct tool names invoked across this conversation. Present only when `includeTools=true` is requested.',
+        description='Distinct tool names invoked across this conversation. Present only when `includeTools=true` is requested and the caller took part in the conversation.',
         examples=[['sql_runner']],
     )
     user_ids: list[str] = Field(
@@ -547,6 +552,12 @@ class ConversationListItemDto(BaseModel):
         alias='userIds',
         description='Distinct user ids that participated in this thread.',
         examples=[['user_abc']],
+    )
+    owned_by_caller: bool | None = Field(
+        None,
+        alias='ownedByCaller',
+        description='Whether the caller took part in this conversation. Only a participant can open, rename or download files from a conversation; for any other row the list carries only who took part and when.',
+        examples=[True],
     )
 
 
@@ -610,11 +621,15 @@ class CreateCustomContextItemRelationDto(BaseModel):
     relation_type: str = Field(
         ...,
         alias='relationType',
-        description='Snake_case relation type describing how the source relates to the target.',
+        description='Snake_case relation type describing how the source relates to the target. Reserved system types cannot be used: contains, reads, joins_with, has_context, has_feedback, filters_by, context_relation. Dotted names are also reserved.',
         examples=['depends_on'],
     )
-    content: dict[str, Any] | None = Field(
-        None, description='Optional structured payload stored on the relation edge.'
+    edge_properties: dict[str, str | float | bool | list[str | float | bool]] | None = Field(
+        None,
+        alias='edgeProperties',
+        description='Edge properties, replacing the previous map. Up to 100 keys matching ^[A-Za-z_][A-Za-z0-9_]{0,63}$ and 65536 UTF-8 JSON bytes; fromContextItemUid, toContextItemUid, relationType, createdAt and updatedAt are reserved. Values are strings, finite numbers, booleans, or arrays of those. Omission writes an empty map.',
+        examples=[{'version': 'v1.1.8', 'source': 'go.mod'}],
+        max_length=100,
     )
 
 
@@ -1115,87 +1130,6 @@ class FileUploadResourceStatus(str, Enum):
     failed = 'failed'
 
 
-class GetAutomationRunResponseDto(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    id: str = Field(
-        ...,
-        description='Composite run identifier (`workflowId:temporalRunId`).',
-        examples=['wf_42_run_1:11111111-2222-3333-4444-555555555555'],
-    )
-    workflow_id: str = Field(
-        ..., alias='workflowId', description='Workflow run identifier.', examples=['wf_42_run_1']
-    )
-    temporal_run_id: str | None = Field(
-        None,
-        alias='temporalRunId',
-        description='Run identifier; a workflow may have multiple runs after a retry.',
-    )
-    agent_id: int = Field(..., alias='agentId', description='Parent workflow id.', examples=[42])
-    agent_name: str = Field(
-        ...,
-        alias='agentName',
-        description='Snapshot of the workflow name at the time the run was indexed.',
-        examples=['Daily Sales Report'],
-    )
-    agent_type: AgentType = Field(
-        ..., alias='agentType', description='Workflow type.', examples=['task']
-    )
-    status: str = Field(
-        ...,
-        description='Run status (running / awaiting_human / completed / error / cancelled).',
-        examples=['completed'],
-    )
-    status_reason: StatusReason | None = Field(
-        None,
-        alias='statusReason',
-        description='Display-only annotation of a completed run: `approval_timeout` when a human approval timed out, `agent_reported_issue` when a workflow step said it could not finish part of its task.',
-    )
-    trigger_type: str | None = Field(
-        None,
-        alias='triggerType',
-        description='Trigger type for the run (schedule / webhook / api / slack / manual).',
-    )
-    started_at: str | None = Field(None, alias='startedAt', description='ISO-8601 start timestamp.')
-    ended_at: str | None = Field(
-        None, alias='endedAt', description='ISO-8601 end timestamp; absent for in-flight runs.'
-    )
-    duration_ms: int | None = Field(
-        None,
-        alias='durationMs',
-        description='Duration in milliseconds (when end timestamp is known).',
-    )
-    summary: str | None = Field(
-        None, description='Short human-readable summary of the run outcome.'
-    )
-    pending_approval: dict[str, Any] | None = Field(
-        None,
-        alias='pendingApproval',
-        description='Pending approval payload (only present when status is awaiting_human).',
-    )
-    source: AutomationRunSource = Field(
-        ...,
-        description='Where the payload was read from. `live-query` = the run is still in progress; `history` = a completed run.',
-    )
-    task_result: dict[str, Any] | None = Field(
-        None,
-        alias='taskResult',
-        description='Final result of a `task`-typed workflow run. Free-form (depends on the workflow).',
-    )
-    task_error: str | None = Field(
-        None, alias='taskError', description='Error message for a failed `task`-typed workflow run.'
-    )
-    workflow_nodes: list[dict[str, Any]] | None = Field(
-        None,
-        alias='workflowNodes',
-        description='Per-node state for a `workflow`-typed workflow run.',
-    )
-    history_unavailable_reason: (
-        str | None
-    ) = (
-        Field(None, alias='historyUnavailableReason', description='Set when history was unavailable; `source` will be `live-query` in that case.')
-    )
-
-
 class GroupPermissionDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     use: bool = Field(
@@ -1421,6 +1355,7 @@ class McpExposureFamily(str, Enum):
     custom_mcp = 'custom_mcp'
     mcp_server = 'mcp_server'
     tool = 'tool'
+    personal = 'personal'
 
 
 class McpToolExposureMode(str, Enum):
@@ -1517,10 +1452,16 @@ class ModusContextResponseDto(BaseModel):
 class MoveContextItemDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     destination_folder_uid: str | None = Field(
-        ...,
+        None,
         alias='destinationFolderUid',
-        description='Stored context-item uid of an existing Files folder, or null to move to the Files root. The destination must already exist. Move does not rename or merge folders.',
+        description='Stored context-item uid of an existing Files folder, or null to move to the Files root. Send this or destinationFolderPath, not both.',
         examples=[None],
+    )
+    destination_folder_path: str | None = Field(
+        None,
+        alias='destinationFolderPath',
+        description='Root-relative destination folder path (for example `reports/2026`). Folders missing on the path are created; existing ones are reused. Send this or destinationFolderUid, not both.',
+        examples=['reports/2026'],
     )
 
 
@@ -1755,11 +1696,6 @@ class SelectionOpDto(BaseModel):
     preferences: dict[str, Any] | None = Field(
         None, description='The connection’s whole data selection, as workspace access preferences.'
     )
-    context_enabled: bool | None = Field(
-        None,
-        alias='contextEnabled',
-        description='Deprecated. Use `preferences` alone: the scope always reads context from its connections. Omit it; `false` is accepted only when the connection is already stored with `false`.',
-    )
     item: SelectedContextItemDto | None = Field(None, description='The pinned context item.')
     uid: str | None = Field(None, description='Uid of the pinned item to remove.')
     value: dict[str, Any] | None = Field(
@@ -1932,6 +1868,27 @@ class TriggerType(str, Enum):
     api = 'api'
     slack = 'slack'
     manual = 'manual'
+    email = 'email'
+
+
+class SenderPolicy(str, Enum):
+    __str__ = str.__str__
+    allowlist = 'allowlist'
+    any = 'any'
+
+
+class TriggerEmailDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    sender_policy: SenderPolicy = Field(
+        ...,
+        description='`allowlist` starts runs only for email from `allowed_senders` (an empty list rejects every email); `any` accepts every authenticated sender.',
+        examples=['allowlist'],
+    )
+    allowed_senders: list[str] = Field(
+        ...,
+        description='Exact addresses or `@domain` entries (that domain only). Stored lowercase; at most 100. Kept when `sender_policy` is `any`.',
+        examples=[['@acme.com', 'billing@supplier.com']],
+    )
 
 
 class TriggerEvaluationRunResponseDto(BaseModel):
@@ -2331,6 +2288,36 @@ class WorkflowNodeType(str, Enum):
     human_approval = 'humanApproval'
 
 
+class WorkflowRunOriginDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    source: str = Field(
+        ...,
+        description='Where the run came from, for example `api`, `schedule` or `email`. `unknown` for a run that did not record it. New values may be added.',
+        examples=['schedule'],
+    )
+    from_: str | None = Field(
+        None,
+        alias='from',
+        description='Email runs: the sender address.',
+        examples=['dana@acme.com'],
+    )
+    from_name: str | None = Field(
+        None,
+        alias='fromName',
+        description='Email runs: the sender display name, when the email has one.',
+        examples=['Dana Cohen'],
+    )
+    subject: str | None = Field(
+        None, description='Email runs: the subject line.', examples=['Invoice 4471 for October']
+    )
+
+
+class WorkflowRunSkippedAttachmentReason(str, Enum):
+    __str__ = str.__str__
+    too_large = 'too_large'
+    too_many = 'too_many'
+
+
 class WorkflowTriggerScheduleResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     frequency: Frequency = Field(..., description='Cadence of the schedule.', examples=['daily'])
@@ -2521,6 +2508,7 @@ class RunSource(str, Enum):
     context_suggestions = 'context_suggestions'
     dashboard_copilot = 'dashboard_copilot'
     dashboard_assistant = 'dashboard_assistant'
+    email = 'email'
     other = 'other'
 
 
@@ -2529,6 +2517,7 @@ class SupplementalContextSource(str, Enum):
     slack = 'slack'
     teams = 'teams'
     mcp = 'mcp'
+    email = 'email'
 
 
 class UserContextDto(BaseModel):
@@ -2675,7 +2664,7 @@ class BatchCreateCustomContextItemRelationsDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     relations: list[CreateCustomContextItemRelationDto] = Field(
         ...,
-        description='Relations to upsert. Idempotent by (fromUid, toUid, relationType); re-sending updates content.',
+        description='Relations to upsert. Idempotent by (fromUid, toUid, relationType); re-sending replaces edgeProperties.',
     )
 
 
@@ -2685,6 +2674,41 @@ class BatchCreateCustomContextItemsResponseDto(BaseModel):
         ...,
         alias='contextItems',
         description='Custom context items created or updated by the batch.',
+    )
+
+
+class BatchDeleteCustomContextItemsDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    source_id: str = Field(
+        ...,
+        alias='sourceId',
+        description='Customer-defined source to delete from. Required — a batch delete is always scoped to one source.',
+        examples=['billing-db'],
+    )
+    collection_id: str | None = Field(
+        None,
+        alias='collectionId',
+        description='Narrow to one collection inside the source. Omit to target the whole source.',
+        examples=['contracts'],
+    )
+    external_id: str | None = Field(
+        None,
+        alias='externalId',
+        description='Narrow to one entity inside the collection. Requires `collectionId`.',
+        examples=['contract-123'],
+    )
+    kind: CustomContextItemKind | None = Field(
+        None,
+        description='Which kind of item to delete at the selected path, for a non-cascade delete. An entity and its `entity_samples` share a path, so this disambiguates them. Defaults to the metadata item at the selected level (`source`/`collection`/`entity`). Must match the selector depth. Ignored when `cascade` is true.',
+        examples=['entity'],
+    )
+    cascade: bool | None = Field(
+        False,
+        description='When `true`, also delete everything beneath the targeted node (its descendants). When `false` (default), delete only the targeted node itself, leaving descendants in place.',
+    )
+    cursor: str | None = Field(
+        None,
+        description='Continuation cursor from a previous response `nextCursor`. Pass it to delete the next batch when a prior call was truncated.',
     )
 
 
@@ -3847,12 +3871,16 @@ class TriggerDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     trigger_type: TriggerType = Field(
         ...,
-        description='Trigger kind. Only `schedule` validates its nested payload here; the rest are opaque.',
+        description='Trigger kind. `schedule` and `email` carry a nested payload; the rest are opaque.',
         examples=['schedule'],
     )
     schedule: TriggerScheduleDto | None = Field(
         None,
         description='Schedule details. Required when trigger_type=schedule. Null for every other trigger.',
+    )
+    email: TriggerEmailDto | None = Field(
+        None,
+        description='Sender policy. Required when trigger_type=email. Null for every other trigger.',
     )
 
 
@@ -3902,6 +3930,14 @@ class WorkflowNodeDto(BaseModel):
     )
 
 
+class WorkflowRunSkippedAttachmentDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    reason: WorkflowRunSkippedAttachmentReason = Field(
+        ...,
+        description='Why the file was left out: `too_large` = over the per-file size limit; `too_many` = over the file count limit.',
+    )
+
+
 class WorkflowStructureDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     nodes: list[WorkflowNodeDto] | None = Field(
@@ -3926,12 +3962,16 @@ class WorkflowTriggerResponseDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     trigger_type: TriggerType = Field(
         ...,
-        description='Trigger kind. Only `schedule` validates its nested payload here; the rest are opaque.',
+        description='Trigger kind. `schedule` and `email` carry a nested payload; the rest are opaque.',
         examples=['schedule'],
     )
     schedule: WorkflowTriggerScheduleResponseDto | None = Field(
         None,
         description='Schedule details. Required when trigger_type=schedule. Null for every other trigger.',
+    )
+    email: TriggerEmailDto | None = Field(
+        None,
+        description='Sender policy. Present when trigger_type=email. Null for every other trigger.',
     )
 
 
@@ -4123,7 +4163,7 @@ class AgentVariationDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     trigger: WorkflowTriggerResponseDto | None = Field(
         None,
-        description='`trigger_type` is `schedule`, `webhook`, `api`, `slack`, or `manual`. `schedule` is present only for a schedule trigger. Null until a trigger is saved.',
+        description='`trigger_type` is `schedule`, `webhook`, `api`, `slack`, `email`, or `manual`. `schedule` is present only for a schedule trigger. Null until a trigger is saved.',
     )
     workflow_structure: WorkflowStructureResponseDto | None = Field(
         None,
@@ -4274,7 +4314,7 @@ class CreateAgentDto(BaseModel):
     access_config: AgentAccessConfigDto | None = Field(
         None,
         alias='accessConfig',
-        description='Access configuration. Omit to use the default (full-org shared with use + manage).',
+        description='Access configuration. Omit to create the workflow private, with no group grants and no invitees; its creator can share it later. A service account token that omits it creates the workflow shared with the whole organization (use + manage), since it has no owner.',
     )
 
 
@@ -4316,7 +4356,7 @@ class CreateSkillDto(BaseModel):
     )
     toolset: dict[str, Any] | None = Field(
         None,
-        description='Map of tool key to configuration; unknown keys are rejected. Integrations require `<platform>.byConnection[connectionUuid] = { actions, rules? }`; actions are catalog action names and SQL platforms grant `query`. Flat entries, action-string arrays and retired keys are rejected with HTTP 422.',
+        description="Map of tool key to configuration; unknown keys are rejected. Integrations require `<platform>.byConnection[connectionUuid] = { actions, rules? }`; actions are catalog action names and SQL platforms grant `query`. A platform people connect personally also takes `<platform>.personal = { actions, rules? }`, which runs on each runner’s own personal connection; a save that newly adds a personal connection's UUID to `byConnection` (or grants it new actions there) is rejected with HTTP 422. Flat entries, action-string arrays and retired keys are rejected with HTTP 422.",
         examples=[{'slack': {'byConnection': {'11111111-1111-4111-8111-111111111111': {'actions': ['SendMessage'], 'rules': {'allowedChannelIds': ['C1']}}}}}],
     )
     model: str | None = Field(
@@ -4338,13 +4378,18 @@ class CreateSkillDto(BaseModel):
     context_selections: list[dict[str, Any]] | None = Field(
         None,
         alias='contextSelections',
-        description="Selected context items (sources / docs) the scope may read. The scope's own learnings are added unless `includeOwnLearnings` is false or these selections already mention learnings.",
+        description="Selected context items (sources / docs) the scope may read. The scope's own learnings and the org-wide learnings are added, each unless its include flag is false, when these selections neither mention learnings already nor are context filters without a rule-based query.",
         examples=[[]],
     )
     include_own_learnings: bool | None = Field(
         True,
         alias='includeOwnLearnings',
         description="Whether the scope reads what is taught while using it: learnings, facts, glossary terms and preferences. Defaults to true. Set false to create the scope without them; it can be included later in the scope's context selections.",
+    )
+    include_org_learnings: bool | None = Field(
+        True,
+        alias='includeOrgLearnings',
+        description="Whether create adds the org-wide learnings path (`auto_generated:org`, what the organization taught Modus) to the scope's selections. Defaults to true, skipped when `contextSelections` already mention learnings or are context filters without a rule-based query; false only skips the addition, so selections naming the path still read it.",
     )
     interfaces: list[ScopeMcpInterfaceInputDto] | None = Field(
         None,
@@ -4490,13 +4535,13 @@ class SkillVariationDto(BaseModel):
     )
     toolset: dict[str, Any] = Field(
         ...,
-        description='Map of tool key to configuration. Integrations use `<platform>.byConnection[connectionUuid] = { actions, rules? }`; SQL platforms grant `query`. General tools and MCP configurations keep their own formats.',
+        description='Map of tool key to configuration. Integrations use `<platform>.byConnection[connectionUuid] = { actions, rules? }`, plus `<platform>.personal = { actions, rules? }` for actions run on each runner’s own personal connection; SQL platforms grant `query`. General tools and MCP configurations keep their own formats.',
         examples=[{'postgresql': {'byConnection': {'11111111-1111-4111-8111-111111111111': {'actions': ['query']}}}, 'web_search': {'enabled': True}}],
     )
     connection_set: list[ConnectionSetItemReadDto] = Field(
         ...,
         alias='connectionSet',
-        description="Connections attached to this variation. A connection's `preferences` say what the scope reads under it; its rows list the derived paths.",
+        description='Connections attached to this variation, one entry per connection. Its `preferences` say what the scope reads under it; an entry with `preferences` can be sent back as it is on update. Drop an entry without them (a deleted connection) first.',
     )
     context_selections: list[dict[str, Any]] = Field(
         ...,
@@ -4615,7 +4660,7 @@ class UpdateSkillDto(BaseModel):
     )
     toolset: dict[str, Any] | None = Field(
         None,
-        description='Map of tool key to configuration; unknown keys are rejected. Integrations require `<platform>.byConnection[connectionUuid] = { actions, rules? }`; actions are catalog action names and SQL platforms grant `query`. Flat entries, action-string arrays and retired keys are rejected with HTTP 422.',
+        description="Map of tool key to configuration; unknown keys are rejected. Integrations require `<platform>.byConnection[connectionUuid] = { actions, rules? }`; actions are catalog action names and SQL platforms grant `query`. A platform people connect personally also takes `<platform>.personal = { actions, rules? }`, which runs on each runner’s own personal connection; a save that newly adds a personal connection's UUID to `byConnection` (or grants it new actions there) is rejected with HTTP 422. Flat entries, action-string arrays and retired keys are rejected with HTTP 422.",
         examples=[{'slack': {'byConnection': {'11111111-1111-4111-8111-111111111111': {'actions': ['SendMessage'], 'rules': {'allowedChannelIds': ['C1']}}}}}],
     )
     model: str | None = Field(
@@ -4786,6 +4831,25 @@ class WorkflowDto(BaseModel):
     )
 
 
+class WorkflowRunAttachmentDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    file_name: str = Field(
+        ...,
+        alias='fileName',
+        description='File name as it was sent.',
+        examples=['invoice-4471.pdf'],
+    )
+    mime_type: str | None = Field(
+        None, alias='mimeType', description='MIME type, when known.', examples=['application/pdf']
+    )
+    size_bytes: int | None = Field(
+        None, alias='sizeBytes', description='Size in bytes, when known.', examples=[182000]
+    )
+    skipped: WorkflowRunSkippedAttachmentDto | None = Field(
+        None, description='Set when the trigger received the file but did not give it to the run.'
+    )
+
+
 class RunConfigDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
     model: str | None = Field(
@@ -4806,7 +4870,7 @@ class RunConfigDto(BaseModel):
     connection_set: list[dict[str, Any]] | None = Field(
         None,
         alias='connectionSet',
-        description="Connection-set entries (runtime-owned shape): `connection_id`, and optionally `preferences` (the connection's workspace-access preferences), `context_enabled` and `path` (a row the preferences compile to).",
+        description="Connection-set entries (runtime-owned shape): `connection_id`, and optionally `preferences` (the connection's workspace-access preferences) and `path` (a row the preferences compile to).",
     )
     connection_all_mode_ids: list[str] | None = Field(None, alias='connectionAllModeIds')
     guardrails: list[str] | None = Field(None, description='Guardrail ids applied to the run.')
@@ -4895,6 +4959,92 @@ class CreateDashboardDto(BaseModel):
     access: DashboardAccessDto | None = Field(
         None, description='Who can use and manage the dashboard.'
     )
+
+
+class GetAutomationRunResponseDto(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
+    id: str = Field(
+        ...,
+        description='Composite run identifier (`workflowId:temporalRunId`).',
+        examples=['wf_42_run_1:11111111-2222-3333-4444-555555555555'],
+    )
+    workflow_id: str = Field(
+        ..., alias='workflowId', description='Workflow run identifier.', examples=['wf_42_run_1']
+    )
+    temporal_run_id: str | None = Field(
+        None,
+        alias='temporalRunId',
+        description='Run identifier; a workflow may have multiple runs after a retry.',
+    )
+    agent_id: int = Field(..., alias='agentId', description='Parent workflow id.', examples=[42])
+    agent_name: str = Field(
+        ...,
+        alias='agentName',
+        description='Snapshot of the workflow name at the time the run was indexed.',
+        examples=['Daily Sales Report'],
+    )
+    agent_type: AgentType = Field(
+        ..., alias='agentType', description='Workflow type.', examples=['task']
+    )
+    status: str = Field(
+        ...,
+        description='Run status (running / awaiting_human / completed / error / cancelled).',
+        examples=['completed'],
+    )
+    status_reason: StatusReason | None = Field(
+        None,
+        alias='statusReason',
+        description='Display-only annotation of a completed run: `approval_timeout` when a human approval timed out, `agent_reported_issue` when a workflow step said it could not finish part of its task.',
+    )
+    trigger_type: str | None = Field(
+        None,
+        alias='triggerType',
+        description='What started this run: `schedule`, `email`, `api`, `manual`, or the chat channel it came from.',
+    )
+    started_at: str | None = Field(None, alias='startedAt', description='ISO-8601 start timestamp.')
+    ended_at: str | None = Field(
+        None, alias='endedAt', description='ISO-8601 end timestamp; absent for in-flight runs.'
+    )
+    duration_ms: int | None = Field(
+        None,
+        alias='durationMs',
+        description='Duration in milliseconds (when end timestamp is known).',
+    )
+    summary: str | None = Field(
+        None, description='Short human-readable summary of the run outcome.'
+    )
+    pending_approval: dict[str, Any] | None = Field(
+        None,
+        alias='pendingApproval',
+        description='Pending approval payload (only present when status is awaiting_human).',
+    )
+    source: AutomationRunSource = Field(
+        ...,
+        description='Where the payload was read from. `live-query` = the run is still in progress; `history` = a completed run.',
+    )
+    task_result: dict[str, Any] | None = Field(
+        None,
+        alias='taskResult',
+        description='Final result of a `task`-typed workflow run. Free-form (depends on the workflow).',
+    )
+    task_error: str | None = Field(
+        None, alias='taskError', description='Error message for a failed `task`-typed workflow run.'
+    )
+    workflow_nodes: list[dict[str, Any]] | None = Field(
+        None,
+        alias='workflowNodes',
+        description='Per-node state for a `workflow`-typed workflow run.',
+    )
+    history_unavailable_reason: (
+        str | None
+    ) = (
+        Field(None, alias='historyUnavailableReason', description='Set when history was unavailable; `source` will be `live-query` in that case.')
+    )
+    attachments: list[WorkflowRunAttachmentDto] | None = Field(
+        None,
+        description='Files the run was started with, and files its trigger left out. Empty when there were none.',
+    )
+    origin: WorkflowRunOriginDto | None = Field(None, description='Where the run came from.')
 
 
 class ListAgentsResponseDto(BaseModel):
@@ -5027,16 +5177,6 @@ class ScopeDto(BaseModel):
 
 class AgentRunDto(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel, extra="ignore")
-    message: str = Field(
-        ...,
-        description='The user message to send. API tokens are held to the 32,000-character limit; a longer message is refused before the run starts.',
-        max_length=32000,
-    )
-    session_id: str = Field(
-        ...,
-        alias='sessionId',
-        description='Opaque client-generated conversation token for continuity. The server NEVER derives the run target identity (scope/workflow/modus) from this string — target identity comes only from the request path and DTO (see RunTarget). It is used solely to thread successive turns of the same conversation together.',
-    )
     organization_id: str | None = Field(
         None,
         alias='organizationId',
@@ -5046,10 +5186,6 @@ class AgentRunDto(BaseModel):
         None,
         description='Saved version to run (scope/workflow; ignored for Modus). API tokens may not run a scope draft.',
     )
-    file_thread_id: str | None = Field(
-        None, alias='fileThreadId', description='Document-scoped conversation thread id.'
-    )
-    config: RunConfigDto | None = None
     attachments: AttachmentsDto | None = None
     user_context: UserContextDto | None = Field(None, alias='userContext')
     supplemental_context: SupplementalContextDto | None = Field(None, alias='supplementalContext')
@@ -5059,13 +5195,44 @@ class AgentRunDto(BaseModel):
     run_id: str | None = Field(
         None, alias='runId', description='Client-supplied run id (Idempotency-Key header wins).'
     )
+    message: str | None = Field(
+        None,
+        description="The run's input, which the workflow's first step receives. Omit it, or send an empty string, to trigger a run with no input. API tokens are held to the 32,000-character limit.",
+        max_length=32000,
+    )
+    session_id: str | None = Field(
+        None,
+        alias='sessionId',
+        description='A token you choose that threads runs into one conversation: send the same value on each run. Omit it for a one-off run; the server then assigns an id it does not return, so that run cannot be continued.',
+    )
+    config: RunConfigDto | None = Field(
+        None,
+        deprecated=True,
+        description='Deprecated: ignored for workflow runs, whose steps use the model and tools set in the workflow. Omit it.',
+    )
+    file_thread_id: str | None = Field(
+        None,
+        alias='fileThreadId',
+        deprecated=True,
+        description='Deprecated and ignored: a workflow run takes its settings from the workflow. Omit it; see `message` and `sessionId` for what a run accepts.',
+    )
     stream_protocol_version: StreamProtocolVersion | None = Field(
         None,
         alias='streamProtocolVersion',
-        description='Streaming protocol version. Version 2 supports assistant-content replacement events.',
+        deprecated=True,
+        description='Deprecated and ignored: a workflow run takes its settings from the workflow. Omit it; see `message` and `sessionId` for what a run accepts.',
     )
-    experimental_features: bool | None = Field(None, alias='experimentalFeatures')
-    debug: bool | None = None
+    experimental_features: bool | None = Field(
+        None,
+        alias='experimentalFeatures',
+        deprecated=True,
+        description='Deprecated and ignored: a workflow run takes its settings from the workflow. Omit it; see `message` and `sessionId` for what a run accepts.',
+    )
+    debug: bool | None = Field(
+        None,
+        deprecated=True,
+        description='Deprecated and ignored: a workflow run takes its settings from the workflow. Omit it; see `message` and `sessionId` for what a run accepts.',
+    )
 
 
 class FollowUpRunDto(BaseModel):

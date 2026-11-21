@@ -74,7 +74,7 @@ ALLOWED_CHAT_MODELS = frozenset({
 })
 
 
-def validate_chat_model(model: str) -> None:
+def validate_chat_model(model: Optional[str]) -> None:
     if model not in ALLOWED_CHAT_MODELS:
         supported = ", ".join(sorted(ALLOWED_CHAT_MODELS))
         raise ValidationError(
